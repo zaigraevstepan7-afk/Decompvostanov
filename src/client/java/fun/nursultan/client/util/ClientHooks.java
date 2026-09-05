@@ -328,7 +328,7 @@ public final class ClientHooks {
         if (stream.setting("links") && lower.matches("(?s).*(t\\.me/|vk\\.|https?://|discord\\.gg|funtime\\.su|spookytime\\.net|/links).*")) {
             return net.minecraft.network.chat.Component.literal("[hidden]");
         }
-        if (stream.setting("staff") && lower.matches("(?s).*(admin|moder|helper|staff|хелпер|модер|админ|князь|титан|элита).*")) {
+        if (stream.setting("staff") && lower.matches("(?s).*(admin|moder|helper|staff|хелпер|модер|админ|князь|титан|элита|герой|барон|принц|страж|аспид|герцог|глава|сквид).*")) {
             return net.minecraft.network.chat.Component.literal("[staff]");
         }
         if ((stream.setting("ft") || stream.setting("funtime")) && raw.contains("Фортуны")) {

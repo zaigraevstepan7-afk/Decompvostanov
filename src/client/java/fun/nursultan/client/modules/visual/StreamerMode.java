@@ -44,7 +44,7 @@ public final class StreamerMode extends Module {
                 }
                 String shown = player.getGameProfile().name() + " " + player.getName().getString();
                 boolean staff = setting("staff") && shown.toLowerCase().matches(
-                        ".*(admin|moder|helper|staff|хелпер|модер|админ|князь|титан|элита|герой|барон|принц|страж|аспид|герцог|глава).*");
+                        ".*(admin|moder|helper|staff|хелпер|модер|админ|князь|титан|элита|герой|барон|принц|страж|аспид|герцог|глава|сквид).*");
                 boolean link = setting("links") && shown.toLowerCase().matches(".*(t\\.me|vk\\.|https?://|discord\\.gg).*");
                 if (setting("hide-entries") || staff || link) {
                     player.setCustomName(Component.literal("hidden"));
