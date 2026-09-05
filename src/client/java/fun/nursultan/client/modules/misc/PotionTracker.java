@@ -21,6 +21,7 @@ public final class PotionTracker extends Module {
         if (mc.level == null || mc.player == null) {
             return;
         }
+        int y = 52;
         int n = 0;
         for (var entity : mc.level.entitiesForRendering()) {
             if (!(entity instanceof AbstractThrownPotion potion)) {
@@ -29,16 +30,25 @@ public final class PotionTracker extends Module {
             if (setting("ignore-self") && potion.getOwner() == mc.player) {
                 continue;
             }
-            String hover = potion.getItem().getHoverName().getString().toLowerCase();
-            if (setting("ignore-common-splash-potions") && (hover.contains("water") || hover.contains("mundane")
-                    || hover.contains("обычн") || hover.contains("вода") || hover.contains("splash potion"))) {
+            String hover = potion.getItem().getHoverName().getString();
+            String lower = hover.toLowerCase();
+            if (setting("ignore-common-splash-potions") && (lower.contains("water") || lower.contains("mundane")
+                    || lower.contains("обычн") || lower.contains("вода") || lower.contains("splash potion"))) {
                 continue;
             }
-            if (setting("ft-bypass") && (hover.contains("funtime") || hover.contains("ft ") || hover.contains("донат"))) {
+            if (setting("ft-bypass") && (lower.contains("funtime") || lower.contains("ft ") || lower.contains("донат"))) {
                 continue;
             }
+            // dump leftover WJ: "\n● "
+            g.drawString(mc.font, "● " + hover, 8, y, fun.nursultan.client.ClientSettings.accent, false);
+            y += 10;
             n++;
+            if (n >= 6) {
+                break;
+            }
         }
-        g.drawString(mc.font, "splash " + n, 8, 52, fun.nursultan.client.ClientSettings.accent, false);
+        if (n == 0) {
+            g.drawString(mc.font, "● 0", 8, 52, 0xFF8A8A96, false);
+        }
     }
 }
