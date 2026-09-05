@@ -309,6 +309,9 @@ public final class ClickGuiScreen extends Screen {
             if (module.enabled) {
                 fill(g, x + 4, ry + 6, 2, rh - 12, accent());
             }
+            if (open == module) {
+                stroke(g, x + 4, ry + 1, w - 8, rh - 2, accent());
+            }
             int textX = x + 12;
             g.drawString(font, displayName(module.name), textX, ry + (ClientSettings.descriptions ? 6 : 10), TEXT, false);
             if (ClientSettings.descriptions) {
