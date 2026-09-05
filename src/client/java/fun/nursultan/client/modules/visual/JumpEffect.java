@@ -23,8 +23,24 @@ public final class JumpEffect extends Module {
             return;
         }
         if (wasGround && !mc.player.onGround()) {
-            for (int i = 0; i < 8; i++) {
-                mc.level.addParticle(ParticleTypes.CLOUD, mc.player.getX(), mc.player.getY(), mc.player.getZ(), 0, 0.05, 0);
+            double r = numberValue("radius", 1);
+            double amp = numberValue("wave-amplitude", 1);
+            for (int i = 0; i < 12; i++) {
+                double a = i * Math.PI / 6.0;
+                mc.level.addParticle(
+                        setting("first-color") ? ParticleTypes.CLOUD : ParticleTypes.SMOKE,
+                        mc.player.getX() + Math.cos(a) * r,
+                        mc.player.getY(),
+                        mc.player.getZ() + Math.sin(a) * r,
+                        0, 0.04 * amp, 0);
+                if (setting("second-color")) {
+                    mc.level.addParticle(
+                            ParticleTypes.END_ROD,
+                            mc.player.getX() + Math.cos(a) * r * 0.6,
+                            mc.player.getY() + 0.1,
+                            mc.player.getZ() + Math.sin(a) * r * 0.6,
+                            0, 0.02 * amp, 0);
+                }
             }
         }
         wasGround = mc.player.onGround();

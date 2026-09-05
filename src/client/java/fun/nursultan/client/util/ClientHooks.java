@@ -286,6 +286,26 @@ public final class ClientHooks {
             ConfigStore.save();
             return true;
         }
+        Module chat = module("chathelper");
+        if (chat != null && chat.enabled && chat.setting("better-commands")) {
+            Minecraft mc = Minecraft.getInstance();
+            if (t.equals(".help") && mc.player != null) {
+                mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal(
+                        ".friend add/del  .auth set/clear  .r  .gm"), false);
+                return true;
+            }
+            if (t.startsWith(".r ") && mc.player != null && mc.player.connection != null) {
+                String who = ChatLog.lastWhisper();
+                if (!who.isBlank()) {
+                    mc.player.connection.sendCommand("msg " + who + " " + t.substring(3));
+                }
+                return true;
+            }
+            if (t.startsWith(".gm ") && mc.player != null && mc.player.connection != null) {
+                mc.player.connection.sendCommand("gamemode " + t.substring(4).trim());
+                return true;
+            }
+        }
         return false;
     }
 

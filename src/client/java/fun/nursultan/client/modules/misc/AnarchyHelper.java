@@ -40,26 +40,37 @@ public final class AnarchyHelper extends Module {
         if (mc.player == null || mc.gameMode == null || Targeting.nearest(mc, 6) == null) {
             return;
         }
-        ItemStack stack = mc.player.getMainHandItem();
-        String name = stack.getHoverName().getString().toLowerCase();
-        boolean match = setting("god-aura") && (name.contains("aura") || name.contains("аура"))
-                || setting("sheer-dust") && (name.contains("пыл") || name.contains("dust"))
-                || setting("holy-water") && (name.contains("свят") || name.contains("holy"))
-                || setting("desorientation") && name.contains("дезор")
-                || setting("trap") && name.contains("трап")
-                || setting("stratum") && (name.contains("пласт") || name.contains("stratum"))
-                || setting("fierytornado") && (name.contains("смерч") || name.contains("tornado"))
-                || setting("snowball") && name.contains("снеж")
-                || setting("godsaura") && name.contains("god")
-                || setting("sheerdust") && name.contains("sheer")
-                || setting("freezeball") && name.contains("freeze")
-                || setting("assassin") && name.contains("assassin")
-                || setting("paladin") && name.contains("paladin")
-                || setting("drowsiness") && name.contains("drowsy")
-                || setting("radiation") && name.contains("radia")
-                || setting("rage") && name.contains("rage");
-        if (match && mc.options.keyUse.isDown()) {
-            mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+        if (!mc.options.keyUse.isDown()) {
+            return;
+        }
+        for (int i = 0; i < 9; i++) {
+            ItemStack stack = mc.player.getInventory().getItem(i);
+            String name = stack.getHoverName().getString().toLowerCase();
+            boolean match = setting("god-aura") && (name.contains("aura") || name.contains("аура"))
+                    || setting("sheer-dust") && (name.contains("пыл") || name.contains("dust"))
+                    || setting("holy-water") && (name.contains("свят") || name.contains("holy"))
+                    || setting("desorientation") && name.contains("дезор")
+                    || setting("trap") && name.contains("трап")
+                    || setting("stratum") && (name.contains("пласт") || name.contains("stratum"))
+                    || setting("fierytornado") && (name.contains("смерч") || name.contains("tornado"))
+                    || setting("snowball") && name.contains("снеж")
+                    || setting("godsaura") && name.contains("god")
+                    || setting("sheerdust") && name.contains("sheer")
+                    || setting("freezeball") && name.contains("freeze")
+                    || setting("assassin") && name.contains("assassin")
+                    || setting("paladin") && name.contains("paladin")
+                    || setting("drowsiness") && name.contains("drowsy")
+                    || setting("radiation") && name.contains("radia")
+                    || setting("rage") && name.contains("rage")
+                    || setting("potion-rage") && name.contains("rage")
+                    || setting("potion-holy-water") && name.contains("holy");
+            if (match) {
+                int prev = mc.player.getInventory().getSelectedSlot();
+                mc.player.getInventory().setSelectedSlot(i);
+                mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+                mc.player.getInventory().setSelectedSlot(prev);
+                return;
+            }
         }
     }
 }

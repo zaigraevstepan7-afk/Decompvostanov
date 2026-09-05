@@ -29,14 +29,22 @@ public final class AutoBuy extends Module {
             return;
         }
         delay = 0;
-        if (!setting("auto-parser")) {
+        if (!setting("auto-parser") && !setting("buyer")) {
             return;
         }
         for (Slot slot : mc.player.containerMenu.slots) {
-            if (slot.index < 27 && !slot.getItem().isEmpty()) {
-                Inventories.click(mc, slot.index, 0, ClickType.PICKUP);
-                return;
+            if (slot.index >= 27 || slot.getItem().isEmpty()) {
+                continue;
             }
+            String name = slot.getItem().getHoverName().getString().toLowerCase();
+            if (setting("checker") && !name.matches(".*\\d+.*")) {
+                continue;
+            }
+            if (setting("decrease-prices") && name.contains("дорого")) {
+                continue;
+            }
+            Inventories.click(mc, slot.index, 0, ClickType.PICKUP);
+            return;
         }
     }
 }

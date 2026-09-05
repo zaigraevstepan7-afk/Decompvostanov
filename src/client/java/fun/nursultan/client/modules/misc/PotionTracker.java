@@ -23,9 +23,13 @@ public final class PotionTracker extends Module {
         }
         int n = 0;
         for (var entity : mc.level.entitiesForRendering()) {
-            if (entity instanceof AbstractThrownPotion) {
-                n++;
+            if (!(entity instanceof AbstractThrownPotion potion)) {
+                continue;
             }
+            if (setting("ignore-self") && potion.getOwner() == mc.player) {
+                continue;
+            }
+            n++;
         }
         g.drawString(mc.font, "splash " + n, 8, 52, 0xFF9FCA2B, false);
     }

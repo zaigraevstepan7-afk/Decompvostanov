@@ -8,6 +8,8 @@ import java.util.Locale;
 public final class ChatLog {
     private static final ArrayDeque<String> LINES = new ArrayDeque<>();
 
+    private static String lastWhisper = "";
+
     public static void push(String text) {
         if (text == null || text.isBlank()) {
             return;
@@ -18,6 +20,18 @@ public final class ChatLog {
                 LINES.removeFirst();
             }
         }
+        String lower = text.toLowerCase(Locale.ROOT);
+        int at = lower.indexOf(" whispers");
+        if (at < 0) {
+            at = lower.indexOf(" шепчет");
+        }
+        if (at > 0) {
+            lastWhisper = text.substring(0, at).replaceAll("§.", "").trim();
+        }
+    }
+
+    public static String lastWhisper() {
+        return lastWhisper;
     }
 
     public static List<String> snapshot() {

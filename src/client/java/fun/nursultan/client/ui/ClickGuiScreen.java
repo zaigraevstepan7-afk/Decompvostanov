@@ -33,6 +33,7 @@ public final class ClickGuiScreen extends Screen {
     private Category category = Category.COMBAT;
     private Module open;
     private int scroll;
+    private int settingScroll;
     private String query = "";
     private boolean typing;
     private boolean binding;
@@ -134,7 +135,11 @@ public final class ClickGuiScreen extends Screen {
                 g.drawString(font, "press key...", sx + 10, y + 78, accent(), false);
             }
             int sy = y + 94;
+            int skip = settingScroll;
             for (BoolSetting setting : open.settings) {
+                if (skip-- > 0) {
+                    continue;
+                }
                 g.fill(sx + 10, sy, sx + 20, sy + 10, setting.value ? accent() : 0xFF2E2E3A);
                 g.drawString(font, setting.label, sx + 26, sy + 1, TEXT, false);
                 sy += 13;
@@ -143,6 +148,9 @@ public final class ClickGuiScreen extends Screen {
                 }
             }
             for (NumberSetting setting : open.numbers) {
+                if (skip-- > 0) {
+                    continue;
+                }
                 g.fill(sx + 10, sy, sx + 250, sy + 10, 0xFF2E2E3A);
                 float t = (setting.value - setting.min) / Math.max(0.0001F, setting.max - setting.min);
                 g.fill(sx + 10, sy, sx + 10 + (int) (240 * t), sy + 10, accent());
@@ -218,9 +226,11 @@ public final class ClickGuiScreen extends Screen {
                 } else if (button == 1 || inside(mouseX, mouseY, x + 144 + 350, my, 28, 24)) {
                     open = module;
                     binding = false;
+                    settingScroll = 0;
                 } else {
                     module.toggle();
                     open = module;
+                    settingScroll = 0;
                 }
                 return true;
             }
@@ -229,7 +239,11 @@ public final class ClickGuiScreen extends Screen {
         if (open != null) {
             int sx = x + 576;
             int sy = y + 94;
+            int skip = settingScroll;
             for (BoolSetting setting : open.settings) {
+                if (skip-- > 0) {
+                    continue;
+                }
                 if (inside(mouseX, mouseY, sx + 10, sy, 200, 12)) {
                     setting.value = !setting.value;
                     fun.nursultan.client.config.ConfigStore.save();
@@ -238,6 +252,9 @@ public final class ClickGuiScreen extends Screen {
                 sy += 13;
             }
             for (NumberSetting setting : open.numbers) {
+                if (skip-- > 0) {
+                    continue;
+                }
                 if (inside(mouseX, mouseY, sx + 10, sy, 240, 12)) {
                     setting.nudge(button == 1 ? -1 : 1);
                     fun.nursultan.client.config.ConfigStore.save();
@@ -251,6 +268,14 @@ public final class ClickGuiScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        float scale = ClientSettings.menuScale;
+        int w = (int) (860 * Math.min(1.15F, scale));
+        int x = width / 2 - w / 2;
+        if (open != null && mouseX > x + 576) {
+            int max = Math.max(0, open.settings.size() + open.numbers.size() - 18);
+            settingScroll = (int) Math.max(0, Math.min(max, settingScroll - (int) Math.signum(scrollY)));
+            return true;
+        }
         int max = Math.max(0, visible().size() - 10);
         scroll = (int) Math.max(0, Math.min(max, scroll - (int) Math.signum(scrollY)));
         return true;
@@ -259,8 +284,7 @@ public final class ClickGuiScreen extends Screen {
     @Override
     public boolean keyPressed(KeyEvent event) {
         if (binding && open != null) {
-            String name = org.lwjgl.glfw.GLFW.glfwGetKeyName(event.key(), event.scancode());
-            open.bind = name == null ? "" : name.toUpperCase(Locale.ROOT);
+            open.bind = bindName(event.key(), event.scancode());
             binding = false;
             fun.nursultan.client.config.ConfigStore.save();
             return true;
@@ -305,6 +329,40 @@ public final class ClickGuiScreen extends Screen {
 
     private static boolean inside(double mx, double my, int x, int y, int w, int h) {
         return mx >= x && my >= y && mx <= x + w && my <= y + h;
+    }
+
+    private static String bindName(int key, int scancode) {
+        String name = org.lwjgl.glfw.GLFW.glfwGetKeyName(key, scancode);
+        if (name != null && !name.isBlank()) {
+            return name.toUpperCase(Locale.ROOT);
+        }
+        return switch (key) {
+            case org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_SHIFT -> "RSHIFT";
+            case org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT -> "LSHIFT";
+            case org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_CONTROL -> "RCTRL";
+            case org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_CONTROL -> "CTRL";
+            case org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_ALT -> "ALT";
+            case org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_ALT -> "RALT";
+            case org.lwjgl.glfw.GLFW.GLFW_KEY_INSERT -> "INSERT";
+            case org.lwjgl.glfw.GLFW.GLFW_KEY_DELETE -> "DELETE";
+            case org.lwjgl.glfw.GLFW.GLFW_KEY_HOME -> "HOME";
+            case org.lwjgl.glfw.GLFW.GLFW_KEY_END -> "END";
+            case org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE -> "SPACE";
+            case org.lwjgl.glfw.GLFW.GLFW_KEY_TAB -> "TAB";
+            case org.lwjgl.glfw.GLFW.GLFW_KEY_F1 -> "F1";
+            case org.lwjgl.glfw.GLFW.GLFW_KEY_F2 -> "F2";
+            case org.lwjgl.glfw.GLFW.GLFW_KEY_F3 -> "F3";
+            case org.lwjgl.glfw.GLFW.GLFW_KEY_F4 -> "F4";
+            case org.lwjgl.glfw.GLFW.GLFW_KEY_F5 -> "F5";
+            case org.lwjgl.glfw.GLFW.GLFW_KEY_F6 -> "F6";
+            case org.lwjgl.glfw.GLFW.GLFW_KEY_F7 -> "F7";
+            case org.lwjgl.glfw.GLFW.GLFW_KEY_F8 -> "F8";
+            case org.lwjgl.glfw.GLFW.GLFW_KEY_F9 -> "F9";
+            case org.lwjgl.glfw.GLFW.GLFW_KEY_F10 -> "F10";
+            case org.lwjgl.glfw.GLFW.GLFW_KEY_F11 -> "F11";
+            case org.lwjgl.glfw.GLFW.GLFW_KEY_F12 -> "F12";
+            default -> "";
+        };
     }
 
     private static String format(float value) {

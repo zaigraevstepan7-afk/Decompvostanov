@@ -10,21 +10,26 @@ import net.minecraft.world.item.Items;
 public final class UseTracker extends Module {
     private int totems;
     private int food;
+    private boolean heldTotem;
 
     public UseTracker() {
         super("usetracker", "UseTracker", Category.MISC, "trackers", "KDFzREm.mA", 24);
         bool("totem-tracker", true);
         bool("food-tracker", true);
+        bool("trackers", true);
     }
 
     @Override
     public void onTick(Minecraft mc) {
-        if (mc.player == null) {
+        if (!setting("trackers") || mc.player == null) {
             return;
         }
-        if (setting("totem-tracker") && mc.player.getOffhandItem().is(Items.TOTEM_OF_UNDYING)) {
-            totems = Math.max(totems, 1);
+        boolean holding = mc.player.getOffhandItem().is(Items.TOTEM_OF_UNDYING)
+                || mc.player.getMainHandItem().is(Items.TOTEM_OF_UNDYING);
+        if (setting("totem-tracker") && heldTotem && !holding && mc.player.hurtTime > 0) {
+            totems++;
         }
+        heldTotem = holding;
         if (setting("food-tracker") && mc.player.isUsingItem() && fun.nursultan.client.util.Inventories.isFood(mc.player.getUseItem())) {
             food++;
         }
