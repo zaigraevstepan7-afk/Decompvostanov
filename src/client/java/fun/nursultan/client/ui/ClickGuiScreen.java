@@ -100,6 +100,8 @@ public final class ClickGuiScreen extends Screen {
         g.fill(0, 0, width, height, OVERLAY);
         round(g, winX, winY, winW, winH, 7, SHELL);
         fill(g, winX, winY, SIDE_W, winH, SIDEBAR);
+        fill(g, winX + SIDE_W, winY, 1, winH, 0x22FFFFFF);
+        fill(g, winX, winY + TOP_H - 1, winW, 1, 0x18FFFFFF);
 
         drawLogo(g, winX + 16, winY + 12);
         drawSearch(g);
@@ -140,8 +142,8 @@ public final class ClickGuiScreen extends Screen {
     }
 
     private void drawSearch(GuiGraphics g) {
-        int sw = Math.min(360, winW - SIDE_W - 80);
-        int sx = winX + SIDE_W + (winW - SIDE_W - sw) / 2;
+        int sw = Math.min(380, Math.max(220, winW - 200));
+        int sx = winX + (winW - sw) / 2;
         int sy = winY + 12;
         round(g, sx, sy, sw, 22, 6, SEARCH_BG);
         int icon = query.isBlank() && !typing ? MUTED : TEXT;
@@ -199,6 +201,7 @@ public final class ClickGuiScreen extends Screen {
         boolean on = section == s && query.isBlank();
         if (on) {
             stroke(g, x, y, w, h, accent());
+            stroke(g, x + 1, y + 1, w - 2, h - 2, accent());
         } else if (inside(mx, my, x, y, w, h)) {
             round(g, x, y, w, h, 3, 0x2218181C);
         }
@@ -234,6 +237,7 @@ public final class ClickGuiScreen extends Screen {
     }
 
     private void drawCard(GuiGraphics g, int x, int y, int w, int h, String sub, List<Module> mods, boolean shut) {
+        fill(g, x + 2, y + 3, w, h, 0x33000000);
         round(g, x, y, w, h, 6, CARD);
         g.drawString(font, subLabel(sub), x + 12, y + 8, accent(), false);
         g.drawString(font, "⇅", x + w - 22, y + 8, MUTED, false);
@@ -243,15 +247,16 @@ public final class ClickGuiScreen extends Screen {
         }
         int ry = y + CARD_HEAD;
         for (Module module : mods) {
-            g.drawString(font, module.name, x + 12, ry + 10, TEXT, false);
-            g.drawString(font, "···", x + w - 62, ry + 10, MUTED, false);
+            g.drawString(font, displayName(module.name), x + 12, ry + 10, TEXT, false);
+            int dotsX = x + Math.max(w / 2, w - 110);
+            g.drawString(font, "···", dotsX, ry + 10, MUTED, false);
             if (!module.bind.isBlank()) {
-                g.drawString(font, module.bind, x + w - 96, ry + 10, MUTED, false);
+                g.drawString(font, module.bind, dotsX - 36, ry + 10, MUTED, false);
             }
             pill(g, x + w - 40, ry + 8, module.enabled);
-            hit("dots", x + w - 70, ry, 28, ROW_H, module);
+            hit("dots", dotsX - 8, ry, 28, ROW_H, module);
             hit("toggle", x + w - 44, ry, 36, ROW_H, module);
-            hit("row", x, ry, w - 70, ROW_H, module);
+            hit("row", x, ry, dotsX - x - 4, ROW_H, module);
             ry += ROW_H;
         }
     }
@@ -304,7 +309,7 @@ public final class ClickGuiScreen extends Screen {
         int ph = winH - TOP_H - 24;
         fill(g, winX + SIDE_W, winY + TOP_H, winW - SIDE_W, winH - TOP_H, 0x66000000);
         round(g, px, py, pw, ph, 6, 0xF016161A);
-        g.drawString(font, open.name, px + 14, py + 12, TEXT, false);
+        g.drawString(font, displayName(open.name), px + 14, py + 12, TEXT, false);
         g.drawString(font, "×", px + pw - 20, py + 12, MUTED, false);
         hit("close", px + pw - 26, py + 6, 22, 20, null);
         if (binding) {
@@ -414,6 +419,14 @@ public final class ClickGuiScreen extends Screen {
             case PLAYER -> Category.PLAYER;
             default -> Category.MISC;
         };
+    }
+
+    static String displayName(String name) {
+        if (name == null || name.isBlank()) {
+            return "";
+        }
+        return name.replaceAll("([a-z])([A-Z])", "$1 $2")
+                .replaceAll("([A-Za-z])(\\d)", "$1 $2");
     }
 
     private static String subLabel(String raw) {
