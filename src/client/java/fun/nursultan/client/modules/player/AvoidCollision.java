@@ -11,6 +11,7 @@ import net.minecraft.world.phys.Vec3;
 public final class AvoidCollision extends Module {
     public AvoidCollision() {
         super("avoidcollision", "AvoidCollision", Category.PLAYER, "base", "KDFzREm.Px", 19);
+        number("distance", 0.3F, 0.1F, 2.0F, 0.05F);
     }
 
     @Override
@@ -18,9 +19,10 @@ public final class AvoidCollision extends Module {
         if (mc.player == null || mc.level == null) {
             return;
         }
-        for (Entity entity : mc.level.getEntities(mc.player, mc.player.getBoundingBox().inflate(0.6))) {
+        float pad = numberValue("distance", 0.3F);
+        for (Entity entity : mc.level.getEntities(mc.player, mc.player.getBoundingBox().inflate(pad + 0.3F))) {
             if (entity instanceof Player && entity != mc.player) {
-                Vec3 away = mc.player.position().subtract(entity.position()).normalize().scale(0.18);
+                Vec3 away = mc.player.position().subtract(entity.position()).normalize().scale(pad);
                 Vec3 v = mc.player.getDeltaMovement();
                 mc.player.setDeltaMovement(v.x + away.x, v.y, v.z + away.z);
                 return;
