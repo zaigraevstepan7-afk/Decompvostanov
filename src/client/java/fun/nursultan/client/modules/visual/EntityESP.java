@@ -2,6 +2,7 @@ package fun.nursultan.client.modules.visual;
 
 import fun.nursultan.client.module.Category;
 import fun.nursultan.client.module.Module;
+import fun.nursultan.client.modules.combat.Targeting;
 import fun.nursultan.client.util.ClientHooks;
 import fun.nursultan.client.util.Friends;
 import net.minecraft.client.Minecraft;
@@ -62,6 +63,13 @@ public final class EntityESP extends Module {
         if (!setting("entities") || mc.player == null || mc.level == null) {
             return;
         }
+        if (setting("chest-minecart")) {
+            for (var cart : mc.level.getEntitiesOfClass(
+                    net.minecraft.world.entity.vehicle.minecart.MinecartChest.class,
+                    mc.player.getBoundingBox().inflate(48))) {
+                cart.setGlowingTag(true);
+            }
+        }
         for (LivingEntity entity : mc.level.getEntitiesOfClass(
                 LivingEntity.class, mc.player.getBoundingBox().inflate(80), e -> accept(mc.player, e))) {
             entity.setGlowingTag(true);
@@ -73,6 +81,9 @@ public final class EntityESP extends Module {
 
     private boolean accept(Player self, LivingEntity entity) {
         if (!entity.isAlive()) {
+            return false;
+        }
+        if (setting("target-condition") && Targeting.nearest(Minecraft.getInstance(), 24, null) != entity) {
             return false;
         }
         if (!setting("through-walls") && self != null && !self.hasLineOfSight(entity)) {
@@ -151,6 +162,22 @@ public final class EntityESP extends Module {
             if (setting("name") || setting("health")) {
                 String text = setting("health") ? label + " " + (int) entity.getHealth() : label;
                 g.drawString(mc.font, text, x + 2, y + 2, 0xFFFFFFFF, false);
+            }
+            if (setting("equipment") && entity instanceof Player) {
+                int slotX = x;
+                float scale = numberValue("equipment-size", 1);
+                int size = Math.max(8, (int) (12 * scale));
+                for (var slot : net.minecraft.world.entity.EquipmentSlot.values()) {
+                    if (slot.getType() != net.minecraft.world.entity.EquipmentSlot.Type.HUMANOID_ARMOR) {
+                        continue;
+                    }
+                    var worn = entity.getItemBySlot(slot);
+                    if (!worn.isEmpty()) {
+                        g.renderItem(worn, slotX, y + 12);
+                    }
+                    slotX += size;
+                }
+                y += size + 2;
             }
             y += 13;
             if (y > height - 48) {

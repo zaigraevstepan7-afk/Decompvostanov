@@ -44,7 +44,9 @@ public final class Trajectory extends Module {
         for (int i = 0; i < 20; i++) {
             pos = pos.add(vel);
             vel = vel.add(0, -0.03, 0);
-            mc.level.addParticle(ParticleTypes.CRIT, pos.x, pos.y, pos.z, 0, 0, 0);
+            var type = setting("hit-line-color") && i > 16 ? ParticleTypes.FLAME
+                    : setting("line-color") ? ParticleTypes.CRIT : ParticleTypes.SMOKE;
+            mc.level.addParticle(type, pos.x, pos.y, pos.z, 0, 0, 0);
         }
     }
 }

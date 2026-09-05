@@ -53,7 +53,7 @@ public class MultiPlayerGameModeMixin {
     @Inject(method = "continueDestroyBlock", at = @At("HEAD"))
     private void nursultan$noBreakDelay(net.minecraft.core.BlockPos pos, net.minecraft.core.Direction face, CallbackInfoReturnable<Boolean> cir) {
         Module delay = ClientHooks.module("nodelay");
-        if (delay != null && delay.enabled && delay.setting("block-breaking")) {
+        if (delay != null && delay.enabled && delay.setting("delays") && delay.setting("block-breaking")) {
             destroyDelay = 0;
         }
     }

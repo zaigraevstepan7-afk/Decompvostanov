@@ -24,7 +24,18 @@ public final class ScreenWalk extends Module {
             return;
         }
         double yaw = Math.toRadians(mc.player.getYRot());
-        double speed = setting("hw") ? 0.18 : setting("vanilla") ? 0.22 : 0.16;
+        double speed = 0.16;
+        if (setting("hw")) {
+            speed = 0.18;
+        } else if (setting("ft")) {
+            speed = 0.20;
+        } else if (setting("matrix")) {
+            speed = 0.14;
+        } else if (setting("spooky")) {
+            speed = 0.17;
+        } else if (setting("vanilla")) {
+            speed = 0.22;
+        }
         double x = 0;
         double z = 0;
         if (mc.options.keyUp.isDown()) {

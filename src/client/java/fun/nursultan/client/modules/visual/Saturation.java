@@ -16,7 +16,10 @@ public final class Saturation extends Module {
     @Override
     public void onTick(Minecraft mc) {
         if (mc.player != null) {
-            mc.options.gamma().set((double) numberValue("saturation", 1.2F));
+            mc.options.gamma().set((double) numberValue("saturation", 1.2F) * numberValue("alpha", 1));
+        }
+        if (setting("sky_protection") && mc.level != null) {
+            mc.level.setSkyFlashTime(0);
         }
     }
 }
