@@ -84,12 +84,22 @@ public final class AutoBuy extends Module {
                 return true;
             }
         }
-        return name.contains("тотем") || name.contains("элитры") || name.contains("шалкер")
-                || name.contains("незерит") || name.contains("алмаз") || name.contains("маяк")
-                || name.contains("зачарованное золотое") || name.contains("золотое яблоко")
-                || name.contains("древние обломки") || name.contains("пузырёк опыта") || name.contains("порох")
-                || name.contains("огненный стержень") || name.contains("эндер жемчуг") || name.contains("золотой слиток")
-                || name.contains("золотой блок") || name.contains("яйцо призыва") || name.contains("голова дракона")
-                || name.contains("заряд ветра") || name.contains("навершие булавы");
+        return name.contains("тотем") || name.contains("тотем бессмертия")
+                || name.contains("элитры") || name.contains("шалкер")
+                || name.contains("незерит") || name.contains("незеритовый слиток")
+                || name.contains("алмаз") || name.contains("алмазная руда") || name.contains("маяк")
+                || name.contains("зачарованное золотое") || name.contains("зачарованное золотое яблоко")
+                || name.contains("золотое яблоко") || name.contains("яблоко")
+                || name.contains("древние обломки") || name.contains("пузырёк опыта") || name.contains("пузырек опыта")
+                || name.contains("порох") || name.contains("огненный стержень") || name.contains("эндер жемчуг")
+                || name.contains("золотой слиток") || name.contains("золотой блок")
+                || name.contains("изумрудная руда") || name.contains("яйцо призыва")
+                || name.contains("яйцо призыва ифрита") || name.contains("яйцо призыва гаста")
+                || name.contains("яйцо призыва эндермена") || name.contains("яйцо призыва крипера")
+                || name.contains("яйцо призыва свиньи") || name.contains("яйцо призыва овцы")
+                || name.contains("яйцо призыва крестьянина") || name.contains("яйцо призыва коровы")
+                || name.contains("яйцо призыва зомби-крестьянина")
+                || name.contains("голова дракона") || name.contains("заряд ветра")
+                || name.contains("навершие булавы");
     }
 }
