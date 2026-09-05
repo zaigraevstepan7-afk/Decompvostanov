@@ -59,7 +59,7 @@ public final class ClientSounds extends Module {
         boolean enableMissing = !java.nio.file.Files.isRegularFile(home.resolve("custom-enable-sound.wav"));
         boolean disableMissing = !java.nio.file.Files.isRegularFile(home.resolve("custom-disable-sound.wav"));
         if ((enableMissing || disableMissing) && setting("sound-does-not-exist")) {
-            g.drawString(mc.font, "sound-does-not-exist", 8, height - 62, 0xFFFFC107, false);
+            g.drawString(mc.font, "sound-does-not-exist WAV files", 8, height - 62, 0xFFFFC107, false);
         }
         if ((enableMissing || disableMissing) && setting("error-please-report")) {
             g.drawString(mc.font, "error-please-report", 8, height - 52, 0xFFE53935, false);

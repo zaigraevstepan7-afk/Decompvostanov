@@ -46,14 +46,14 @@ public final class AnarchyHelper extends Module {
         for (int i = 0; i < 9; i++) {
             ItemStack stack = mc.player.getInventory().getItem(i);
             String name = stack.getHoverName().getString().toLowerCase();
-            boolean match = setting("god-aura") && (name.contains("aura") || name.contains("аура") || name.contains("божья аура"))
-                    || setting("sheer-dust") && (name.contains("пыл") || name.contains("dust") || name.contains("явная пыль"))
+            boolean match = setting("god-aura") && (name.contains("aura") || name.contains("аура") || name.contains("Божья аура".toLowerCase()))
+                    || setting("sheer-dust") && (name.contains("пыл") || name.contains("dust") || name.contains("Явная пыль".toLowerCase()))
                     || setting("holy-water") && (name.contains("свят") || name.contains("holy"))
-                    || setting("desorientation") && (name.contains("дезор") || name.contains("дезориентация"))
-                    || setting("trap") && (name.contains("трап") || name.contains("трапка"))
-                    || setting("stratum") && (name.contains("пласт") || name.contains("stratum"))
-                    || setting("fierytornado") && (name.contains("смерч") || name.contains("tornado") || name.contains("огненный смерч"))
-                    || setting("snowball") && (name.contains("снеж") || name.contains("снежок заморозка"))
+                    || setting("desorientation") && (name.contains("дезор") || name.contains("Дезориентация".toLowerCase()))
+                    || setting("trap") && (name.contains("трап") || name.contains("Трапка".toLowerCase()))
+                    || setting("stratum") && (name.contains("пласт") || name.contains("Пласт".toLowerCase()) || name.contains("stratum"))
+                    || setting("fierytornado") && (name.contains("смерч") || name.contains("tornado") || name.contains("Огненный смерч".toLowerCase()))
+                    || setting("snowball") && (name.contains("снеж") || name.contains("Снежок заморозка".toLowerCase()))
                     || setting("godsaura") && name.contains("god")
                     || setting("sheerdust") && name.contains("sheer")
                     || setting("freezeball") && name.contains("freeze")

@@ -24,7 +24,8 @@ public final class AutoAccept extends Module {
         if (!setting("accept") || mc.player == null || mc.player.connection == null || --cool > 0) {
             return;
         }
-        if (setting("teleport-request") && friendOk("телепорт", "teleport", "tpaccept", "просит телепортироваться", "хочет телепортироваться")) {
+        if (setting("teleport-request") && friendOk("телепорт", "teleport", "tpaccept", "/tpaccept",
+                "просит телепортироваться", "хочет телепортироваться")) {
             mc.player.connection.sendCommand("tpaccept");
             cool = 40;
         }

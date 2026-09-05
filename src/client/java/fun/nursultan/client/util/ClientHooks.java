@@ -323,16 +323,25 @@ public final class ClientHooks {
         return enabled("customcape");
     }
 
-    /** Dump leftover hosts/ranks from KDFzREm.js — one matcher for chat, tab, nametags. */
+    /** Dump leftover hosts from KDFzREm.js — plaintext, then used for chat/tab/nametags. */
+    private static final String[] STREAMER_LINK_LEFTOVERS = {
+            "funtime.su", "t.me/funtime", "dd.funtime.su", "play.funtime.su", "vk.com/funtime",
+            "shop.Spookytime.net", "vk.com/spookytimenet", "discord.gg/spookytime",
+            "spookytime.net", "SpookyTime", "SpookyTime!", "СпукиТайм!", "СпукиТайм", "Спукитайм",
+            "nursultan.fun", "фантайм", "анархия", "/links"
+    };
+
     public static boolean streamerLink(String text) {
         if (text == null || text.isBlank()) {
             return false;
         }
-        return text.toLowerCase().matches(
-                "(?s).*(t\\.me|vk\\.|https?://|discord\\.gg|funtime\\.su|dd\\.funtime\\.su|play\\.funtime\\.su|"
-                        + "vk\\.com/funtime|t\\.me/funtime|spookytime\\.net|shop\\.spookytime\\.net|"
-                        + "vk\\.com/spookytimenet|discord\\.gg/spookytime|nursultan\\.fun|"
-                        + "фантайм|спукитайм|спокитайм|анархия|/links).*");
+        String lower = text.toLowerCase();
+        for (String leftover : STREAMER_LINK_LEFTOVERS) {
+            if (lower.contains(leftover.toLowerCase())) {
+                return true;
+            }
+        }
+        return lower.matches("(?s).*(t\\.me|vk\\.|https?://|discord\\.gg).*");
     }
 
     public static boolean streamerStaff(String text) {
@@ -362,7 +371,7 @@ public final class ClientHooks {
             return net.minecraft.network.chat.Component.literal("[staff]");
         }
         if ((stream.setting("ft") || stream.setting("funtime"))
-                && (raw.contains("Фортуны") || raw.contains("Начислена фортуна") || raw.contains("ВНИМАНИЕ!"))) {
+                && (raw.contains("Фортуны:") || raw.contains("Начислена фортуна:") || raw.contains("ВНИМАНИЕ!"))) {
             return null;
         }
         return message;
