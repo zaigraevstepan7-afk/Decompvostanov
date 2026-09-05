@@ -13,6 +13,25 @@ public final class TickRateSync extends Module {
     }
 
     @Override
+    public void onTick(Minecraft mc) {
+        if (mc.level == null) {
+            return;
+        }
+        float want = Math.max(1.0F, numberValue("tick-rate", 20));
+        if (Math.abs(mc.level.tickRateManager().tickrate() - want) > 0.05F) {
+            mc.level.tickRateManager().setTickRate(want);
+        }
+    }
+
+    @Override
+    public void onDisable() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level != null) {
+            mc.level.tickRateManager().setTickRate(20.0F);
+        }
+    }
+
+    @Override
     public void onHud(GuiGraphics g, int width, int height) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null) {

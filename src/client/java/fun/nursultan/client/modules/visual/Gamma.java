@@ -21,6 +21,11 @@ public final class Gamma extends Module {
     }
 
     @Override
+    public void onTick(Minecraft mc) {
+        mc.options.gamma().set((double) numberValue("gamma", 16));
+    }
+
+    @Override
     public void onDisable() {
         Minecraft.getInstance().options.gamma().set(previous);
     }
