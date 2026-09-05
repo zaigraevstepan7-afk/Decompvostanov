@@ -98,7 +98,7 @@ public final class ClickGuiScreen extends Screen {
                 g.drawString(font, module.subcategory, listX + 4, listY + row * 26, MUTED, false);
                 lastSub = module.subcategory;
                 row++;
-                if (row >= 12) {
+                if (row >= 14) {
                     break;
                 }
             }
@@ -196,12 +196,12 @@ public final class ClickGuiScreen extends Screen {
         List<Module> list = visible();
         int row = 0;
         String lastSub = "";
-        for (int n = scroll; n < list.size() && row < 12; n++) {
+        for (int n = scroll; n < list.size() && row < 14; n++) {
             Module module = list.get(n);
             if (!module.subcategory.isBlank() && !module.subcategory.equals(lastSub) && query.isBlank()) {
                 lastSub = module.subcategory;
                 row++;
-                if (row >= 12) {
+                if (row >= 14) {
                     break;
                 }
             }
