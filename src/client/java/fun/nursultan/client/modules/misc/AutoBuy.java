@@ -78,6 +78,23 @@ public final class AutoBuy extends Module {
             return;
         }
         g.drawString(mc.font, "autobuy.name " + CATALOG.length, 8, 88, fun.nursultan.client.ClientSettings.accent, false);
+        if (mc.screen instanceof ContainerScreen && mc.player != null) {
+            boolean hit = false;
+            for (Slot slot : mc.player.containerMenu.slots) {
+                if (slot.index >= 27 || slot.getItem().isEmpty()) {
+                    continue;
+                }
+                if (inCatalog(slot.getItem().getItem().getDescriptionId().toLowerCase(),
+                        AuctionPrices.blob(slot.getItem()).toLowerCase())) {
+                    hit = true;
+                    break;
+                }
+            }
+            if (!hit) {
+                // dump leftover from KDFzREm.k L[]
+                g.drawString(mc.font, "error-please-report", 8, 98, 0xFFE53935, false);
+            }
+        }
     }
 
     private static boolean inCatalog(String id, String name) {

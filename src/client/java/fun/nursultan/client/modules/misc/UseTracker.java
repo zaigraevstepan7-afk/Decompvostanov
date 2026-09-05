@@ -38,6 +38,16 @@ public final class UseTracker extends Module {
     @Override
     public void onHud(GuiGraphics g, int width, int height) {
         Minecraft mc = Minecraft.getInstance();
-        g.drawString(mc.font, "use t" + totems + " f" + food, 8, 76, 0xFFF2E9FF, false);
+        if (!setting("trackers")) {
+            return;
+        }
+        int y = 76;
+        if (setting("totem-tracker")) {
+            g.drawString(mc.font, "totem-tracker " + totems, 8, y, 0xFFF2E9FF, false);
+            y += 10;
+        }
+        if (setting("food-tracker")) {
+            g.drawString(mc.font, "food-tracker " + food, 8, y, 0xFFF2E9FF, false);
+        }
     }
 }

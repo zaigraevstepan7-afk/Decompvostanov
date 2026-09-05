@@ -337,7 +337,7 @@ public final class ClickGuiScreen extends Screen {
         if (section == Section.PRESETS) {
             round(g, cx, cy, cardW, 120, 6, CARD);
             g.drawString(font, ClientSettings.ru() ? "Пресеты" : "Presets", cx + 14, cy + 10, accent(), false);
-            g.drawString(font, ConfigStore.file().getFileName().toString(), cx + 14, cy + 28, MUTED, false);
+            g.drawString(font, "configs  " + ConfigStore.file().getFileName(), cx + 14, cy + 28, MUTED, false);
             button(g, cx + 14, cy + 52, 110, 22, ClientSettings.ru() ? "Сохранить" : "Save", "save");
             button(g, cx + 132, cy + 52, 110, 22, ClientSettings.ru() ? "Загрузить" : "Load", "load");
             g.drawString(font, "auto-save-preset " + (ClientSettings.autoSavePreset ? "on" : "off"),
@@ -400,10 +400,16 @@ public final class ClickGuiScreen extends Screen {
         }
         int bindY = ClientSettings.descriptions ? py + 54 : py + 42;
         if (binding) {
-            g.drawString(font, ClientSettings.ru() ? "нажмите клавишу" : "press a key", px + 14, bindY, accent(), false);
+            g.drawString(font, "bind", px + 14, bindY, accent(), false);
         } else {
-            String bind = open.bind.isBlank() ? (ClientSettings.ru() ? "без бинда" : "no bind") : open.bind;
-            g.drawString(font, "bind  " + bind, px + 14, bindY, MUTED, false);
+            g.drawString(font, "bind", px + 14, bindY, MUTED, false);
+            if (!open.bind.isBlank()) {
+                int bw = Math.max(18, font.width(open.bind) + 8);
+                int bx = px + 48;
+                fill(g, bx, bindY - 2, bw, 14, 0xFF2A2A30);
+                stroke(g, bx, bindY - 2, bw, 14, (accent() & 0x00FFFFFF) | 0x66000000);
+                g.drawString(font, open.bind, bx + 4, bindY + 1, MUTED, false);
+            }
             hit("bind", px + 14, bindY - 4, 200, 16, open);
         }
         int sy = bindY + 22;
@@ -425,8 +431,12 @@ public final class ClickGuiScreen extends Screen {
                 continue;
             }
             float t = (setting.value - setting.min) / Math.max(0.0001F, setting.max - setting.min);
+            int filled = Math.max(4, (int) (240 * t));
             fill(g, px + 14, sy + 10, 240, 6, PILL_OFF);
-            fill(g, px + 14, sy + 10, Math.max(4, (int) (240 * t)), 6, accent());
+            fill(g, px + 14, sy + 10, filled, 6, accent());
+            int kx = px + 10 + filled;
+            fill(g, kx, sy + 8, 8, 10, 0xFFF2E9FF);
+            stroke(g, kx, sy + 8, 8, 10, accent());
             g.drawString(font, setting.label + " " + format(setting.value), px + 14, sy, TEXT, false);
             hit("num", px + 14, sy, 240, 18, setting);
             sy += 24;
