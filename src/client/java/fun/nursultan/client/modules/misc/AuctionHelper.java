@@ -37,7 +37,8 @@ public final class AuctionHelper extends Module {
                 continue;
             }
             String hover = slot.getItem().getHoverName().getString();
-            if (hover.matches(".*\\d+.*") || hover.contains("Цена") || hover.contains("¤")) {
+            if (hover.matches(".*\\d+.*") || hover.contains("Цена") || hover.contains("Текущая цена")
+                    || hover.contains("За штуку") || hover.contains("¤") || hover.contains("аукцион")) {
                 shown++;
             }
             if (shown >= numberValue("profitable-items-count", 6)) {
