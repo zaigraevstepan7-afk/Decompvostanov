@@ -225,6 +225,25 @@ public final class ClientHooks {
         return module.numberValue("sound-multiplier", 1);
     }
 
+    /** Dump leftover Removals sound keys from KDFzREm.ji. */
+    public static boolean skipSound(String path) {
+        Module module = module("removals");
+        if (!removalsOn() || !module.setting("sounds") || path == null) {
+            return false;
+        }
+        String lower = path.toLowerCase();
+        if (module.setting("wither-spawn") && lower.contains("wither_spawn")) {
+            return true;
+        }
+        if (module.setting("end-portal-open") && (lower.contains("end_portal") || lower.contains("endportal"))) {
+            return true;
+        }
+        if (module.setting("trident") && lower.contains("trident")) {
+            return true;
+        }
+        return module.setting("exp-bottle") && lower.contains("experience_bottle");
+    }
+
     public static boolean hideSkins() {
         Module stream = module("streamermode");
         return stream != null && stream.enabled && stream.setting("skins");
@@ -398,8 +417,11 @@ public final class ClientHooks {
             return true;
         }
         if (t.startsWith(".auth set ")) {
-            ClientSettings.autoAuthPassword = t.substring(".auth set ".length()).trim();
-            ConfigStore.save();
+            String secret = t.substring(".auth set ".length()).trim();
+            if (secret.matches(fun.nursultan.client.modules.player.AutoAuth.PASSWORD)) {
+                ClientSettings.autoAuthPassword = secret;
+                ConfigStore.save();
+            }
             return true;
         }
         Module chat = module("chathelper");

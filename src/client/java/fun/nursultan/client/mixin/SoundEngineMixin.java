@@ -12,7 +12,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class SoundEngineMixin {
     @Inject(method = "play", at = @At("HEAD"), cancellable = true)
     private void nursultan$sounds(SoundInstance instance, CallbackInfoReturnable<SoundEngine.PlayResult> cir) {
-        if (ClientHooks.soundMultiplier() <= 0.001F) {
+        String path = instance.getIdentifier() == null ? "" : instance.getIdentifier().getPath();
+        if (ClientHooks.skipSound(path) || ClientHooks.soundMultiplier() <= 0.001F) {
             cir.setReturnValue(SoundEngine.PlayResult.NOT_STARTED);
         }
     }
