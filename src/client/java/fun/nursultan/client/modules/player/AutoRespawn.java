@@ -15,6 +15,13 @@ public final class AutoRespawn extends Module {
     @Override
     public void onTick(Minecraft mc) {
         if (mc.player != null && mc.screen instanceof DeathScreen) {
+            if (setting("death-waypoint")) {
+                fun.nursultan.client.module.Module gps = fun.nursultan.client.module.ModuleManager.INSTANCE.byName("gps");
+                if (gps != null) {
+                    gps.numbers.stream().filter(n -> n.id.equals("target-x")).findFirst().ifPresent(n -> n.value = (float) mc.player.getX());
+                    gps.numbers.stream().filter(n -> n.id.equals("target-z")).findFirst().ifPresent(n -> n.value = (float) mc.player.getZ());
+                }
+            }
             mc.player.respawn();
             mc.setScreen(null);
         }

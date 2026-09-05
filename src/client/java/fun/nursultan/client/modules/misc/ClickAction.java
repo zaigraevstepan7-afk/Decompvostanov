@@ -20,6 +20,7 @@ public final class ClickAction extends Module {
         }
         if (hit.getEntity() instanceof Player player && mc.options.keyUse.isDown() && mc.screen == null) {
             Friends.add(player.getGameProfile().name());
+            fun.nursultan.client.config.ConfigStore.save();
         }
     }
 }

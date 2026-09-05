@@ -22,9 +22,20 @@ public final class DeathCoords extends Module {
             return;
         }
         if (mc.player.isDeadOrDying()) {
-            if (!announced && setting("death-message")) {
-                String msg = "death-waypoint " + (int) mc.player.getX() + " " + (int) mc.player.getY() + " " + (int) mc.player.getZ();
-                mc.player.displayClientMessage(Component.literal(msg), false);
+            if (!announced) {
+                int x = (int) mc.player.getX();
+                int y = (int) mc.player.getY();
+                int z = (int) mc.player.getZ();
+                if (setting("death-message")) {
+                    mc.player.displayClientMessage(Component.literal("death-waypoint " + x + " " + y + " " + z), false);
+                }
+                if (setting("save-waypoint") || setting("death-waypoint")) {
+                    fun.nursultan.client.module.Module gps = fun.nursultan.client.module.ModuleManager.INSTANCE.byName("gps");
+                    if (gps != null) {
+                        gps.numbers.stream().filter(n -> n.id.equals("target-x")).findFirst().ifPresent(n -> n.value = x);
+                        gps.numbers.stream().filter(n -> n.id.equals("target-z")).findFirst().ifPresent(n -> n.value = z);
+                    }
+                }
                 announced = true;
             }
         } else {
