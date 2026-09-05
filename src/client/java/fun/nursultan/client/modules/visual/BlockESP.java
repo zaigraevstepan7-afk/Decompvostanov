@@ -19,7 +19,8 @@ public final class BlockESP extends Module {
             return;
         }
         BlockPos feet = mc.player.blockPosition();
-        for (BlockPos pos : BlockPos.betweenClosed(feet.offset(-12, -6, -12), feet.offset(12, 6, 12))) {
+        int r = setting("delta-mode") ? 8 : 12;
+        for (BlockPos pos : BlockPos.betweenClosed(feet.offset(-r, -4, -r), feet.offset(r, 4, r))) {
             var state = mc.level.getBlockState(pos);
             if (state.is(Blocks.CHEST) || state.is(Blocks.ENDER_CHEST) || state.is(Blocks.SPAWNER)
                     || state.is(Blocks.SHULKER_BOX) || state.is(Blocks.ANCIENT_DEBRIS)) {

@@ -29,9 +29,15 @@ public final class StreamerMode extends Module {
             mc.player.setCustomName(Component.literal(setting("funtime") ? "FunTime" : "Nursultan"));
             mc.player.setCustomNameVisible(true);
         }
-        if (setting("hide-entries")) {
+        if (setting("hide-entries") || setting("links") || setting("staff")) {
             for (Player player : mc.level.players()) {
-                if (player != mc.player) {
+                if (player == mc.player) {
+                    continue;
+                }
+                String shown = player.getGameProfile().name() + " " + player.getName().getString();
+                boolean staff = setting("staff") && shown.toLowerCase().matches(".*(admin|moder|helper|staff|хелпер|модер|админ).*");
+                boolean link = setting("links") && shown.toLowerCase().matches(".*(t\\.me|vk\\.|https?://|discord\\.gg).*");
+                if (setting("hide-entries") || staff || link) {
                     player.setCustomName(Component.literal("hidden"));
                     player.setCustomNameVisible(false);
                 }
