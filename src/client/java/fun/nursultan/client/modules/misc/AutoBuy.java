@@ -85,6 +85,11 @@ public final class AutoBuy extends Module {
             }
         }
         return name.contains("тотем") || name.contains("элитры") || name.contains("шалкер")
-                || name.contains("незерит") || name.contains("алмаз") || name.contains("маяк");
+                || name.contains("незерит") || name.contains("алмаз") || name.contains("маяк")
+                || name.contains("зачарованное золотое") || name.contains("золотое яблоко")
+                || name.contains("древние обломки") || name.contains("пузырёк опыта") || name.contains("порох")
+                || name.contains("огненный стержень") || name.contains("эндер жемчуг") || name.contains("золотой слиток")
+                || name.contains("золотой блок") || name.contains("яйцо призыва") || name.contains("голова дракона")
+                || name.contains("заряд ветра") || name.contains("навершие булавы");
     }
 }
