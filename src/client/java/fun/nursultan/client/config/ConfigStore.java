@@ -89,7 +89,7 @@ public final class ConfigStore {
             }
             System.out.println("Nursultan preset loaded " + path);
         } catch (Exception e) {
-            System.err.println("Nursultan preset load failed: " + e.getMessage());
+            System.err.println("Failed to load config " + path);
         } finally {
             ClientSettings.loading = false;
         }
@@ -144,7 +144,7 @@ public final class ConfigStore {
             Files.createDirectories(path.getParent());
             Files.writeString(path, GSON.toJson(root));
         } catch (Exception e) {
-            System.err.println("Nursultan preset save failed: " + e.getMessage());
+            System.err.println("Failed to save config " + file());
         }
     }
 

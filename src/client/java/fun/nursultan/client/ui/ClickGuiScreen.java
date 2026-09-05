@@ -7,6 +7,7 @@ import fun.nursultan.client.module.Category;
 import fun.nursultan.client.module.Module;
 import fun.nursultan.client.module.ModuleManager;
 import fun.nursultan.client.module.NumberSetting;
+import fun.nursultan.client.util.Friends;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -164,7 +165,7 @@ public final class ClickGuiScreen extends Screen {
             drawBurgerMenu(g);
         }
         if (ClientSettings.descriptions) {
-            g.drawString(font, "Menu dumped " + ModuleManager.INSTANCE.modules.size(),
+            g.drawString(font, "Menu dumped " + ModuleManager.INSTANCE.modules.size() + " · root",
                     winX + SIDE_W + 14, winY + winH - 16, MUTED, false);
         }
         super.render(g, mouseX, mouseY, delta);
@@ -177,7 +178,8 @@ public final class ClickGuiScreen extends Screen {
         for (int i = 0; i < 13; i++) {
             fill(g, x + 2 + i, y + i, 3, 2, a);
         }
-        hit("logo", x - 4, y - 4, 28, 26, null);
+        g.drawString(font, "menu", x + 20, y + 5, MUTED, false);
+        hit("logo", x - 4, y - 4, 48, 26, null);
     }
 
     private void drawSearch(GuiGraphics g) {
@@ -185,6 +187,10 @@ public final class ClickGuiScreen extends Screen {
         int sx = winX + (winW - sw) / 2;
         int sy = winY + 12;
         round(g, sx, sy, sw, 22, 6, SEARCH_BG);
+        if (typing) {
+            stroke(g, sx, sy, sw, 22, accent());
+            stroke(g, sx + 1, sy + 1, sw - 2, 20, accent());
+        }
         int icon = query.isBlank() && !typing ? MUTED : TEXT;
         fill(g, sx + 8, sy + 7, 7, 7, 0x00000000);
         ring(g, sx + 10, sy + 7, icon);
@@ -286,8 +292,9 @@ public final class ClickGuiScreen extends Screen {
         int rh = rowH();
         fill(g, x + 2, y + 3, w, h, 0x33000000);
         round(g, x, y, w, h, 6, CARD);
-        g.drawString(font, subLabel(sub), x + 12, y + 8, accent(), false);
-        fill(g, x + 12, y + 20, Math.min(72, font.width(subLabel(sub))), 1, accent());
+        String title = subLabel(sub);
+        g.drawString(font, title, x + 12, y + 8, accent(), false);
+        fill(g, x + 12, y + 20, Math.max(24, font.width(title)), 1, accent());
         g.drawString(font, "⇅", x + w - 22, y + 8, MUTED, false);
         hit("collapse", x + w - 28, y, 28, CARD_HEAD, sub);
         if (shut) {
@@ -333,9 +340,8 @@ public final class ClickGuiScreen extends Screen {
             g.drawString(font, ConfigStore.file().getFileName().toString(), cx + 14, cy + 28, MUTED, false);
             button(g, cx + 14, cy + 52, 110, 22, ClientSettings.ru() ? "Сохранить" : "Save", "save");
             button(g, cx + 132, cy + 52, 110, 22, ClientSettings.ru() ? "Загрузить" : "Load", "load");
-            g.drawString(font, ClientSettings.autoSavePreset
-                    ? (ClientSettings.ru() ? "автосохранение вкл" : "autosave on")
-                    : (ClientSettings.ru() ? "автосохранение выкл" : "autosave off"), cx + 14, cy + 86, MUTED, false);
+            g.drawString(font, "auto-save-preset " + (ClientSettings.autoSavePreset ? "on" : "off"),
+                    cx + 14, cy + 86, MUTED, false);
             hit("autosave", cx + 14, cy + 82, 200, 16, null);
         } else if (section == Section.AUTOBUY) {
             Module buy = ModuleManager.INSTANCE.byName("autobuy");
@@ -355,14 +361,25 @@ public final class ClickGuiScreen extends Screen {
                 }
             }
         } else {
-            round(g, cx, cy, cardW, 90, 6, CARD);
+            var friends = Friends.all().stream().sorted().toList();
+            int h = 78 + Math.max(12, friends.size() * 12);
+            round(g, cx, cy, cardW, h, 6, CARD);
             g.drawString(font, ClientSettings.ru() ? "Аккаунты" : "Accounts", cx + 14, cy + 10, accent(), false);
             String name = "Player";
             if (minecraft != null && minecraft.player != null && minecraft.player.getGameProfile().name() != null) {
                 name = minecraft.player.getGameProfile().name();
             }
-            g.drawString(font, name, cx + 14, cy + 32, TEXT, false);
-            g.drawString(font, ClientSettings.ru() ? "До 30 декабря 2027" : "Until Dec 30, 2027", cx + 14, cy + 48, MUTED, false);
+            g.drawString(font, name, cx + 14, cy + 28, TEXT, false);
+            g.drawString(font, ".friend add/del", cx + 14, cy + 42, MUTED, false);
+            int fy = cy + 58;
+            if (friends.isEmpty()) {
+                g.drawString(font, "friends", cx + 14, fy, MUTED, false);
+            } else {
+                for (String friend : friends) {
+                    g.drawString(font, friend, cx + 14, fy, TEXT, false);
+                    fy += 12;
+                }
+            }
         }
     }
 
@@ -377,7 +394,7 @@ public final class ClickGuiScreen extends Screen {
         fill(g, px + 14, py + 24, Math.min(120, font.width(displayName(open.name))), 1, accent());
         g.drawString(font, "×", px + pw - 20, py + 12, MUTED, false);
         hit("close", px + pw - 26, py + 6, 22, 20, null);
-        g.drawString(font, "menu.setting", px + 14, py + 28, MUTED, false);
+        g.drawString(font, "root  menu.setting", px + 14, py + 28, MUTED, false);
         if (ClientSettings.descriptions) {
             g.drawString(font, open.dumpHint(), px + 14, py + 40, MUTED, false);
         }
@@ -423,15 +440,11 @@ public final class ClickGuiScreen extends Screen {
         int mx = winX + winW - 168;
         int my = winY + 40;
         round(g, mx, my, 152, 124, 5, 0xF01C1C20);
-        String lang = ClientSettings.ru() ? "Язык: RU" : "Language: EN";
+        String lang = "language " + ClientSettings.language;
         String menu = "menu-scale " + ClientSettings.scaleKey(ClientSettings.menuScale);
         String hud = "hud-scale " + ClientSettings.scaleKey(ClientSettings.hudScale);
-        String desc = ClientSettings.descriptions
-                ? (ClientSettings.ru() ? "Описания вкл" : "Descriptions on")
-                : (ClientSettings.ru() ? "Описания выкл" : "Descriptions off");
-        String snap = ClientSettings.snapGuides
-                ? (ClientSettings.ru() ? "Направляющие вкл" : "Snap guides on")
-                : (ClientSettings.ru() ? "Направляющие выкл" : "Snap guides off");
+        String desc = "descriptions " + (ClientSettings.descriptions ? "on" : "off");
+        String snap = "snapGuides " + (ClientSettings.snapGuides ? "on" : "off");
         String color = "accent #" + Integer.toHexString(ClientSettings.accent & 0xFFFFFF).toUpperCase(Locale.ROOT);
         g.drawString(font, lang, mx + 10, my + 10, TEXT, false);
         g.drawString(font, menu, mx + 10, my + 28, TEXT, false);
