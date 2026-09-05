@@ -207,11 +207,18 @@ public final class ClientHooks {
         Module fog = module("fog");
         if (fog != null && fog.enabled && fog.setting("color")) {
             int accent = fun.nursultan.client.ClientSettings.accent;
+            float alpha = current.w;
+            float dist = fog.numberValue("distance", 192);
+            if (dist < 96) {
+                alpha *= 0.35F;
+            } else if (fog.setting("blur")) {
+                alpha *= 0.7F;
+            }
             return new org.joml.Vector4f(
                     ((accent >> 16) & 0xFF) / 255F,
                     ((accent >> 8) & 0xFF) / 255F,
                     (accent & 0xFF) / 255F,
-                    current.w);
+                    alpha);
         }
         return current;
     }

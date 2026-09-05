@@ -57,4 +57,22 @@ public final class HolyHelper extends Module {
             }
         }
     }
+
+    @Override
+    public void onHud(net.minecraft.client.gui.GuiGraphics g, int width, int height) {
+        if (!setting("show-stun-zone")) {
+            return;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || Targeting.nearest(mc, 5) == null) {
+            return;
+        }
+        int color = setting("zone-color") ? 0x66E53935 : 0x669FCA2B;
+        int cx = width / 2;
+        int cy = height / 2;
+        g.fill(cx - 40, cy - 40, cx - 38, cy + 40, color);
+        g.fill(cx + 38, cy - 40, cx + 40, cy + 40, color);
+        g.fill(cx - 40, cy - 40, cx + 40, cy - 38, color);
+        g.fill(cx - 40, cy + 38, cx + 40, cy + 40, color);
+    }
 }

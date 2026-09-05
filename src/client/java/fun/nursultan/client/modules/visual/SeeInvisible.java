@@ -21,7 +21,7 @@ public final class SeeInvisible extends Module {
                 LivingEntity.class, mc.player.getBoundingBox().inflate(64), e -> e != mc.player)) {
             if (entity.isInvisible()) {
                 entity.setInvisible(false);
-                entity.setGlowingTag(true);
+                entity.setGlowingTag(numberValue("opacity", 0.4F) >= 0.35F);
             }
         }
     }

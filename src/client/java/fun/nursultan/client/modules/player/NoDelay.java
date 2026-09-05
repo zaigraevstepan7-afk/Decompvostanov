@@ -16,7 +16,7 @@ public final class NoDelay extends Module {
 
     @Override
     public void onTick(Minecraft mc) {
-        if (mc.player == null) {
+        if (!setting("delays") || mc.player == null) {
             return;
         }
         if (setting("right-click") && mc.options.keyUse.isDown() && mc.gameMode != null) {

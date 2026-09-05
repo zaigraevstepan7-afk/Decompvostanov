@@ -13,6 +13,7 @@ public final class Backtrack extends Module {
 
     public Backtrack() {
         super("backtrack", "Backtrack", Category.COMBAT, "tools", "KDFzREm.UP", 52);
+        bool("color", true);
         bool("hold-after-attack", true);
         number("ticks", 4, 1, 20, 1);
         number("delay", 0, 0, 10, 1);
@@ -37,5 +38,15 @@ public final class Backtrack extends Module {
         } else {
             held = target.position();
         }
+    }
+
+    @Override
+    public void onHud(net.minecraft.client.gui.GuiGraphics g, int width, int height) {
+        if (held == null) {
+            return;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        int color = setting("color") ? 0xFF9FCA2B : 0xFFFFFFFF;
+        g.drawString(mc.font, "bt " + ticks, width / 2 - 10, height / 2 + 16, color, false);
     }
 }
