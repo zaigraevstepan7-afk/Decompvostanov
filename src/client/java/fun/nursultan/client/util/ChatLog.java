@@ -50,5 +50,16 @@ public final class ChatLog {
         return false;
     }
 
+    /** Dump leftover regex needles from KDFzREm.Pq. */
+    public static boolean recentMatches(String regex) {
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(regex, java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.UNICODE_CASE);
+        for (String line : snapshot()) {
+            if (pattern.matcher(line).find()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private ChatLog() {}
 }
