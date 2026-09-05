@@ -67,9 +67,9 @@ public final class ClickGuiScreen extends Screen {
         g.fill(x, y, x + w, y + h, PANEL);
         g.fill(x, y, x + w, y + 2, accent());
         g.drawString(font, "NURSULTAN", x + 16, y + 12, accent(), false);
-        g.drawString(font, "Gs · menu " + ClientSettings.menuScale + " · hud " + ClientSettings.hudScale + " · " + ModuleManager.INSTANCE.modules.size(), x + 16, y + 24, MUTED, false);
+        g.drawString(font, "Gs · " + ClientSettings.language + " · menu " + ClientSettings.menuScale + " · hud " + ClientSettings.hudScale + " · " + ModuleManager.INSTANCE.modules.size(), x + 16, y + 24, MUTED, false);
 
-        String search = (typing ? ">" : "") + (query.isBlank() ? "search" : query);
+        String search = (typing ? ">" : "") + (query.isBlank() ? (ClientSettings.ru() ? "поиск" : "search") : query);
         g.fill(x + w - 220, y + 10, x + w - 14, y + 28, CARD);
         g.drawString(font, search, x + w - 212, y + 16, query.isBlank() ? MUTED : TEXT, false);
 
@@ -82,7 +82,7 @@ public final class ClickGuiScreen extends Screen {
                 g.fill(x + 10, cy, x + 13, cy + 22, accent());
             }
             int count = ModuleManager.INSTANCE.byCategory(cat).size();
-            g.drawString(font, cat.name().toLowerCase(Locale.ROOT) + " " + count, x + 20, cy + 7, on ? TEXT : MUTED, false);
+            g.drawString(font, label(cat) + " " + count, x + 20, cy + 7, on ? TEXT : MUTED, false);
             i++;
         }
 
@@ -120,8 +120,8 @@ public final class ClickGuiScreen extends Screen {
         int sx = x + 576;
         g.fill(sx, y + 44, x + w - 12, y + h - 12, CARD);
         if (open == null) {
-            g.drawString(font, "dots / RMB · settings", sx + 10, y + 56, MUTED, false);
-            g.drawString(font, "MMB · bind", sx + 10, y + 70, MUTED, false);
+            g.drawString(font, ClientSettings.ru() ? "ПКМ · настройки" : "dots / RMB · settings", sx + 10, y + 56, MUTED, false);
+            g.drawString(font, ClientSettings.ru() ? "СКМ · бинд" : "MMB · bind", sx + 10, y + 70, MUTED, false);
         } else {
             g.drawString(font, open.name, sx + 10, y + 52, TEXT, false);
             g.drawString(font, open.dumpClass, sx + 10, y + 64, accent(), false);
@@ -163,6 +163,10 @@ public final class ClickGuiScreen extends Screen {
         int y = height / 2 - h / 2;
         if (inside(mouseX, mouseY, x + w - 220, y + 10, 206, 18)) {
             typing = true;
+            return true;
+        }
+        if (inside(mouseX, mouseY, x + 16, y + 10, 140, 12)) {
+            ClientSettings.cycleLanguage();
             return true;
         }
         if (inside(mouseX, mouseY, x + 16, y + 20, 200, 14)) {
@@ -275,6 +279,19 @@ public final class ClickGuiScreen extends Screen {
             return true;
         }
         return super.charTyped(event);
+    }
+
+    private static String label(Category cat) {
+        if (!ClientSettings.ru()) {
+            return cat.name().toLowerCase(Locale.ROOT);
+        }
+        return switch (cat) {
+            case COMBAT -> "бой";
+            case MOVEMENT -> "движение";
+            case PLAYER -> "игрок";
+            case VISUAL -> "визуалы";
+            case MISC -> "разное";
+        };
     }
 
     private static boolean inside(double mx, double my, int x, int y, int w, int h) {

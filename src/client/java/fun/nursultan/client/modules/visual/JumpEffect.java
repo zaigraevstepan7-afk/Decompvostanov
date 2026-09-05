@@ -11,6 +11,7 @@ public final class JumpEffect extends Module {
 
     public JumpEffect() {
         super("jumpeffect", "JumpEffect", Category.VISUAL, "world", "KDFzREm.Tb", 37);
+        number("radius", 1, 0.2F, 4, 0.1F);
         number("wave-amplitude", 1, 0.2F, 3, 0.1F);
         bool("first-color", true);
         bool("second-color", true);

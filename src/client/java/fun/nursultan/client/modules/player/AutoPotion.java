@@ -21,6 +21,9 @@ public final class AutoPotion extends Module {
         bool("fire-resistance-potion", true);
         bool("healing-potion", true);
         number("heal-health", 10, 2, 20, 1);
+        bool("heal-key", false);
+        bool("single", true);
+        bool("multi", false);
         bool("hotbar-only", true);
         bool("only-in-pvp", false);
         bool("disable-after-throw", false);
@@ -34,6 +37,9 @@ public final class AutoPotion extends Module {
         }
         delay = 0;
         if (setting("only-in-pvp") && mc.player.getLastHurtByMob() == null) {
+            return;
+        }
+        if (setting("heal-key") && !mc.options.keyUse.isDown()) {
             return;
         }
         int limit = setting("hotbar-only") ? 9 : 36;

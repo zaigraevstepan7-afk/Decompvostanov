@@ -10,9 +10,12 @@ public final class Particles extends Module {
     public Particles() {
         super("particles", "Particles", Category.VISUAL, "world", "KDFzREm.bK", 49);
         bool("totem-popping", true);
+        bool("ambience", false);
         bool("thrown-item", true);
         bool("critical-hit", true);
+        bool("emitters", false);
         bool("color-selectable", false);
+        number("size", 1, 0.2F, 3, 0.1F);
     }
 
     @Override

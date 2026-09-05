@@ -23,6 +23,17 @@ public final class ClientSettings {
         }
     }
 
+    public static void cycleLanguage() {
+        language = "en".equals(language) ? "ru" : "en";
+        if (autoSavePreset && !loading) {
+            fun.nursultan.client.config.ConfigStore.save();
+        }
+    }
+
+    public static boolean ru() {
+        return !"en".equals(language);
+    }
+
     public static void cycleHudScale() {
         if (hudScale < 1.25F) {
             hudScale = 1.5F;

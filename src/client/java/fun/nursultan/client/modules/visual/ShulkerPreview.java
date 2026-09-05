@@ -12,6 +12,7 @@ public final class ShulkerPreview extends Module {
     public ShulkerPreview() {
         super("shulkerpreview", "ShulkerPreview", Category.VISUAL, "screen", "KDFzREm.Tl", 43);
         bool("show-in-world", true);
+        bool("shulker.holdControl", false);
     }
 
     @Override

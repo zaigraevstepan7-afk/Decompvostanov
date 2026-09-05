@@ -10,6 +10,7 @@ import net.minecraft.world.entity.player.Player;
 public final class NoFriendDamage extends Module {
     public NoFriendDamage() {
         super("nofrienddamage", "NoFriendDamage", Category.COMBAT, "", "KDFzREm.UE", 18);
+        bool("teams", true);
     }
 
     @Override

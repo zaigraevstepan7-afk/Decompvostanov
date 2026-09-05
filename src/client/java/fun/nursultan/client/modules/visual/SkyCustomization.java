@@ -8,9 +8,14 @@ import net.minecraft.client.Minecraft;
 public final class SkyCustomization extends Module {
     public SkyCustomization() {
         super("skycustomization", "SkyCustomization", Category.VISUAL, "world", "KDFzREm.jW", 56);
+        bool("chroma", false);
+        bool("borealis", true);
         bool("aurora-first", true);
         bool("aurora-second", true);
         number("intensity", 1, 0.1F, 3, 0.1F);
+        number("softness", 0.5F, 0.1F, 2, 0.1F);
+        number("coverage", 1, 0.1F, 3, 0.1F);
+        number("speed", 1, 0.1F, 4, 0.1F);
     }
 
     @Override

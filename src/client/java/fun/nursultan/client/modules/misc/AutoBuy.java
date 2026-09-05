@@ -14,6 +14,8 @@ public final class AutoBuy extends Module {
 
     public AutoBuy() {
         super("autobuy", "AutoBuy", Category.MISC, "base", "KDFzREm.WV", 50);
+        bool("buyer", true);
+        bool("checker", false);
         bool("decrease-prices", true);
         bool("auto-parser", true);
     }
