@@ -10,6 +10,7 @@
     "sources": "https://t.me/nursultan_mc"
   },
   "license": "All-Rights-Reserved",
+  "icon": "assets/nursultan/icon.png",
   "environment": "client",
   "entrypoints": {
     "client": [
