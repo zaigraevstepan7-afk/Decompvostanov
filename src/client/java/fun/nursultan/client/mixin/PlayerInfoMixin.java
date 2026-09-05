@@ -36,7 +36,8 @@ public class PlayerInfoMixin {
         String lower = shown.toLowerCase();
         boolean staff = stream.setting("staff") && lower.matches(
                 ".*(admin|moder|helper|staff|хелпер|модер|админ|князь|титан|элита|герой|барон|принц|страж|аспид|герцог|глава|сквид).*");
-        boolean link = stream.setting("links") && lower.matches(".*(t\\.me|vk\\.|https?://|discord\\.gg|/links).*");
+        boolean link = stream.setting("links") && lower.matches(
+                ".*(t\\.me|vk\\.|https?://|discord\\.gg|funtime\\.su|dd\\.funtime\\.su|play\\.funtime\\.su|vk\\.com/funtime|t\\.me/funtime|spookytime\\.net|shop\\.spookytime\\.net|nursultan\\.fun|фантайм|/links).*");
         if (stream.setting("hide-entries") || staff || link) {
             cir.setReturnValue(Component.literal("hidden"));
             return;

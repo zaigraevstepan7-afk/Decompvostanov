@@ -55,11 +55,34 @@ public abstract class Module {
     }
 
     protected void bool(String id, boolean def) {
-        settings.add(new BoolSetting(id, id.replace('-', ' '), def));
+        settings.add(new BoolSetting(id, labelOf(id), def));
     }
 
     protected void number(String id, float def, float min, float max, float step) {
-        numbers.add(new NumberSetting(id, id.replace('-', ' '), def, min, max, step));
+        numbers.add(new NumberSetting(id, labelOf(id), def, min, max, step));
+    }
+
+    /** Dump leftover from zf descriptions — class / methods / settings, not invented lore. */
+    public String dumpHint() {
+        return dumpClass + " · " + dumpMethods + " fn · " + (settings.size() + numbers.size()) + " set";
+    }
+
+    private static String labelOf(String id) {
+        String[] parts = id.replace('.', ' ').replace('-', ' ').split(" ");
+        StringBuilder out = new StringBuilder();
+        for (String part : parts) {
+            if (part.isBlank()) {
+                continue;
+            }
+            if (!out.isEmpty()) {
+                out.append(' ');
+            }
+            out.append(Character.toUpperCase(part.charAt(0)));
+            if (part.length() > 1) {
+                out.append(part.substring(1));
+            }
+        }
+        return out.toString();
     }
 
     public float numberValue(String id, float fallback) {

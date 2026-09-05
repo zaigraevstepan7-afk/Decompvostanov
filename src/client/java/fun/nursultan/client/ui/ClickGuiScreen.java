@@ -115,7 +115,7 @@ public final class ClickGuiScreen extends Screen {
         try {
             g.enableScissor(cx - 2, cy - 2, cx + cw + 2, cy + ch + 2);
             if (section.ordinal() <= Section.MISC.ordinal()) {
-                drawCards(g, cx, cy, cw, ch);
+                drawCards(g, cx, cy, cw, ch, mouseX, mouseY);
             } else {
                 drawManage(g, cx, cy, cw);
             }
@@ -211,22 +211,27 @@ public final class ClickGuiScreen extends Screen {
         return y + 30;
     }
 
-    private void drawCards(GuiGraphics g, int cx, int cy, int cw, int ch) {
+    private int rowH() {
+        return ClientSettings.descriptions ? 42 : ROW_H;
+    }
+
+    private void drawCards(GuiGraphics g, int cx, int cy, int cw, int ch, int mouseX, int mouseY) {
         Map<String, List<Module>> groups = groups();
         int colW = (cw - 12) / 2;
         int leftY = cy - contentScroll;
         int rightY = cy - contentScroll;
         int col = 0;
+        int rh = rowH();
         for (Map.Entry<String, List<Module>> e : groups.entrySet()) {
             List<Module> mods = e.getValue();
             if (mods.isEmpty()) {
                 continue;
             }
             boolean shut = collapsed.contains(e.getKey());
-            int h = CARD_HEAD + (shut ? 6 : mods.size() * ROW_H + 8);
+            int h = CARD_HEAD + (shut ? 6 : mods.size() * rh + 8);
             int x = col == 0 ? cx : cx + colW + 12;
             int y = col == 0 ? leftY : rightY;
-            drawCard(g, x, y, colW, h, e.getKey(), mods, shut);
+            drawCard(g, x, y, colW, h, e.getKey(), mods, shut, mouseX, mouseY);
             if (col == 0) {
                 leftY += h + 12;
             } else {
@@ -236,10 +241,13 @@ public final class ClickGuiScreen extends Screen {
         }
     }
 
-    private void drawCard(GuiGraphics g, int x, int y, int w, int h, String sub, List<Module> mods, boolean shut) {
+    private void drawCard(GuiGraphics g, int x, int y, int w, int h, String sub, List<Module> mods, boolean shut,
+            int mouseX, int mouseY) {
+        int rh = rowH();
         fill(g, x + 2, y + 3, w, h, 0x33000000);
         round(g, x, y, w, h, 6, CARD);
         g.drawString(font, subLabel(sub), x + 12, y + 8, accent(), false);
+        fill(g, x + 12, y + 20, Math.min(72, font.width(subLabel(sub))), 1, accent());
         g.drawString(font, "⇅", x + w - 22, y + 8, MUTED, false);
         hit("collapse", x + w - 28, y, 28, CARD_HEAD, sub);
         if (shut) {
@@ -247,17 +255,28 @@ public final class ClickGuiScreen extends Screen {
         }
         int ry = y + CARD_HEAD;
         for (Module module : mods) {
-            g.drawString(font, displayName(module.name), x + 12, ry + 10, TEXT, false);
-            int dotsX = x + Math.max(w / 2, w - 110);
-            g.drawString(font, "···", dotsX, ry + 10, MUTED, false);
-            if (!module.bind.isBlank()) {
-                g.drawString(font, module.bind, dotsX - 36, ry + 10, MUTED, false);
+            boolean hover = inside(mouseX, mouseY, x, ry, w, rh);
+            if (hover || module.enabled) {
+                fill(g, x + 4, ry + 1, w - 8, rh - 2, module.enabled ? 0x22181408 : 0x14FFFFFF);
             }
-            pill(g, x + w - 40, ry + 8, module.enabled);
-            hit("dots", dotsX - 8, ry, 28, ROW_H, module);
-            hit("toggle", x + w - 44, ry, 36, ROW_H, module);
-            hit("row", x, ry, dotsX - x - 4, ROW_H, module);
-            ry += ROW_H;
+            if (module.enabled) {
+                fill(g, x + 4, ry + 6, 2, rh - 12, accent());
+            }
+            int textX = x + 12;
+            g.drawString(font, displayName(module.name), textX, ry + (ClientSettings.descriptions ? 6 : 10), TEXT, false);
+            if (ClientSettings.descriptions) {
+                g.drawString(font, module.dumpHint(), textX, ry + 18, MUTED, false);
+            }
+            int dotsX = x + Math.max(w / 2, w - 110);
+            g.drawString(font, "···", dotsX, ry + (rh - 8) / 2, MUTED, false);
+            if (!module.bind.isBlank()) {
+                g.drawString(font, module.bind, dotsX - 36, ry + (rh - 8) / 2, MUTED, false);
+            }
+            pill(g, x + w - 40, ry + (rh - 14) / 2, module.enabled);
+            hit("dots", dotsX - 8, ry, 28, rh, module);
+            hit("toggle", x + w - 44, ry, 36, rh, module);
+            hit("row", x, ry, dotsX - x - 4, rh, module);
+            ry += rh;
         }
     }
 
@@ -310,16 +329,21 @@ public final class ClickGuiScreen extends Screen {
         fill(g, winX + SIDE_W, winY + TOP_H, winW - SIDE_W, winH - TOP_H, 0x66000000);
         round(g, px, py, pw, ph, 6, 0xF016161A);
         g.drawString(font, displayName(open.name), px + 14, py + 12, TEXT, false);
+        fill(g, px + 14, py + 24, Math.min(120, font.width(displayName(open.name))), 1, accent());
         g.drawString(font, "×", px + pw - 20, py + 12, MUTED, false);
         hit("close", px + pw - 26, py + 6, 22, 20, null);
+        if (ClientSettings.descriptions) {
+            g.drawString(font, open.dumpHint(), px + 14, py + 28, MUTED, false);
+        }
+        int bindY = ClientSettings.descriptions ? py + 42 : py + 32;
         if (binding) {
-            g.drawString(font, ClientSettings.ru() ? "нажмите клавишу" : "press a key", px + 14, py + 30, accent(), false);
+            g.drawString(font, ClientSettings.ru() ? "нажмите клавишу" : "press a key", px + 14, bindY, accent(), false);
         } else {
             String bind = open.bind.isBlank() ? (ClientSettings.ru() ? "без бинда" : "no bind") : open.bind;
-            g.drawString(font, bind, px + 14, py + 30, MUTED, false);
-            hit("bind", px + 14, py + 26, 120, 14, open);
+            g.drawString(font, (ClientSettings.ru() ? "Бинд  " : "Bind  ") + bind, px + 14, bindY, MUTED, false);
+            hit("bind", px + 14, bindY - 4, 200, 16, open);
         }
-        int sy = py + 52;
+        int sy = bindY + 22;
         int skip = settingScroll;
         for (BoolSetting setting : open.settings) {
             if (skip-- > 0) {
