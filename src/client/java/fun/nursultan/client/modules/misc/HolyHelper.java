@@ -67,7 +67,7 @@ public final class HolyHelper extends Module {
         if (mc.player == null || Targeting.nearest(mc, 5) == null) {
             return;
         }
-        int color = setting("zone-color") ? 0x66E53935 : 0x669FCA2B;
+        int color = setting("zone-color") ? 0x66E53935 : (fun.nursultan.client.ClientSettings.accent & 0x00FFFFFF) | 0x66000000;
         int cx = width / 2;
         int cy = height / 2;
         g.fill(cx - 40, cy - 40, cx - 38, cy + 40, color);

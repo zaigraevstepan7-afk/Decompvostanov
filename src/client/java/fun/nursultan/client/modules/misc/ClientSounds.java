@@ -17,12 +17,13 @@ public final class ClientSounds extends Module {
         bool("sound-type", true);
         bool("select-enable-sound", true);
         bool("select-disable-sound", true);
+        bool("sounds", true);
         number("volume", 0.4F, 0, 1, 0.05F);
     }
 
     @Override
     public void onTick(Minecraft mc) {
-        if (mc.player == null || !setting("toggle-sounds")) {
+        if (mc.player == null || !setting("sounds") || !setting("toggle-sounds")) {
             return;
         }
         for (var module : fun.nursultan.client.module.ModuleManager.INSTANCE.modules) {
