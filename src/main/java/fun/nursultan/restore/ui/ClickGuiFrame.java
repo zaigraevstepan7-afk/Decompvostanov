@@ -1,4 +1,4 @@
-// Java 21, restored Nursultan click GUI
+// Java 21, restored Nursultan click GUI (cards / bind / dots)
 package fun.nursultan.restore.ui;
 
 import fun.nursultan.restore.catalog.Catalog;
@@ -12,13 +12,10 @@ import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.GridLayout;
-import java.awt.Insets;
-import java.awt.RenderingHints;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import javax.swing.BorderFactory;
@@ -29,13 +26,15 @@ import javax.swing.JCheckBox;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
 
-public final class ClickGuiFrame extends JFrame {
+public final class ClickGuiFrame extends JFrame implements ModuleCard.Listener {
     public static final String[] TABS = {"modules", "hud", "autobuy", "accounts", "courses", "classes"};
 
     private final Catalog catalog;
@@ -46,9 +45,10 @@ public final class ClickGuiFrame extends JFrame {
     private final JLabel status = new JLabel();
     private String category = "combat";
     private String tab = "modules";
-    private JPanel moduleGrid;
+    private JPanel moduleList;
     private JTextField search;
     private SettingsDrawer settingsDrawer;
+    private JPanel sidebar;
 
     public ClickGuiFrame(Catalog catalog, Path dataDir) {
         super("Nursultan");
@@ -56,14 +56,19 @@ public final class ClickGuiFrame extends JFrame {
         this.dataDir = dataDir;
         this.state = new ClientState(catalog, dataDir);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setMinimumSize(new Dimension(1180, 740));
-        setSize(1280, 800);
+        setMinimumSize(new Dimension(1120, 700));
+        setSize(1180, 740);
         setLocationRelativeTo(null);
         getContentPane().setBackground(Theme.BG);
         setLayout(new BorderLayout());
         add(buildSidebar(), BorderLayout.WEST);
         add(buildCenter(), BorderLayout.CENTER);
-        state.addListener(this::refreshStatus);
+        state.addListener(() -> {
+            refreshStatus();
+            if ("modules".equals(tab)) {
+                refreshModules(search.getText());
+            }
+        });
         refreshModules("");
         refreshStatus();
     }
@@ -72,11 +77,15 @@ public final class ClickGuiFrame extends JFrame {
         return state;
     }
 
+    public Catalog catalog() {
+        return catalog;
+    }
+
     public void showTab(String id) {
         tab = id;
         cards.show(cardHost, id);
+        paintSidebar();
         refreshStatus();
-        repaint();
     }
 
     public void showCategory(String id) {
@@ -84,57 +93,88 @@ public final class ClickGuiFrame extends JFrame {
         if (!"modules".equals(tab)) {
             showTab("modules");
         }
-        refreshModules(search.getText());
+        if (search != null) {
+            search.setText("");
+        }
+        refreshModules("");
+        paintSidebar();
+    }
+
+    @Override
+    public void settings(ModuleDef module) {
+        settingsDrawer.show(module);
+    }
+
+    @Override
+    public void bind(ModuleDef module) {
+        String key = JOptionPane.showInputDialog(this, "bind for " + module.name, state.bind(module.id));
+        if (key != null) {
+            state.setBind(module.id, key.trim().toUpperCase());
+            refreshModules(search.getText());
+        }
+    }
+
+    @Override
+    public void toggled(ModuleDef module) {
+        refreshStatus();
     }
 
     private JComponent buildSidebar() {
-        JPanel rail = new JPanel();
-        rail.setBackground(Theme.PANEL);
-        rail.setPreferredSize(new Dimension(214, 800));
-        rail.setLayout(new BoxLayout(rail, BoxLayout.Y_AXIS));
-        rail.setBorder(new EmptyBorder(18, 16, 18, 16));
-
+        sidebar = new JPanel();
+        sidebar.setBackground(Theme.PANEL);
+        sidebar.setPreferredSize(new Dimension(168, 800));
+        sidebar.setLayout(new BoxLayout(sidebar, BoxLayout.Y_AXIS));
+        sidebar.setBorder(new EmptyBorder(22, 14, 18, 14));
         JLabel mark = new JLabel("NURSULTAN");
         mark.setForeground(Theme.ACCENT);
-        mark.setFont(Theme.ui(20, Font.BOLD));
+        mark.setFont(Theme.ui(16, Font.BOLD));
         mark.setAlignmentX(Component.LEFT_ALIGNMENT);
-        rail.add(mark);
+        sidebar.add(mark);
+        sidebar.add(Box.createVerticalStrut(22));
+        paintSidebar();
+        return sidebar;
+    }
 
-        JLabel sub = new JLabel("restored clickgui");
-        sub.setForeground(Theme.MUTED);
-        sub.setFont(Theme.ui(11, Font.PLAIN));
-        sub.setAlignmentX(Component.LEFT_ALIGNMENT);
-        rail.add(sub);
-        rail.add(Box.createVerticalStrut(18));
-
-        String[] cats = {"combat", "movement", "player", "visual", "misc"};
-        for (String cat : cats) {
-            rail.add(navButton(cat.toUpperCase(), () -> showCategory(cat)));
-            rail.add(Box.createVerticalStrut(6));
+    private void paintSidebar() {
+        if (sidebar == null) {
+            return;
         }
-        rail.add(Box.createVerticalStrut(10));
-        String[] extras = {"hud", "autobuy", "accounts", "courses", "classes"};
-        for (String extra : extras) {
-            rail.add(navButton(extra.toUpperCase(), () -> showTab(extra)));
-            rail.add(Box.createVerticalStrut(6));
+        sidebar.removeAll();
+        JLabel mark = new JLabel("NURSULTAN");
+        mark.setForeground(Theme.ACCENT);
+        mark.setFont(Theme.ui(16, Font.BOLD));
+        mark.setAlignmentX(Component.LEFT_ALIGNMENT);
+        sidebar.add(mark);
+        sidebar.add(Box.createVerticalStrut(20));
+        for (String cat : catalog.categories) {
+            sidebar.add(nav(cat, cat.equals(category) && "modules".equals(tab), () -> showCategory(cat)));
+            sidebar.add(Box.createVerticalStrut(4));
         }
-        rail.add(Box.createVerticalGlue());
-        JLabel stats = new JLabel("<html>" + catalog.classCount + " classes<br>" + catalog.lambdaCount
-                + " lambdas<br>" + catalog.methodCount() + " methods</html>");
+        sidebar.add(Box.createVerticalStrut(14));
+        for (String extra : new String[] {"hud", "autobuy", "accounts", "courses", "classes"}) {
+            sidebar.add(nav(extra, extra.equals(tab), () -> showTab(extra)));
+            sidebar.add(Box.createVerticalStrut(4));
+        }
+        sidebar.add(Box.createVerticalGlue());
+        JLabel stats = new JLabel("<html>" + catalog.classCount + " classes<br>" + catalog.modules.size()
+                + " modules<br>" + catalog.methodCount() + " methods</html>");
         stats.setForeground(Theme.MUTED);
         stats.setFont(Theme.ui(11, Font.PLAIN));
         stats.setAlignmentX(Component.LEFT_ALIGNMENT);
-        rail.add(stats);
-        return rail;
+        sidebar.add(stats);
+        sidebar.revalidate();
+        sidebar.repaint();
     }
 
-    private JButton navButton(String label, Runnable action) {
+    private JButton nav(String label, boolean selected, Runnable action) {
         JButton button = new JButton(label);
         button.setAlignmentX(Component.LEFT_ALIGNMENT);
-        button.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
-        button.setBackground(Theme.PANEL_ALT);
-        button.setForeground(Theme.TEXT);
-        button.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
+        button.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+        button.setBackground(selected ? Theme.PANEL_ALT : Theme.PANEL);
+        button.setForeground(selected ? Theme.TEXT : Theme.MUTED);
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, selected ? 3 : 0, 0, 0, Theme.ACCENT),
+                BorderFactory.createEmptyBorder(6, selected ? 9 : 12, 6, 10)));
         button.setFocusPainted(false);
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         button.setHorizontalAlignment(SwingConstants.LEFT);
@@ -155,7 +195,7 @@ public final class ClickGuiFrame extends JFrame {
         cardHost.add(new ClassBrowser(catalog), "classes");
         root.add(cardHost, BorderLayout.CENTER);
         status.setForeground(Theme.MUTED);
-        status.setBorder(new EmptyBorder(8, 16, 10, 16));
+        status.setBorder(new EmptyBorder(8, 18, 10, 18));
         root.add(status, BorderLayout.SOUTH);
         return root;
     }
@@ -163,7 +203,7 @@ public final class ClickGuiFrame extends JFrame {
     private JComponent buildTop() {
         JPanel top = new JPanel(new BorderLayout());
         top.setBackground(Theme.BG);
-        top.setBorder(new EmptyBorder(14, 16, 8, 16));
+        top.setBorder(new EmptyBorder(16, 18, 10, 18));
         JLabel title = new JLabel("меню");
         title.setForeground(Theme.TEXT);
         title.setFont(Theme.ui(18, Font.BOLD));
@@ -172,8 +212,9 @@ public final class ClickGuiFrame extends JFrame {
         search.setForeground(Theme.TEXT);
         search.setCaretColor(Theme.TEXT);
         search.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(Theme.STROKE), new EmptyBorder(6, 10, 6, 10)));
-        search.setPreferredSize(new Dimension(280, 32));
+                BorderFactory.createLineBorder(Theme.STROKE), new EmptyBorder(7, 12, 7, 12)));
+        search.setPreferredSize(new Dimension(260, 34));
+        search.putClientProperty("JTextField.placeholderText", "search");
         search.getDocument().addDocumentListener(new SimpleDocumentListener(() -> refreshModules(search.getText())));
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         right.setOpaque(false);
@@ -186,121 +227,109 @@ public final class ClickGuiFrame extends JFrame {
     private JComponent buildModulesPage() {
         JPanel page = new JPanel(new BorderLayout(12, 0));
         page.setBackground(Theme.BG);
-        page.setBorder(new EmptyBorder(0, 16, 8, 16));
-        moduleGrid = new JPanel();
-        moduleGrid.setBackground(Theme.BG);
-        JScrollPane scroll = new JScrollPane(moduleGrid);
+        page.setBorder(new EmptyBorder(0, 18, 8, 18));
+        moduleList = new JPanel();
+        moduleList.setBackground(Theme.BG);
+        moduleList.setLayout(new BoxLayout(moduleList, BoxLayout.Y_AXIS));
+        JScrollPane scroll = new JScrollPane(moduleList);
         scroll.setBorder(BorderFactory.createEmptyBorder());
         scroll.getViewport().setBackground(Theme.BG);
         scroll.getVerticalScrollBar().setUnitIncrement(18);
         settingsDrawer = new SettingsDrawer(state);
-        settingsDrawer.setPreferredSize(new Dimension(300, 600));
+        settingsDrawer.setPreferredSize(new Dimension(320, 600));
         page.add(scroll, BorderLayout.CENTER);
         page.add(settingsDrawer, BorderLayout.EAST);
         return page;
     }
 
     public void refreshModules(String query) {
-        if (moduleGrid == null) {
+        if (moduleList == null) {
             return;
         }
-        List<ModuleDef> found = catalog.search(query);
+        List<ModuleDef> found;
         if (query == null || query.isBlank()) {
             found = catalog.byCategory(category);
+        } else {
+            found = catalog.search(query);
         }
-        moduleGrid.removeAll();
-        moduleGrid.setLayout(new GridLayout(0, 2, 10, 10));
+        moduleList.removeAll();
+        String lastSub = "";
         for (ModuleDef module : found) {
-            moduleGrid.add(moduleCard(module));
+            String sub = module.subcategory == null || module.subcategory.isBlank() ? "" : module.subcategory;
+            if (!sub.equals(lastSub) && !sub.isBlank() && (query == null || query.isBlank())) {
+                JLabel header = new JLabel(sub);
+                header.setForeground(Theme.MUTED);
+                header.setFont(Theme.ui(11, Font.BOLD));
+                header.setBorder(new EmptyBorder(10, 4, 6, 0));
+                header.setAlignmentX(Component.LEFT_ALIGNMENT);
+                moduleList.add(header);
+                lastSub = sub;
+            }
+            ModuleCard card = new ModuleCard(module, state, this);
+            card.setAlignmentX(Component.LEFT_ALIGNMENT);
+            moduleList.add(card);
+            moduleList.add(Box.createVerticalStrut(8));
         }
         if (found.isEmpty()) {
             JLabel empty = new JLabel("ничего не найдено");
             empty.setForeground(Theme.MUTED);
-            moduleGrid.setLayout(new FlowLayout(FlowLayout.LEFT));
-            moduleGrid.add(empty);
+            moduleList.add(empty);
         }
-        moduleGrid.revalidate();
-        moduleGrid.repaint();
+        moduleList.add(Box.createVerticalGlue());
+        moduleList.revalidate();
+        moduleList.repaint();
         refreshStatus();
-    }
-
-    private JComponent moduleCard(ModuleDef module) {
-        JPanel card = new JPanel(new BorderLayout());
-        card.setBackground(state.isEnabled(module.id) ? Theme.PANEL_ALT : Theme.PANEL);
-        card.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(state.isEnabled(module.id) ? Theme.ACCENT_DIM : Theme.STROKE),
-                new EmptyBorder(10, 12, 10, 12)));
-        JLabel name = new JLabel(module.name);
-        name.setForeground(Theme.TEXT);
-        name.setFont(Theme.ui(14, Font.BOLD));
-        JLabel desc = new JLabel("<html>" + module.description + "</html>");
-        desc.setForeground(Theme.MUTED);
-        desc.setFont(Theme.ui(11, Font.PLAIN));
-        JCheckBox toggle = new JCheckBox("on");
-        toggle.setSelected(state.isEnabled(module.id));
-        toggle.setOpaque(false);
-        toggle.setForeground(Theme.ACCENT);
-        toggle.addActionListener(e -> {
-            state.setEnabled(module.id, toggle.isSelected());
-            refreshModules(search.getText());
-            settingsDrawer.show(module);
-        });
-        JPanel head = new JPanel(new BorderLayout());
-        head.setOpaque(false);
-        head.add(name, BorderLayout.WEST);
-        head.add(toggle, BorderLayout.EAST);
-        card.add(head, BorderLayout.NORTH);
-        card.add(desc, BorderLayout.CENTER);
-        card.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                settingsDrawer.show(module);
-            }
-        });
-        return card;
     }
 
     private void refreshStatus() {
         long on = catalog.modules.stream().filter(m -> state.isEnabled(m.id)).count();
-        status.setText("tab " + tab + " · " + category + " · modules " + on + "/" + catalog.modules.size()
-                + " · " + catalog.initializer + " · courses in " + dataDir.resolve("courses"));
-    }
-
-    public Catalog catalog() {
-        return catalog;
+        status.setText(tab + " · " + category + " · " + on + "/" + catalog.modules.size()
+                + " · UM " + catalog.modules.size() + " · " + catalog.menuClass);
     }
 
     static final class SettingsDrawer extends JPanel {
         private final ClientState state;
         private final JLabel title = new JLabel("settings");
+        private final JLabel meta = new JLabel(" ");
         private final JPanel body = new JPanel();
+        private final JTextArea source = new JTextArea();
 
         SettingsDrawer(ClientState state) {
             this.state = state;
             setBackground(Theme.PANEL);
-            setLayout(new BorderLayout());
-            setBorder(new EmptyBorder(14, 14, 14, 14));
+            setLayout(new BorderLayout(0, 8));
+            setBorder(new EmptyBorder(16, 14, 14, 14));
             title.setForeground(Theme.TEXT);
-            title.setFont(Theme.ui(15, Font.BOLD));
+            title.setFont(Theme.ui(16, Font.BOLD));
+            meta.setForeground(Theme.MUTED);
+            meta.setFont(Theme.ui(11, Font.PLAIN));
+            JPanel head = new JPanel(new BorderLayout());
+            head.setOpaque(false);
+            head.add(title, BorderLayout.NORTH);
+            head.add(meta, BorderLayout.SOUTH);
             body.setOpaque(false);
             body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
-            add(title, BorderLayout.NORTH);
+            source.setEditable(false);
+            source.setBackground(new Color(0x101018));
+            source.setForeground(Theme.MUTED);
+            source.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 11));
+            source.setLineWrap(true);
+            source.setWrapStyleWord(false);
+            source.setText("выбери модуль · dots / ПКМ");
+            JScrollPane src = new JScrollPane(source);
+            src.setBorder(BorderFactory.createLineBorder(Theme.STROKE));
+            src.setPreferredSize(new Dimension(280, 220));
+            add(head, BorderLayout.NORTH);
             add(body, BorderLayout.CENTER);
-            JLabel hint = new JLabel("выбери модуль");
-            hint.setForeground(Theme.MUTED);
-            body.add(hint);
+            add(src, BorderLayout.SOUTH);
         }
 
         void show(ModuleDef module) {
             title.setText(module.name);
+            meta.setText(module.className + " · " + module.methodCount + " methods");
             body.removeAll();
-            JLabel desc = new JLabel("<html>" + module.description + "</html>");
-            desc.setForeground(Theme.MUTED);
-            desc.setAlignmentX(Component.LEFT_ALIGNMENT);
-            body.add(desc);
-            body.add(Box.createVerticalStrut(10));
             if (module.settings == null || module.settings.isEmpty()) {
-                JLabel none = new JLabel("нет дополнительных настроек");
+                JLabel none = new JLabel("нет settings в константах");
                 none.setForeground(Theme.MUTED);
                 none.setAlignmentX(Component.LEFT_ALIGNMENT);
                 body.add(none);
@@ -315,8 +344,26 @@ public final class ClickGuiFrame extends JFrame {
                     body.add(box);
                 }
             }
+            source.setText(loadSource(module));
+            source.setCaretPosition(0);
             body.revalidate();
             body.repaint();
+        }
+
+        private String loadSource(ModuleDef module) {
+            Path path = Path.of("decompiled/modules/KDFzREm/" + module.bytecodeClass + ".java");
+            if (!Files.isRegularFile(path)) {
+                path = Path.of("decompiled/KDFzREm/" + module.bytecodeClass + ".java");
+            }
+            if (!Files.isRegularFile(path)) {
+                return "// " + module.className + " not decompiled yet\n// bytecode in runtime/nursultan-classes-restored.jar";
+            }
+            try {
+                String text = Files.readString(path, StandardCharsets.UTF_8);
+                return text.length() > 12000 ? text.substring(0, 12000) + "\n// … truncated" : text;
+            } catch (Exception e) {
+                return e.getMessage();
+            }
         }
     }
 

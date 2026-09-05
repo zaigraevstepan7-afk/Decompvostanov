@@ -2,6 +2,7 @@
 package fun.nursultan.restore;
 
 import fun.nursultan.restore.catalog.Catalog;
+import fun.nursultan.restore.catalog.ModuleDef;
 import fun.nursultan.restore.state.ClientState;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,11 +19,15 @@ public final class SelfTest {
         errors += check("initializer", "KDFzREm.NNNNGY".equals(catalog.initializer));
         errors += check("menu class", "KDFzREm.Gs".equals(catalog.menuClass));
         errors += check("hud class", "KDFzREm.td".equals(catalog.hudClass));
-        errors += check("modules present", catalog.modules.size() >= 50);
-        for (String cat : new String[] {"combat", "movement", "player", "visual", "misc", "hud", "autobuy"}) {
+        errors += check("109 UM modules", catalog.modules.size() == 109);
+        for (String cat : new String[] {"combat", "movement", "player", "visual", "misc"}) {
             errors += check("category " + cat, !catalog.byCategory(cat).isEmpty());
         }
-        Set<String> required = Set.of("AimAssist", "AttackAura", "Speed", "Scaffold", "EntityESP", "AutoBuy");
+        ModuleDef aura = catalog.modules.stream().filter(m -> "AttackAura".equals(m.name)).findFirst().orElse(null);
+        errors += check("AttackAura class", aura != null && "KDFzREm.Uv".equals(aura.className) && aura.methodCount > 50);
+        ModuleDef aim = catalog.modules.stream().filter(m -> "AimAssist".equals(m.name)).findFirst().orElse(null);
+        errors += check("AimAssist class", aim != null && "KDFzREm.Ub".equals(aim.className));
+        Set<String> required = Set.of("AimAssist", "AttackAura", "TriggerBot", "Speed", "Scaffold", "EntityESP", "NoVelocity", "AutoTotem");
         long hit = catalog.modules.stream().map(m -> m.name).filter(required::contains).count();
         errors += check("core modules", hit == required.size());
         Path classesJar = Path.of("runtime/nursultan-classes-restored.jar");
@@ -43,6 +48,14 @@ public final class SelfTest {
         } catch (Exception e) {
             System.err.println("FAIL course io: " + e.getMessage());
             errors++;
+        }
+        Path auraSrc = Path.of("decompiled/modules/KDFzREm/Uv.java");
+        try {
+            errors += check("AttackAura source", Files.isRegularFile(auraSrc) && Files.size(auraSrc) > 20_000);
+            String auraText = Files.readString(auraSrc);
+            errors += check("AttackAura logic", auraText.contains("aim-range") && auraText.contains("class Uv"));
+        } catch (Exception e) {
+            errors += check("AttackAura logic", false);
         }
         if (errors == 0) {
             System.out.println("SELF-TEST OK");

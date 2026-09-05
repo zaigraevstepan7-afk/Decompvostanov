@@ -30,17 +30,20 @@ public final class Smoke {
                     for (String cat : new String[] {"combat", "movement", "player", "visual", "misc"}) {
                         frame.showCategory(cat);
                     }
+                    frame.showCategory("combat");
+                    frame.state().setEnabled("attackaura", true);
                     frame.state().setEnabled("aimassist", true);
+                    frame.state().setEnabled("triggerbot", true);
+                    var aura = catalog.modules.stream().filter(m -> "AttackAura".equals(m.name)).findFirst().orElseThrow();
+                    frame.settings(aura);
                     frame.refreshModules("");
                     frame.setSize(1280, 800);
                     frame.doLayout();
-                    capture(frame, outDir.resolve("menu_combat.png"));
-                    frame.showTab("hud");
-                    capture(frame, outDir.resolve("menu_hud.png"));
-                    frame.showTab("courses");
-                    capture(frame, outDir.resolve("menu_courses.png"));
+                    capture(frame, outDir.resolve("clickgui_combat.png"));
+                    frame.showCategory("movement");
+                    capture(frame, outDir.resolve("clickgui_movement.png"));
                     frame.showTab("classes");
-                    capture(frame, outDir.resolve("menu_classes.png"));
+                    capture(frame, outDir.resolve("clickgui_classes.png"));
                     if (!frame.isDisplayable()) {
                         throw new IllegalStateException("frame not displayable");
                     }

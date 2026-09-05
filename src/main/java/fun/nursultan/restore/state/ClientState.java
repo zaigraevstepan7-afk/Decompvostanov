@@ -21,6 +21,7 @@ public final class ClientState {
     private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
     private final Map<String, Boolean> enabled = new LinkedHashMap<>();
     private final Map<String, Map<String, Boolean>> settings = new LinkedHashMap<>();
+    private final Map<String, String> binds = new LinkedHashMap<>();
     private final List<Listener> listeners = new CopyOnWriteArrayList<>();
 
     public ClientState(Catalog catalog, Path dataDir) {
@@ -59,8 +60,18 @@ public final class ClientState {
         fire();
     }
 
+    public String bind(String moduleId) {
+        return binds.getOrDefault(moduleId, "");
+    }
+
+    public void setBind(String moduleId, String key) {
+        binds.put(moduleId, key);
+        save();
+        fire();
+    }
+
     public Snapshot snapshot(String name) {
-        return new Snapshot(name, new LinkedHashMap<>(enabled), copySettings());
+        return new Snapshot(name, new LinkedHashMap<>(enabled), copySettings(), new LinkedHashMap<>(binds));
     }
 
     public void apply(Snapshot snapshot) {
@@ -68,6 +79,10 @@ public final class ClientState {
         enabled.putAll(snapshot.enabled);
         settings.clear();
         settings.putAll(snapshot.settings);
+        binds.clear();
+        if (snapshot.binds != null) {
+            binds.putAll(snapshot.binds);
+        }
         save();
         fire();
     }
@@ -104,6 +119,9 @@ public final class ClientState {
                     settings.computeIfAbsent(e.getKey(), key -> new LinkedHashMap<>()).putAll(e.getValue());
                 }
             }
+            if (snapshot != null && snapshot.binds != null) {
+                binds.putAll(snapshot.binds);
+            }
         } catch (IOException ignored) {
             // keep defaults
         }
@@ -126,13 +144,23 @@ public final class ClientState {
         public String name;
         public Map<String, Boolean> enabled = new LinkedHashMap<>();
         public Map<String, Map<String, Boolean>> settings = new LinkedHashMap<>();
+        public Map<String, String> binds = new LinkedHashMap<>();
 
         public Snapshot() {}
 
         public Snapshot(String name, Map<String, Boolean> enabled, Map<String, Map<String, Boolean>> settings) {
+            this(name, enabled, settings, new LinkedHashMap<>());
+        }
+
+        public Snapshot(
+                String name,
+                Map<String, Boolean> enabled,
+                Map<String, Map<String, Boolean>> settings,
+                Map<String, String> binds) {
             this.name = name;
             this.enabled = enabled;
             this.settings = settings;
+            this.binds = binds;
         }
 
         public int enabledCount() {

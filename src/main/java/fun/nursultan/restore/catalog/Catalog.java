@@ -116,7 +116,8 @@ public final class Catalog {
         for (ModuleDef module : modules) {
             if (module.name.toLowerCase().contains(q)
                     || module.description.toLowerCase().contains(q)
-                    || module.category.contains(q)) {
+                    || module.category.contains(q)
+                    || (module.className != null && module.className.toLowerCase().contains(q))) {
                 out.add(module);
             }
         }

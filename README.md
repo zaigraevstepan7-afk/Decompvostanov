@@ -14,6 +14,7 @@
 | классы | 3001 |
 | лямбды | 11267 |
 | методы / функции | 39080 |
+| модули (`UM`) | 109 |
 | вход | `KDFzREm.NNNNGY` (`ClientModInitializer`) |
 | ядро | `KDFzREm.y` |
 | меню | `KDFzREm.Gs` |
@@ -21,7 +22,8 @@
 
 Байткод: `runtime/nursultan-classes-restored.jar`, `runtime/nursultan-lambdas-restored.jar`.  
 Индекс методов: `src/main/resources/nursultan/methods.json`.  
-Ядро, декомпил: `decompiled/KDFzREm/{y,Gs,td,NNNNGY}.java`.
+Ядро, декомпил: `decompiled/KDFzREm/{y,Gs,td,NNNNGY}.java`.  
+Все 109 чит-модулей: `decompiled/modules/KDFzREm/` (`Uv` = AttackAura, `Ub` = AimAssist, …).
 
 Оригинальный клиент — Fabric + Minecraft. Полный запуск внутри игры требует игру, loader и нативы. Здесь поднимается живое меню со всеми восстановленными категориями, модулями, HUD, AutoBuy, аккаунтами, реди-курсами (пресеты) и браузером классов/функций.
 

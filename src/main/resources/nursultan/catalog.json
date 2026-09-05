@@ -7,88 +7,29 @@
   "core": "KDFzREm.y",
   "menuClass": "KDFzREm.Gs",
   "hudClass": "KDFzREm.td",
+  "moduleBase": "KDFzREm.UM",
   "categories": [
     "combat",
     "movement",
     "player",
     "visual",
-    "misc",
-    "hud",
-    "autobuy",
-    "configs",
-    "accounts"
+    "misc"
   ],
   "modules": [
     {
       "id": "aimassist",
       "name": "AimAssist",
       "category": "combat",
-      "description": "Наведение на цель в заданном радиусе",
+      "subcategory": "fighting",
+      "className": "KDFzREm.Ub",
+      "bytecodeClass": "Ub",
+      "description": "restored from Ub.class · 37 methods · 25869 bytes",
+      "methodCount": 37,
+      "size": 25869,
       "settings": [
         {
           "id": "aim-range",
           "label": "aim range",
-          "type": "toggle"
-        },
-        {
-          "id": "through-walls",
-          "label": "through walls",
-          "type": "toggle"
-        },
-        {
-          "id": "pvp-only",
-          "label": "pvp only",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "attackaura",
-      "name": "AttackAura",
-      "category": "combat",
-      "description": "Автоатака выбранных сущностей",
-      "settings": [
-        {
-          "id": "aim-range",
-          "label": "aim range",
-          "type": "toggle"
-        },
-        {
-          "id": "aura-only",
-          "label": "aura only",
-          "type": "toggle"
-        },
-        {
-          "id": "critical-hit",
-          "label": "critical hit",
-          "type": "toggle"
-        },
-        {
-          "id": "through-walls",
-          "label": "through walls",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "triggerbot",
-      "name": "TriggerBot",
-      "category": "combat",
-      "description": "Удар при наведении на цель",
-      "settings": [
-        {
-          "id": "pvp-only",
-          "label": "pvp only",
-          "type": "toggle"
-        },
-        {
-          "id": "critical-only-space",
-          "label": "critical only space",
-          "type": "toggle"
-        },
-        {
-          "id": "hit-only",
-          "label": "hit only",
           "type": "toggle"
         }
       ]
@@ -97,7 +38,12 @@
       "id": "antibot",
       "name": "AntiBot",
       "category": "combat",
-      "description": "Отсев ботов из таргетинга",
+      "subcategory": "",
+      "className": "KDFzREm.UU",
+      "bytecodeClass": "UU",
+      "description": "restored from UU.class · 23 methods · 13585 bytes",
+      "methodCount": 23,
+      "size": 13585,
       "settings": [
         {
           "id": "no-bot-interaction",
@@ -107,101 +53,51 @@
       ]
     },
     {
-      "id": "novelocity",
-      "name": "NoVelocity",
+      "id": "attackaura",
+      "name": "AttackAura",
       "category": "combat",
-      "description": "Гашение отдачи и нокбэка",
+      "subcategory": "fighting",
+      "className": "KDFzREm.Uv",
+      "bytecodeClass": "Uv",
+      "description": "restored from Uv.class · 104 methods · 78686 bytes",
+      "methodCount": 104,
+      "size": 78686,
       "settings": [
         {
-          "id": "enabled",
-          "label": "enabled",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "autototem",
-      "name": "AutoTotem",
-      "category": "combat",
-      "description": "Автопостановка тотема",
-      "settings": [
-        {
-          "id": "totem-of-undying",
-          "label": "totem of undying",
+          "id": "spooky-time",
+          "label": "spooky time",
           "type": "toggle"
         },
         {
-          "id": "from-inventory",
-          "label": "from inventory",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "autoexplosion",
-      "name": "AutoExplosion",
-      "category": "combat",
-      "description": "Автоподрыв кристаллов / TNT",
-      "settings": [
-        {
-          "id": "crystal-trigger",
-          "label": "crystal trigger",
+          "id": "target-condition",
+          "label": "target condition",
           "type": "toggle"
         },
         {
-          "id": "tnt-trigger",
-          "label": "tnt trigger",
+          "id": "move-correction",
+          "label": "move correction",
           "type": "toggle"
         },
         {
-          "id": "distance-to-crystal",
-          "label": "distance to crystal",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "autoswap",
-      "name": "AutoSwap",
-      "category": "combat",
-      "description": "Смена предмета по условию",
-      "settings": [
-        {
-          "id": "swap-key",
-          "label": "swap key",
+          "id": "target-follow",
+          "label": "target follow",
           "type": "toggle"
         },
         {
-          "id": "swap-item",
-          "label": "swap item",
+          "id": "do-not-attack",
+          "label": "do not attack",
           "type": "toggle"
         },
         {
-          "id": "from-inventory",
-          "label": "from inventory",
+          "id": "sprint-mode",
+          "label": "sprint mode",
           "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "nofrienddamage",
-      "name": "NoFriendDamage",
-      "category": "combat",
-      "description": "Не бить друзей",
-      "settings": [
+        },
         {
-          "id": "friends",
-          "label": "friends",
+          "id": "critical-disabled",
+          "label": "critical disabled",
           "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "criticals",
-      "name": "Criticals",
-      "category": "combat",
-      "description": "Принудительные криты",
-      "settings": [
+        },
         {
           "id": "critical-always",
           "label": "critical always",
@@ -213,48 +109,455 @@
           "type": "toggle"
         },
         {
+          "id": "critical-hit",
+          "label": "critical hit",
+          "type": "toggle"
+        },
+        {
           "id": "increase-crit-accuracy",
           "label": "increase crit accuracy",
           "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "shieldbreak",
-      "name": "ShieldBreak",
-      "category": "combat",
-      "description": "Сбитие щита",
-      "settings": [
+        },
+        {
+          "id": "additional-range",
+          "label": "additional range",
+          "type": "toggle"
+        },
+        {
+          "id": "aim-range",
+          "label": "aim range",
+          "type": "toggle"
+        },
+        {
+          "id": "through-walls",
+          "label": "through walls",
+          "type": "toggle"
+        },
         {
           "id": "shield-break",
           "label": "shield break",
           "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "noslow",
-      "name": "NoSlow",
-      "category": "combat",
-      "description": "Без замедления при использовании",
-      "settings": [
+        },
         {
-          "id": "using-item",
-          "label": "using item",
+          "id": "auto-mace",
+          "label": "auto mace",
           "type": "toggle"
         },
         {
-          "id": "using-shield",
-          "label": "using shield",
+          "id": "swap-damage",
+          "label": "swap damage",
           "type": "toggle"
         }
       ]
     },
     {
-      "id": "speed",
-      "name": "Speed",
+      "id": "autoexplosion",
+      "name": "AutoExplosion",
+      "category": "combat",
+      "subcategory": "fighting",
+      "className": "KDFzREm.WZ",
+      "bytecodeClass": "WZ",
+      "description": "restored from WZ.class · 39 methods · 34861 bytes",
+      "methodCount": 39,
+      "size": 34861,
+      "settings": [
+        {
+          "id": "any-item-click",
+          "label": "any item click",
+          "type": "toggle"
+        },
+        {
+          "id": "reset-slot",
+          "label": "reset slot",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "autoswap",
+      "name": "AutoSwap",
+      "category": "combat",
+      "subcategory": "base",
+      "className": "KDFzREm.sY",
+      "bytecodeClass": "sY",
+      "description": "restored from sY.class · 55 methods · 33319 bytes",
+      "methodCount": 55,
+      "size": 33319,
+      "settings": [
+        {
+          "id": "swap-key",
+          "label": "swap key",
+          "type": "toggle"
+        },
+        {
+          "id": "first-item",
+          "label": "first item",
+          "type": "toggle"
+        },
+        {
+          "id": "second-item",
+          "label": "second item",
+          "type": "toggle"
+        },
+        {
+          "id": "log-swapped-item",
+          "label": "log swapped item",
+          "type": "toggle"
+        },
+        {
+          "id": "sunrise-runes",
+          "label": "sunrise runes",
+          "type": "toggle"
+        },
+        {
+          "id": "any-food",
+          "label": "any food",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "backtrack",
+      "name": "Backtrack",
+      "category": "combat",
+      "subcategory": "tools",
+      "className": "KDFzREm.UP",
+      "bytecodeClass": "UP",
+      "description": "restored from UP.class · 52 methods · 46646 bytes",
+      "methodCount": 52,
+      "size": 46646,
+      "settings": [
+        {
+          "id": "hold-after-attack",
+          "label": "hold after attack",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "itemrelease",
+      "name": "ItemRelease",
+      "category": "combat",
+      "subcategory": "base",
+      "className": "KDFzREm.WU",
+      "bytecodeClass": "WU",
+      "description": "restored from WU.class · 26 methods · 15278 bytes",
+      "methodCount": 26,
+      "size": 15278,
+      "settings": [
+        {
+          "id": "hit-only",
+          "label": "hit only",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "nofrienddamage",
+      "name": "NoFriendDamage",
+      "category": "combat",
+      "subcategory": "",
+      "className": "KDFzREm.UE",
+      "bytecodeClass": "UE",
+      "description": "restored from UE.class · 18 methods · 11167 bytes",
+      "methodCount": 18,
+      "size": 11167,
+      "settings": []
+    },
+    {
+      "id": "noslotchange",
+      "name": "NoSlotChange",
+      "category": "combat",
+      "subcategory": "",
+      "className": "KDFzREm.UW",
+      "bytecodeClass": "UW",
+      "description": "restored from UW.class · 13 methods · 10439 bytes",
+      "methodCount": 13,
+      "size": 10439,
+      "settings": []
+    },
+    {
+      "id": "novelocity",
+      "name": "NoVelocity",
+      "category": "combat",
+      "subcategory": "fighting",
+      "className": "KDFzREm.WG",
+      "bytecodeClass": "WG",
+      "description": "restored from WG.class · 23 methods · 12352 bytes",
+      "methodCount": 23,
+      "size": 12352,
+      "settings": [
+        {
+          "id": "jump-reset",
+          "label": "jump reset",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "sprintreset",
+      "name": "SprintReset",
+      "category": "combat",
+      "subcategory": "tools",
+      "className": "KDFzREm.WP",
+      "bytecodeClass": "WP",
+      "description": "restored from WP.class · 33 methods · 19324 bytes",
+      "methodCount": 33,
+      "size": 19324,
+      "settings": [
+        {
+          "id": "shift-tap",
+          "label": "shift tap",
+          "type": "toggle"
+        },
+        {
+          "id": "no-stop",
+          "label": "no stop",
+          "type": "toggle"
+        },
+        {
+          "id": "ground-only",
+          "label": "ground only",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "tapemouse",
+      "name": "TapeMouse",
+      "category": "combat",
+      "subcategory": "tools",
+      "className": "KDFzREm.Wn",
+      "bytecodeClass": "Wn",
+      "description": "restored from Wn.class · 25 methods · 14266 bytes",
+      "methodCount": 25,
+      "size": 14266,
+      "settings": [
+        {
+          "id": "left-mouse",
+          "label": "left mouse",
+          "type": "toggle"
+        },
+        {
+          "id": "left-mouse-delay-sec",
+          "label": "left mouse delay sec",
+          "type": "toggle"
+        },
+        {
+          "id": "right-mouse",
+          "label": "right mouse",
+          "type": "toggle"
+        },
+        {
+          "id": "right-mouse-delay-sec",
+          "label": "right mouse delay sec",
+          "type": "toggle"
+        },
+        {
+          "id": "mouse-buttons",
+          "label": "mouse buttons",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "triggerbot",
+      "name": "TriggerBot",
+      "category": "combat",
+      "subcategory": "fighting",
+      "className": "KDFzREm.Uj",
+      "bytecodeClass": "Uj",
+      "description": "restored from Uj.class · 67 methods · 64434 bytes",
+      "methodCount": 67,
+      "size": 64434,
+      "settings": [
+        {
+          "id": "target-condition",
+          "label": "target condition",
+          "type": "toggle"
+        },
+        {
+          "id": "do-not-attack",
+          "label": "do not attack",
+          "type": "toggle"
+        },
+        {
+          "id": "critical-disabled",
+          "label": "critical disabled",
+          "type": "toggle"
+        },
+        {
+          "id": "critical-always",
+          "label": "critical always",
+          "type": "toggle"
+        },
+        {
+          "id": "critical-only-space",
+          "label": "critical only space",
+          "type": "toggle"
+        },
+        {
+          "id": "critical-hit",
+          "label": "critical hit",
+          "type": "toggle"
+        },
+        {
+          "id": "reset-sprint",
+          "label": "reset sprint",
+          "type": "toggle"
+        },
+        {
+          "id": "shield-break",
+          "label": "shield break",
+          "type": "toggle"
+        },
+        {
+          "id": "auto-mace",
+          "label": "auto mace",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "webtrap",
+      "name": "WebTrap",
+      "category": "combat",
+      "subcategory": "tools",
+      "className": "KDFzREm.Um",
+      "bytecodeClass": "Um",
+      "description": "restored from Um.class · 40 methods · 32079 bytes",
+      "methodCount": 40,
+      "size": 32079,
+      "settings": [
+        {
+          "id": "place-key",
+          "label": "place key",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "airstuck",
+      "name": "AirStuck",
       "category": "movement",
-      "description": "Ускорение перемещения",
+      "subcategory": "tools",
+      "className": "KDFzREm.mD",
+      "bytecodeClass": "mD",
+      "description": "restored from mD.class · 23 methods · 14006 bytes",
+      "methodCount": 23,
+      "size": 14006,
+      "settings": []
+    },
+    {
+      "id": "autojump",
+      "name": "AutoJump",
+      "category": "movement",
+      "subcategory": "tools",
+      "className": "KDFzREm.mh",
+      "bytecodeClass": "mh",
+      "description": "restored from mh.class · 12 methods · 8317 bytes",
+      "methodCount": 12,
+      "size": 8317,
+      "settings": []
+    },
+    {
+      "id": "edgejump",
+      "name": "EdgeJump",
+      "category": "movement",
+      "subcategory": "tools",
+      "className": "KDFzREm.mr",
+      "bytecodeClass": "mr",
+      "description": "restored from mr.class · 13 methods · 8685 bytes",
+      "methodCount": 13,
+      "size": 8685,
+      "settings": []
+    },
+    {
+      "id": "elytratarget",
+      "name": "ElytraTarget",
+      "category": "movement",
+      "subcategory": "base",
+      "className": "KDFzREm.Ps",
+      "bytecodeClass": "Ps",
+      "description": "restored from Ps.class · 37 methods · 22057 bytes",
+      "methodCount": 37,
+      "size": 22057,
+      "settings": [
+        {
+          "id": "chase-distance",
+          "label": "chase distance",
+          "type": "toggle"
+        },
+        {
+          "id": "overtake-distance",
+          "label": "overtake distance",
+          "type": "toggle"
+        },
+        {
+          "id": "timing-firework-use",
+          "label": "timing firework use",
+          "type": "toggle"
+        },
+        {
+          "id": "bind-firework-use",
+          "label": "bind firework use",
+          "type": "toggle"
+        },
+        {
+          "id": "firework-use",
+          "label": "firework use",
+          "type": "toggle"
+        },
+        {
+          "id": "none-firework-use",
+          "label": "none firework use",
+          "type": "toggle"
+        },
+        {
+          "id": "auto-firework-use",
+          "label": "auto firework use",
+          "type": "toggle"
+        },
+        {
+          "id": "delay-ticks",
+          "label": "delay ticks",
+          "type": "toggle"
+        },
+        {
+          "id": "manual-hotkey",
+          "label": "manual hotkey",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "flight",
+      "name": "Flight",
+      "category": "movement",
+      "subcategory": "base",
+      "className": "KDFzREm.Pv",
+      "bytecodeClass": "Pv",
+      "description": "restored from Pv.class · 25 methods · 12607 bytes",
+      "methodCount": 25,
+      "size": 12607,
+      "settings": [
+        {
+          "id": "multi-jump",
+          "label": "multi jump",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "freecamera",
+      "name": "FreeCamera",
+      "category": "movement",
+      "subcategory": "tools",
+      "className": "KDFzREm.PN",
+      "bytecodeClass": "PN",
+      "description": "restored from PN.class · 39 methods · 30793 bytes",
+      "methodCount": 39,
+      "size": 30793,
       "settings": [
         {
           "id": "speed-xz",
@@ -267,540 +570,8 @@
           "type": "toggle"
         },
         {
-          "id": "ground-only",
-          "label": "ground only",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "sprint",
-      "name": "Sprint",
-      "category": "movement",
-      "description": "Постоянный спринт",
-      "settings": [
-        {
-          "id": "sprint-mode",
-          "label": "sprint mode",
-          "type": "toggle"
-        },
-        {
-          "id": "reset-sprint",
-          "label": "reset sprint",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "sprintreset",
-      "name": "SprintReset",
-      "category": "movement",
-      "description": "Сброс спринта для удара",
-      "settings": [
-        {
-          "id": "reset-sprint",
-          "label": "reset sprint",
-          "type": "toggle"
-        },
-        {
-          "id": "jump-reset",
-          "label": "jump reset",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "scaffold",
-      "name": "Scaffold",
-      "category": "movement",
-      "description": "Автоустановка блоков под ногами",
-      "settings": [
-        {
-          "id": "safe-walk",
-          "label": "safe walk",
-          "type": "toggle"
-        },
-        {
-          "id": "tower",
-          "label": "tower",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "timer",
-      "name": "Timer",
-      "category": "movement",
-      "description": "Искажение клиентского таймера",
-      "settings": [
-        {
-          "id": "speed",
-          "label": "speed",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "blink",
-      "name": "Blink",
-      "category": "movement",
-      "description": "Буфер пакетов движения",
-      "settings": [
-        {
-          "id": "auto-release-packets",
-          "label": "auto release packets",
-          "type": "toggle"
-        },
-        {
-          "id": "release-packets-on-hit",
-          "label": "release packets on hit",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "autojump",
-      "name": "AutoJump",
-      "category": "movement",
-      "description": "Автопрыжок",
-      "settings": [
-        {
-          "id": "auto-jump",
-          "label": "auto jump",
-          "type": "toggle"
-        },
-        {
-          "id": "jump-delay",
-          "label": "jump delay",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "noweb",
-      "name": "NoWeb",
-      "category": "movement",
-      "description": "Игнор паутины",
-      "settings": []
-    },
-    {
-      "id": "nopush",
-      "name": "NoPush",
-      "category": "movement",
-      "description": "Игнор столкновений",
-      "settings": [
-        {
-          "id": "entity-push",
-          "label": "entity push",
-          "type": "toggle"
-        },
-        {
-          "id": "block-push",
-          "label": "block push",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "elytratarget",
-      "name": "ElytraTarget",
-      "category": "movement",
-      "description": "Наведение / полёт на элитрах",
-      "settings": [
-        {
-          "id": "elytra-gliding",
-          "label": "elytra gliding",
-          "type": "toggle"
-        },
-        {
-          "id": "elytra-health-trigger",
-          "label": "elytra health trigger",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "autoarmor",
-      "name": "AutoArmor",
-      "category": "player",
-      "description": "Автоэкипировка брони",
-      "settings": [
-        {
-          "id": "armor-durability",
-          "label": "armor durability",
-          "type": "toggle"
-        },
-        {
-          "id": "min-durability-percentage",
-          "label": "min durability percentage",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "autoeat",
-      "name": "AutoEat",
-      "category": "player",
-      "description": "Автоеда",
-      "settings": [
-        {
-          "id": "any-food",
-          "label": "any food",
-          "type": "toggle"
-        },
-        {
-          "id": "ignore-hunger",
-          "label": "ignore hunger",
-          "type": "toggle"
-        },
-        {
-          "id": "health-trigger",
-          "label": "health trigger",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "autofish",
-      "name": "AutoFish",
-      "category": "player",
-      "description": "Авторыбалка",
-      "settings": [
-        {
-          "id": "fishing-rod",
-          "label": "fishing rod",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "autotool",
-      "name": "AutoTool",
-      "category": "player",
-      "description": "Автовыбор инструмента",
-      "settings": [
-        {
-          "id": "only-while-breaking",
-          "label": "only while breaking",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "autopotion",
-      "name": "AutoPotion",
-      "category": "player",
-      "description": "Автозелья",
-      "settings": [
-        {
-          "id": "heal-health",
-          "label": "heal health",
-          "type": "toggle"
-        },
-        {
-          "id": "speed-potion",
-          "label": "speed potion",
-          "type": "toggle"
-        },
-        {
-          "id": "strength-potion",
-          "label": "strength potion",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "autopearl",
-      "name": "AutoPearl",
-      "category": "player",
-      "description": "Автоэндерперл",
-      "settings": [
-        {
-          "id": "ender-pearl",
-          "label": "ender pearl",
-          "type": "toggle"
-        },
-        {
-          "id": "throw-key",
-          "label": "throw key",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "autototem",
-      "name": "AutoTotem",
-      "category": "player",
-      "description": "Тотем в руку",
-      "settings": [
-        {
-          "id": "totem-of-undying",
-          "label": "totem of undying",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "cheststealer",
-      "name": "ChestStealer",
-      "category": "player",
-      "description": "Сбор лута из контейнеров",
-      "settings": [
-        {
-          "id": "auto-close",
-          "label": "auto close",
-          "type": "toggle"
-        },
-        {
-          "id": "delay-in-ticks",
-          "label": "delay in ticks",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "inventory",
-      "name": "Inventory",
-      "category": "player",
-      "description": "Инвентарь и хотбар",
-      "settings": [
-        {
-          "id": "inventory-only",
-          "label": "inventory only",
-          "type": "toggle"
-        },
-        {
-          "id": "hotbar-only",
-          "label": "hotbar only",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "nodelay",
-      "name": "NoDelay",
-      "category": "player",
-      "description": "Снятие клиентских задержек",
-      "settings": [
-        {
-          "id": "break-delay",
-          "label": "break delay",
-          "type": "toggle"
-        },
-        {
-          "id": "delay-ticks",
-          "label": "delay ticks",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "nointeract",
-      "name": "NoInteract",
-      "category": "player",
-      "description": "Блок взаимодействий",
-      "settings": [
-        {
-          "id": "block-interact",
-          "label": "block interact",
-          "type": "toggle"
-        },
-        {
-          "id": "entity-interact",
-          "label": "entity interact",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "noslotchange",
-      "name": "NoSlotChange",
-      "category": "player",
-      "description": "Запрет смены слота сервером",
-      "settings": [
-        {
-          "id": "reset-slot",
-          "label": "reset slot",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "clickaction",
-      "name": "ClickAction",
-      "category": "player",
-      "description": "Действия по клику",
-      "settings": [
-        {
-          "id": "left-mouse",
-          "label": "left mouse",
-          "type": "toggle"
-        },
-        {
-          "id": "right-click",
-          "label": "right click",
-          "type": "toggle"
-        },
-        {
-          "id": "any-item-click",
-          "label": "any item click",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "expbottle",
-      "name": "ExpBottle",
-      "category": "player",
-      "description": "Автоопыт",
-      "settings": [
-        {
-          "id": "exp-bottle",
-          "label": "exp bottle",
-          "type": "toggle"
-        },
-        {
-          "id": "fast",
-          "label": "fast",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "fastexp",
-      "name": "FastExp",
-      "category": "player",
-      "description": "Быстрые пузырьки опыта",
-      "settings": [
-        {
-          "id": "bottle-of-exp",
-          "label": "bottle of exp",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "autodripstone",
-      "name": "AutoDripstone",
-      "category": "player",
-      "description": "Автодрипстоун",
-      "settings": [
-        {
-          "id": "falling-dripstone-trigger",
-          "label": "falling dripstone trigger",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "entityesp",
-      "name": "EntityESP",
-      "category": "visual",
-      "description": "Подсветка сущностей",
-      "settings": [
-        {
-          "id": "player-color",
-          "label": "player color",
-          "type": "toggle"
-        },
-        {
-          "id": "living-color",
-          "label": "living color",
-          "type": "toggle"
-        },
-        {
-          "id": "through-walls",
-          "label": "through walls",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "blockesp",
-      "name": "BlockESP",
-      "category": "visual",
-      "description": "Подсветка блоков",
-      "settings": [
-        {
-          "id": "box-color",
-          "label": "box color",
-          "type": "toggle"
-        },
-        {
-          "id": "blockesp",
-          "label": "blockesp",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "targetesp",
-      "name": "TargetEsp",
-      "category": "visual",
-      "description": "ESP текущей цели",
-      "settings": [
-        {
-          "id": "target",
-          "label": "target",
-          "type": "toggle"
-        },
-        {
-          "id": "line-color",
-          "label": "line color",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "targetinfo",
-      "name": "TargetInfo",
-      "category": "visual",
-      "description": "Карточка цели",
-      "settings": [
-        {
-          "id": "show-absorption",
-          "label": "show absorption",
-          "type": "toggle"
-        },
-        {
-          "id": "show-armor-details",
-          "label": "show armor details",
-          "type": "toggle"
-        },
-        {
-          "id": "health-bar",
-          "label": "health bar",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "tracers",
-      "name": "Tracers",
-      "category": "visual",
-      "description": "Линии до сущностей",
-      "settings": [
-        {
-          "id": "line-color",
-          "label": "line color",
-          "type": "toggle"
-        },
-        {
-          "id": "player-radius",
-          "label": "player radius",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "freecamera",
-      "name": "FreeCamera",
-      "category": "visual",
-      "description": "Свободная камера",
-      "settings": [
-        {
-          "id": "camera-clip",
-          "label": "camera clip",
+          "id": "walk-by-click",
+          "label": "walk by click",
           "type": "toggle"
         },
         {
@@ -811,150 +582,240 @@
       ]
     },
     {
-      "id": "viewmodel",
-      "name": "ViewModel",
-      "category": "visual",
-      "description": "Смещение рук / предмета",
+      "id": "nopush",
+      "name": "NoPush",
+      "category": "movement",
+      "subcategory": "tools",
+      "className": "KDFzREm.Py",
+      "bytecodeClass": "Py",
+      "description": "restored from Py.class · 24 methods · 11941 bytes",
+      "methodCount": 24,
+      "size": 11941,
       "settings": [
         {
-          "id": "left-hand-x",
-          "label": "left hand x",
+          "id": "entity-push",
+          "label": "entity push",
           "type": "toggle"
         },
         {
-          "id": "right-hand-x",
-          "label": "right hand x",
+          "id": "block-push",
+          "label": "block push",
           "type": "toggle"
         },
         {
-          "id": "aspect-ratio",
-          "label": "aspect ratio",
+          "id": "fishing-rod",
+          "label": "fishing rod",
+          "type": "toggle"
+        },
+        {
+          "id": "apply-to",
+          "label": "apply to",
           "type": "toggle"
         }
       ]
     },
     {
-      "id": "aspectratio",
-      "name": "AspectRatio",
-      "category": "visual",
-      "description": "Соотношение сторон",
+      "id": "noslow",
+      "name": "NoSlow",
+      "category": "movement",
+      "subcategory": "base",
+      "className": "KDFzREm.Pl",
+      "bytecodeClass": "Pl",
+      "description": "restored from Pl.class · 23 methods · 11133 bytes",
+      "methodCount": 23,
+      "size": 11133,
       "settings": [
         {
-          "id": "custom-ratio",
-          "label": "custom ratio",
-          "type": "toggle"
-        },
-        {
-          "id": "aspect-ratio",
-          "label": "aspect ratio",
+          "id": "spooky-time-duels",
+          "label": "spooky time duels",
           "type": "toggle"
         }
       ]
     },
     {
-      "id": "killeffect",
-      "name": "KillEffect",
-      "category": "visual",
-      "description": "Эффект убийства",
+      "id": "noweb",
+      "name": "NoWeb",
+      "category": "movement",
+      "subcategory": "tools",
+      "className": "KDFzREm.PY",
+      "bytecodeClass": "PY",
+      "description": "restored from PY.class · 20 methods · 9405 bytes",
+      "methodCount": 20,
+      "size": 9405,
       "settings": [
         {
-          "id": "heart-effect",
-          "label": "heart effect",
-          "type": "toggle"
-        },
-        {
-          "id": "shader-effect",
-          "label": "shader effect",
+          "id": "really-world",
+          "label": "really world",
           "type": "toggle"
         }
       ]
     },
     {
-      "id": "customcape",
-      "name": "CustomCape",
-      "category": "visual",
-      "description": "Кастомный плащ",
+      "id": "screenwalk",
+      "name": "ScreenWalk",
+      "category": "movement",
+      "subcategory": "base",
+      "className": "KDFzREm.Pi",
+      "bytecodeClass": "Pi",
+      "description": "restored from Pi.class · 28 methods · 16045 bytes",
+      "methodCount": 28,
+      "size": 16045,
       "settings": []
     },
     {
-      "id": "fakeplayer",
-      "name": "FakePlayer",
-      "category": "visual",
-      "description": "Фейковый игрок",
+      "id": "spearboost",
+      "name": "SpearBoost",
+      "category": "movement",
+      "subcategory": "tools",
+      "className": "KDFzREm.PM",
+      "bytecodeClass": "PM",
+      "description": "restored from PM.class · 43 methods · 37532 bytes",
+      "methodCount": 43,
+      "size": 37532,
       "settings": [
         {
-          "id": "custom-name",
-          "label": "custom name",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "noentitytrace",
-      "name": "NoEntityTrace",
-      "category": "visual",
-      "description": "Клик сквозь сущности",
-      "settings": []
-    },
-    {
-      "id": "noserverrotation",
-      "name": "NoServerRotation",
-      "category": "visual",
-      "description": "Игнор серверного поворота",
-      "settings": []
-    },
-    {
-      "id": "ambience",
-      "name": "Ambience",
-      "category": "visual",
-      "description": "Время и атмосфера",
-      "settings": [
-        {
-          "id": "ambience",
-          "label": "ambience",
+          "id": "auto-jump",
+          "label": "auto jump",
           "type": "toggle"
         },
         {
-          "id": "spooky-time",
-          "label": "spooky time",
+          "id": "boost-key",
+          "label": "boost key",
           "type": "toggle"
         }
       ]
     },
     {
-      "id": "nuker",
-      "name": "Nuker",
-      "category": "visual",
-      "description": "Массовая ломка блоков",
+      "id": "speed",
+      "name": "Speed",
+      "category": "movement",
+      "subcategory": "base",
+      "className": "KDFzREm.Pg",
+      "bytecodeClass": "Pg",
+      "description": "restored from Pg.class · 25 methods · 11239 bytes",
+      "methodCount": 25,
+      "size": 11239,
+      "settings": []
+    },
+    {
+      "id": "sprint",
+      "name": "Sprint",
+      "category": "movement",
+      "subcategory": "base",
+      "className": "KDFzREm.PB",
+      "bytecodeClass": "PB",
+      "description": "restored from PB.class · 19 methods · 10542 bytes",
+      "methodCount": 19,
+      "size": 10542,
       "settings": [
         {
-          "id": "break-only-allowed-blocks",
-          "label": "break only allowed blocks",
+          "id": "ignore-hunger",
+          "label": "ignore hunger",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "superfirework",
+      "name": "SuperFirework",
+      "category": "movement",
+      "subcategory": "tools",
+      "className": "KDFzREm.PZ",
+      "bytecodeClass": "PZ",
+      "description": "restored from PZ.class · 18 methods · 8576 bytes",
+      "methodCount": 18,
+      "size": 8576,
+      "settings": []
+    },
+    {
+      "id": "timer",
+      "name": "Timer",
+      "category": "movement",
+      "subcategory": "base",
+      "className": "KDFzREm.Pz",
+      "bytecodeClass": "Pz",
+      "description": "restored from Pz.class · 20 methods · 10530 bytes",
+      "methodCount": 20,
+      "size": 10530,
+      "settings": []
+    },
+    {
+      "id": "wallclimb",
+      "name": "WallClimb",
+      "category": "movement",
+      "subcategory": "base",
+      "className": "KDFzREm.Po",
+      "bytecodeClass": "Po",
+      "description": "restored from Po.class · 18 methods · 8784 bytes",
+      "methodCount": 18,
+      "size": 8784,
+      "settings": []
+    },
+    {
+      "id": "windhop",
+      "name": "WindHop",
+      "category": "movement",
+      "subcategory": "tools",
+      "className": "KDFzREm.PU",
+      "bytecodeClass": "PU",
+      "description": "restored from PU.class · 36 methods · 29570 bytes",
+      "methodCount": 36,
+      "size": 29570,
+      "settings": [
+        {
+          "id": "auto-jump",
+          "label": "auto jump",
           "type": "toggle"
         },
         {
-          "id": "break-only-in-selection",
-          "label": "break only in selection",
+          "id": "jump-key",
+          "label": "jump key",
+          "type": "toggle"
+        },
+        {
+          "id": "combo-key",
+          "label": "combo key",
           "type": "toggle"
         }
       ]
     },
     {
-      "id": "autoauth",
-      "name": "AutoAuth",
-      "category": "misc",
-      "description": "Автологин",
-      "settings": []
+      "id": "antiafk",
+      "name": "AntiAFK",
+      "category": "player",
+      "subcategory": "base",
+      "className": "KDFzREm.su",
+      "bytecodeClass": "su",
+      "description": "restored from su.class · 24 methods · 15302 bytes",
+      "methodCount": 24,
+      "size": 15302,
+      "settings": [
+        {
+          "id": "camera-shake",
+          "label": "camera shake",
+          "type": "toggle"
+        }
+      ]
     },
     {
       "id": "autoaccept",
       "name": "AutoAccept",
-      "category": "misc",
-      "description": "Автопринятие запросов",
+      "category": "player",
+      "subcategory": "auto",
+      "className": "KDFzREm.Pq",
+      "bytecodeClass": "Pq",
+      "description": "restored from Pq.class · 39 methods · 24594 bytes",
+      "methodCount": 39,
+      "size": 24594,
       "settings": [
         {
           "id": "teleport-request",
           "label": "teleport request",
+          "type": "toggle"
+        },
+        {
+          "id": "command-duel-request",
+          "label": "command duel request",
           "type": "toggle"
         },
         {
@@ -970,14 +831,106 @@
       ]
     },
     {
-      "id": "autojoin",
-      "name": "AutoJoin",
-      "category": "misc",
-      "description": "Автовход на сервер",
+      "id": "autoarmor",
+      "name": "AutoArmor",
+      "category": "player",
+      "subcategory": "auto",
+      "className": "KDFzREm.PK",
+      "bytecodeClass": "PK",
+      "description": "restored from PK.class · 31 methods · 24554 bytes",
+      "methodCount": 31,
+      "size": 24554,
       "settings": [
         {
-          "id": "auto-launch",
-          "label": "auto launch",
+          "id": "delay-in-ticks",
+          "label": "delay in ticks",
+          "type": "toggle"
+        },
+        {
+          "id": "swap-only-while-standing",
+          "label": "swap only while standing",
+          "type": "toggle"
+        },
+        {
+          "id": "swap-only-while-inventory-open",
+          "label": "swap only while inventory open",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "autoauth",
+      "name": "AutoAuth",
+      "category": "player",
+      "subcategory": "auto",
+      "className": "KDFzREm.sT",
+      "bytecodeClass": "sT",
+      "description": "restored from sT.class · 29 methods · 17186 bytes",
+      "methodCount": 29,
+      "size": 17186,
+      "settings": [
+        {
+          "id": "open-path",
+          "label": "open path",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "autodripstone",
+      "name": "AutoDripstone",
+      "category": "player",
+      "subcategory": "auto",
+      "className": "KDFzREm.PV",
+      "bytecodeClass": "PV",
+      "description": "restored from PV.class · 25 methods · 31863 bytes",
+      "methodCount": 25,
+      "size": 31863,
+      "settings": []
+    },
+    {
+      "id": "autoeat",
+      "name": "AutoEat",
+      "category": "player",
+      "subcategory": "auto",
+      "className": "KDFzREm.PH",
+      "bytecodeClass": "PH",
+      "description": "restored from PH.class · 24 methods · 15059 bytes",
+      "methodCount": 24,
+      "size": 15059,
+      "settings": []
+    },
+    {
+      "id": "autofish",
+      "name": "AutoFish",
+      "category": "player",
+      "subcategory": "auto",
+      "className": "KDFzREm.Pc",
+      "bytecodeClass": "Pc",
+      "description": "restored from Pc.class · 16 methods · 10213 bytes",
+      "methodCount": 16,
+      "size": 10213,
+      "settings": []
+    },
+    {
+      "id": "autojoin",
+      "name": "AutoJoin",
+      "category": "player",
+      "subcategory": "auto",
+      "className": "KDFzREm.WC",
+      "bytecodeClass": "WC",
+      "description": "restored from WC.class · 25 methods · 12333 bytes",
+      "methodCount": 25,
+      "size": 12333,
+      "settings": [
+        {
+          "id": "spooky-time-duels",
+          "label": "spooky time duels",
+          "type": "toggle"
+        },
+        {
+          "id": "really-world",
+          "label": "really world",
           "type": "toggle"
         }
       ]
@@ -985,17 +938,118 @@
     {
       "id": "autoleave",
       "name": "AutoLeave",
-      "category": "misc",
-      "description": "Автовыход",
+      "category": "player",
+      "subcategory": "auto",
+      "className": "KDFzREm.sv",
+      "bytecodeClass": "sv",
+      "description": "restored from sv.class · 31 methods · 17690 bytes",
+      "methodCount": 31,
+      "size": 17690,
       "settings": [
         {
-          "id": "auto-enable-auto-leave",
-          "label": "auto enable auto leave",
+          "id": "custom-command",
+          "label": "custom command",
           "type": "toggle"
         },
         {
-          "id": "auto-leave",
-          "label": "auto leave",
+          "id": "player-nearby",
+          "label": "player nearby",
+          "type": "toggle"
+        },
+        {
+          "id": "was-in-pvp",
+          "label": "was in pvp",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "autopearl",
+      "name": "AutoPearl",
+      "category": "player",
+      "subcategory": "auto",
+      "className": "KDFzREm.PX",
+      "bytecodeClass": "PX",
+      "description": "restored from PX.class · 36 methods · 31379 bytes",
+      "methodCount": 36,
+      "size": 31379,
+      "settings": [
+        {
+          "id": "only-in-pvp",
+          "label": "only in pvp",
+          "type": "toggle"
+        },
+        {
+          "id": "target-follow",
+          "label": "target follow",
+          "type": "toggle"
+        },
+        {
+          "id": "min-distance",
+          "label": "min distance",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "autopotion",
+      "name": "AutoPotion",
+      "category": "player",
+      "subcategory": "auto",
+      "className": "KDFzREm.Pa",
+      "bytecodeClass": "Pa",
+      "description": "restored from Pa.class · 65 methods · 52049 bytes",
+      "methodCount": 65,
+      "size": 52049,
+      "settings": [
+        {
+          "id": "speed-potion",
+          "label": "speed potion",
+          "type": "toggle"
+        },
+        {
+          "id": "strength-potion",
+          "label": "strength potion",
+          "type": "toggle"
+        },
+        {
+          "id": "fire-resistance-potion",
+          "label": "fire resistance potion",
+          "type": "toggle"
+        },
+        {
+          "id": "healing-potion",
+          "label": "healing potion",
+          "type": "toggle"
+        },
+        {
+          "id": "heal-health",
+          "label": "heal health",
+          "type": "toggle"
+        },
+        {
+          "id": "heal-key",
+          "label": "heal key",
+          "type": "toggle"
+        },
+        {
+          "id": "hotbar-only",
+          "label": "hotbar only",
+          "type": "toggle"
+        },
+        {
+          "id": "only-in-pvp",
+          "label": "only in pvp",
+          "type": "toggle"
+        },
+        {
+          "id": "disable-after-throw",
+          "label": "disable after throw",
+          "type": "toggle"
+        },
+        {
+          "id": "exclude-donate-potions",
+          "label": "exclude donate potions",
           "type": "toggle"
         }
       ]
@@ -1003,81 +1057,794 @@
     {
       "id": "autoreconnect",
       "name": "AutoReconnect",
-      "category": "misc",
-      "description": "Переподключение",
-      "settings": []
+      "category": "player",
+      "subcategory": "auto",
+      "className": "KDFzREm.PA",
+      "bytecodeClass": "PA",
+      "description": "restored from PA.class · 26 methods · 15664 bytes",
+      "methodCount": 26,
+      "size": 15664,
+      "settings": [
+        {
+          "id": "auto-enable-auto-leave",
+          "label": "auto enable auto leave",
+          "type": "toggle"
+        }
+      ]
     },
     {
       "id": "autorespawn",
       "name": "AutoRespawn",
-      "category": "misc",
-      "description": "Автореспавн",
+      "category": "player",
+      "subcategory": "auto",
+      "className": "KDFzREm.PC",
+      "bytecodeClass": "PC",
+      "description": "restored from PC.class · 12 methods · 9306 bytes",
+      "methodCount": 12,
+      "size": 9306,
+      "settings": []
+    },
+    {
+      "id": "autotool",
+      "name": "AutoTool",
+      "category": "player",
+      "subcategory": "auto",
+      "className": "KDFzREm.PS",
+      "bytecodeClass": "PS",
+      "description": "restored from PS.class · 41 methods · 23596 bytes",
+      "methodCount": 41,
+      "size": 23596,
       "settings": [
         {
-          "id": "death-waypoint",
-          "label": "death waypoint",
+          "id": "hotbar-only",
+          "label": "hotbar only",
           "type": "toggle"
         }
       ]
     },
     {
-      "id": "antiafk",
-      "name": "AntiAFK",
-      "category": "misc",
-      "description": "Анти-афк",
-      "settings": []
-    },
-    {
-      "id": "bypasshealth",
-      "name": "BypassHealth",
-      "category": "misc",
-      "description": "Обход отображения здоровья",
-      "settings": []
-    },
-    {
-      "id": "srpspoofer",
-      "name": "SRPSpoofer",
-      "category": "misc",
-      "description": "Подмена ресурс-пака",
-      "settings": []
-    },
-    {
-      "id": "streamermode",
-      "name": "StreamerMode",
-      "category": "misc",
-      "description": "Скрытие ников / IP",
+      "id": "autototem",
+      "name": "AutoTotem",
+      "category": "player",
+      "subcategory": "auto",
+      "className": "KDFzREm.sJ",
+      "bytecodeClass": "sJ",
+      "description": "restored from sJ.class · 55 methods · 48595 bytes",
+      "methodCount": 55,
+      "size": 48595,
       "settings": [
         {
-          "id": "custom-name",
-          "label": "custom name",
+          "id": "health-trigger",
+          "label": "health trigger",
+          "type": "toggle"
+        },
+        {
+          "id": "elytra-health-trigger",
+          "label": "elytra health trigger",
+          "type": "toggle"
+        },
+        {
+          "id": "crystal-trigger",
+          "label": "crystal trigger",
+          "type": "toggle"
+        },
+        {
+          "id": "tnt-trigger",
+          "label": "tnt trigger",
+          "type": "toggle"
+        },
+        {
+          "id": "falling-dripstone-trigger",
+          "label": "falling dripstone trigger",
+          "type": "toggle"
+        },
+        {
+          "id": "falling-trigger",
+          "label": "falling trigger",
+          "type": "toggle"
+        },
+        {
+          "id": "trident-trigger",
+          "label": "trident trigger",
+          "type": "toggle"
+        },
+        {
+          "id": "mace-smash-trigger",
+          "label": "mace smash trigger",
           "type": "toggle"
         }
       ]
+    },
+    {
+      "id": "avoidcollision",
+      "name": "AvoidCollision",
+      "category": "player",
+      "subcategory": "base",
+      "className": "KDFzREm.Px",
+      "bytecodeClass": "Px",
+      "description": "restored from Px.class · 19 methods · 11494 bytes",
+      "methodCount": 19,
+      "size": 11494,
+      "settings": []
+    },
+    {
+      "id": "blink",
+      "name": "Blink",
+      "category": "player",
+      "subcategory": "base",
+      "className": "KDFzREm.PD",
+      "bytecodeClass": "PD",
+      "description": "restored from PD.class · 38 methods · 23552 bytes",
+      "methodCount": 38,
+      "size": 23552,
+      "settings": [
+        {
+          "id": "release-packets-on-hit",
+          "label": "release packets on hit",
+          "type": "toggle"
+        },
+        {
+          "id": "render-server-position",
+          "label": "render server position",
+          "type": "toggle"
+        },
+        {
+          "id": "render-color",
+          "label": "render color",
+          "type": "toggle"
+        },
+        {
+          "id": "auto-release-packets",
+          "label": "auto release packets",
+          "type": "toggle"
+        },
+        {
+          "id": "release-packets-ticks",
+          "label": "release packets ticks",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "cheststealer",
+      "name": "ChestStealer",
+      "category": "player",
+      "subcategory": "base",
+      "className": "KDFzREm.sp",
+      "bytecodeClass": "sp",
+      "description": "restored from sp.class · 42 methods · 25330 bytes",
+      "methodCount": 42,
+      "size": 25330,
+      "settings": [
+        {
+          "id": "loot-type",
+          "label": "loot type",
+          "type": "toggle"
+        },
+        {
+          "id": "auto-close",
+          "label": "auto close",
+          "type": "toggle"
+        },
+        {
+          "id": "ignore-server-menus",
+          "label": "ignore server menus",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "fastexp",
+      "name": "FastExp",
+      "category": "player",
+      "subcategory": "base",
+      "className": "KDFzREm.Ph",
+      "bytecodeClass": "Ph",
+      "description": "restored from Ph.class · 23 methods · 13374 bytes",
+      "methodCount": 23,
+      "size": 13374,
+      "settings": [
+        {
+          "id": "only-without-pvp",
+          "label": "only without pvp",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "lockslots",
+      "name": "LockSlots",
+      "category": "player",
+      "subcategory": "base",
+      "className": "KDFzREm.Pr",
+      "bytecodeClass": "Pr",
+      "description": "restored from Pr.class · 32 methods · 18704 bytes",
+      "methodCount": 32,
+      "size": 18704,
+      "settings": [
+        {
+          "id": "from-inventory",
+          "label": "from inventory",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "nodelay",
+      "name": "NoDelay",
+      "category": "player",
+      "subcategory": "base",
+      "className": "KDFzREm.sD",
+      "bytecodeClass": "sD",
+      "description": "restored from sD.class · 28 methods · 14594 bytes",
+      "methodCount": 28,
+      "size": 14594,
+      "settings": [
+        {
+          "id": "block-breaking",
+          "label": "block breaking",
+          "type": "toggle"
+        },
+        {
+          "id": "right-click",
+          "label": "right click",
+          "type": "toggle"
+        },
+        {
+          "id": "jump-delay",
+          "label": "jump delay",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "noentitytrace",
+      "name": "NoEntityTrace",
+      "category": "player",
+      "subcategory": "base",
+      "className": "KDFzREm.sN",
+      "bytecodeClass": "sN",
+      "description": "restored from sN.class · 17 methods · 9594 bytes",
+      "methodCount": 17,
+      "size": 9594,
+      "settings": [
+        {
+          "id": "only-while-breaking",
+          "label": "only while breaking",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "nointeract",
+      "name": "NoInteract",
+      "category": "player",
+      "subcategory": "base",
+      "className": "KDFzREm.Ty",
+      "bytecodeClass": "Ty",
+      "description": "restored from Ty.class · 59 methods · 31731 bytes",
+      "methodCount": 59,
+      "size": 31731,
+      "settings": [
+        {
+          "id": "aura-only",
+          "label": "aura only",
+          "type": "toggle"
+        },
+        {
+          "id": "pvp-only",
+          "label": "pvp only",
+          "type": "toggle"
+        },
+        {
+          "id": "dont-place-orbs",
+          "label": "dont place orbs",
+          "type": "toggle"
+        },
+        {
+          "id": "block-interact",
+          "label": "block interact",
+          "type": "toggle"
+        },
+        {
+          "id": "note-block",
+          "label": "note block",
+          "type": "toggle"
+        },
+        {
+          "id": "enchant-tables",
+          "label": "enchant tables",
+          "type": "toggle"
+        },
+        {
+          "id": "brewing-stands",
+          "label": "brewing stands",
+          "type": "toggle"
+        },
+        {
+          "id": "crafting-tables",
+          "label": "crafting tables",
+          "type": "toggle"
+        },
+        {
+          "id": "entity-interact",
+          "label": "entity interact",
+          "type": "toggle"
+        },
+        {
+          "id": "armor-stand",
+          "label": "armor stand",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "noserverrotation",
+      "name": "NoServerRotation",
+      "category": "player",
+      "subcategory": "base",
+      "className": "KDFzREm.sy",
+      "bytecodeClass": "sy",
+      "description": "restored from sy.class · 22 methods · 14852 bytes",
+      "methodCount": 22,
+      "size": 14852,
+      "settings": []
+    },
+    {
+      "id": "nuker",
+      "name": "Nuker",
+      "category": "player",
+      "subcategory": "base",
+      "className": "KDFzREm.sL",
+      "bytecodeClass": "sL",
+      "description": "restored from sL.class · 40 methods · 38447 bytes",
+      "methodCount": 40,
+      "size": 38447,
+      "settings": [
+        {
+          "id": "break-only-allowed-blocks",
+          "label": "break only allowed blocks",
+          "type": "toggle"
+        },
+        {
+          "id": "break-only-in-selection",
+          "label": "break only in selection",
+          "type": "toggle"
+        },
+        {
+          "id": "height-range",
+          "label": "height range",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "quickuse",
+      "name": "QuickUse",
+      "category": "player",
+      "subcategory": "base",
+      "className": "KDFzREm.TL",
+      "bytecodeClass": "TL",
+      "description": "restored from TL.class · 32 methods · 17185 bytes",
+      "methodCount": 32,
+      "size": 17185,
+      "settings": [
+        {
+          "id": "golden-apple",
+          "label": "golden apple",
+          "type": "toggle"
+        },
+        {
+          "id": "enchanted-golden-apple",
+          "label": "enchanted golden apple",
+          "type": "toggle"
+        },
+        {
+          "id": "bottle-of-exp",
+          "label": "bottle of exp",
+          "type": "toggle"
+        },
+        {
+          "id": "instant-damage",
+          "label": "instant damage",
+          "type": "toggle"
+        },
+        {
+          "id": "instant-health",
+          "label": "instant health",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "scaffold",
+      "name": "Scaffold",
+      "category": "player",
+      "subcategory": "base",
+      "className": "KDFzREm.TM",
+      "bytecodeClass": "TM",
+      "description": "restored from TM.class · 36 methods · 17450 bytes",
+      "methodCount": 36,
+      "size": 17450,
+      "settings": [
+        {
+          "id": "auto-jump",
+          "label": "auto jump",
+          "type": "toggle"
+        },
+        {
+          "id": "safe-walk",
+          "label": "safe walk",
+          "type": "toggle"
+        },
+        {
+          "id": "save-y",
+          "label": "save y",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "arrows",
+      "name": "Arrows",
+      "category": "visual",
+      "subcategory": "screen",
+      "className": "KDFzREm.TQ",
+      "bytecodeClass": "TQ",
+      "description": "restored from TQ.class · 40 methods · 32389 bytes",
+      "methodCount": 40,
+      "size": 32389,
+      "settings": []
+    },
+    {
+      "id": "aspectratio",
+      "name": "AspectRatio",
+      "category": "visual",
+      "subcategory": "screen",
+      "className": "KDFzREm.Tm",
+      "bytecodeClass": "Tm",
+      "description": "restored from Tm.class · 29 methods · 16663 bytes",
+      "methodCount": 29,
+      "size": 16663,
+      "settings": [
+        {
+          "id": "aspect-ratio",
+          "label": "aspect ratio",
+          "type": "toggle"
+        },
+        {
+          "id": "custom-ratio",
+          "label": "custom ratio",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "blockesp",
+      "name": "BlockESP",
+      "category": "visual",
+      "subcategory": "world",
+      "className": "KDFzREm.TH",
+      "bytecodeClass": "TH",
+      "description": "restored from TH.class · 66 methods · 55018 bytes",
+      "methodCount": 66,
+      "size": 55018,
+      "settings": [
+        {
+          "id": "delta-mode",
+          "label": "delta mode",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "cooldowns",
+      "name": "Cooldowns",
+      "category": "visual",
+      "subcategory": "",
+      "className": "KDFzREm.jo",
+      "bytecodeClass": "jo",
+      "description": "restored from jo.class · 28 methods · 15475 bytes",
+      "methodCount": 28,
+      "size": 15475,
+      "settings": [
+        {
+          "id": "render-on-items",
+          "label": "render on items",
+          "type": "toggle"
+        },
+        {
+          "id": "inventory-only",
+          "label": "inventory only",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "entityesp",
+      "name": "EntityESP",
+      "category": "visual",
+      "subcategory": "screen",
+      "className": "KDFzREm.Ta",
+      "bytecodeClass": "Ta",
+      "description": "restored from Ta.class · 72 methods · 48266 bytes",
+      "methodCount": 72,
+      "size": 48266,
+      "settings": [
+        {
+          "id": "chest-minecart",
+          "label": "chest minecart",
+          "type": "toggle"
+        },
+        {
+          "id": "target-condition",
+          "label": "target condition",
+          "type": "toggle"
+        },
+        {
+          "id": "hold-in-hands",
+          "label": "hold in hands",
+          "type": "toggle"
+        },
+        {
+          "id": "ft-spheres",
+          "label": "ft spheres",
+          "type": "toggle"
+        },
+        {
+          "id": "health-bar",
+          "label": "health bar",
+          "type": "toggle"
+        },
+        {
+          "id": "equipment-size",
+          "label": "equipment size",
+          "type": "toggle"
+        },
+        {
+          "id": "dormant-display-time",
+          "label": "dormant display time",
+          "type": "toggle"
+        },
+        {
+          "id": "box-color",
+          "label": "box color",
+          "type": "toggle"
+        },
+        {
+          "id": "health-bar-mode",
+          "label": "health bar mode",
+          "type": "toggle"
+        },
+        {
+          "id": "health-bar-color",
+          "label": "health bar color",
+          "type": "toggle"
+        },
+        {
+          "id": "health-bar-color-bottom",
+          "label": "health bar color bottom",
+          "type": "toggle"
+        },
+        {
+          "id": "item-name",
+          "label": "item name",
+          "type": "toggle"
+        },
+        {
+          "id": "item-name-mode",
+          "label": "item name mode",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "fakeplayer",
+      "name": "FakePlayer",
+      "category": "visual",
+      "subcategory": "world",
+      "className": "KDFzREm.TP",
+      "bytecodeClass": "TP",
+      "description": "restored from TP.class · 54 methods · 39294 bytes",
+      "methodCount": 54,
+      "size": 39294,
+      "settings": []
+    },
+    {
+      "id": "fog",
+      "name": "Fog",
+      "category": "visual",
+      "subcategory": "world",
+      "className": "KDFzREm.bm",
+      "bytecodeClass": "bm",
+      "description": "restored from bm.class · 34 methods · 20520 bytes",
+      "methodCount": 34,
+      "size": 20520,
+      "settings": []
+    },
+    {
+      "id": "freelook",
+      "name": "FreeLook",
+      "category": "visual",
+      "subcategory": "world",
+      "className": "KDFzREm.bG",
+      "bytecodeClass": "bG",
+      "description": "restored from bG.class · 28 methods · 14283 bytes",
+      "methodCount": 28,
+      "size": 14283,
+      "settings": []
+    },
+    {
+      "id": "gps",
+      "name": "GPS",
+      "category": "visual",
+      "subcategory": "",
+      "className": "KDFzREm.bw",
+      "bytecodeClass": "bw",
+      "description": "restored from bw.class · 40 methods · 28740 bytes",
+      "methodCount": 40,
+      "size": 28740,
+      "settings": [
+        {
+          "id": "target-x",
+          "label": "target x",
+          "type": "toggle"
+        },
+        {
+          "id": "target-z",
+          "label": "target z",
+          "type": "toggle"
+        },
+        {
+          "id": "clear-target",
+          "label": "clear target",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "gamma",
+      "name": "Gamma",
+      "category": "visual",
+      "subcategory": "world",
+      "className": "KDFzREm.TT",
+      "bytecodeClass": "TT",
+      "description": "restored from TT.class · 20 methods · 10550 bytes",
+      "methodCount": 20,
+      "size": 10550,
+      "settings": []
+    },
+    {
+      "id": "hands",
+      "name": "Hands",
+      "category": "visual",
+      "subcategory": "world",
+      "className": "KDFzREm.bk",
+      "bytecodeClass": "bk",
+      "description": "restored from bk.class · 29 methods · 14383 bytes",
+      "methodCount": 29,
+      "size": 14383,
+      "settings": [
+        {
+          "id": "color-right",
+          "label": "color right",
+          "type": "toggle"
+        },
+        {
+          "id": "color-left",
+          "label": "color left",
+          "type": "toggle"
+        },
+        {
+          "id": "texture-mix",
+          "label": "texture mix",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "hotkeys",
+      "name": "Hotkeys",
+      "category": "visual",
+      "subcategory": "",
+      "className": "KDFzREm.jq",
+      "bytecodeClass": "jq",
+      "description": "restored from jq.class · 9 methods · 6158 bytes",
+      "methodCount": 9,
+      "size": 6158,
+      "settings": []
+    },
+    {
+      "id": "inventory",
+      "name": "Inventory",
+      "category": "visual",
+      "subcategory": "",
+      "className": "KDFzREm.jK",
+      "bytecodeClass": "jK",
+      "description": "restored from jK.class · 9 methods · 6153 bytes",
+      "methodCount": 9,
+      "size": 6153,
+      "settings": []
+    },
+    {
+      "id": "jumpeffect",
+      "name": "JumpEffect",
+      "category": "visual",
+      "subcategory": "world",
+      "className": "KDFzREm.Tb",
+      "bytecodeClass": "Tb",
+      "description": "restored from Tb.class · 37 methods · 21754 bytes",
+      "methodCount": 37,
+      "size": 21754,
+      "settings": [
+        {
+          "id": "wave-amplitude",
+          "label": "wave amplitude",
+          "type": "toggle"
+        },
+        {
+          "id": "first-color",
+          "label": "first color",
+          "type": "toggle"
+        },
+        {
+          "id": "second-color",
+          "label": "second color",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "killeffect",
+      "name": "KillEffect",
+      "category": "visual",
+      "subcategory": "world",
+      "className": "KDFzREm.bQ",
+      "bytecodeClass": "bQ",
+      "description": "restored from bQ.class · 47 methods · 40615 bytes",
+      "methodCount": 47,
+      "size": 40615,
+      "settings": [
+        {
+          "id": "behind-walls",
+          "label": "behind walls",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "logo",
+      "name": "Logo",
+      "category": "visual",
+      "subcategory": "",
+      "className": "KDFzREm.jV",
+      "bytecodeClass": "jV",
+      "description": "restored from jV.class · 42 methods · 19386 bytes",
+      "methodCount": 42,
+      "size": 19386,
+      "settings": []
     },
     {
       "id": "notifications",
       "name": "Notifications",
-      "category": "misc",
-      "description": "Уведомления клиента",
+      "category": "visual",
+      "subcategory": "",
+      "className": "KDFzREm.jc",
+      "bytecodeClass": "jc",
+      "description": "restored from jc.class · 29 methods · 13726 bytes",
+      "methodCount": 29,
+      "size": 13726,
       "settings": [
         {
-          "id": "event-notification",
-          "label": "event notification",
+          "id": "module-toggle",
+          "label": "module toggle",
           "type": "toggle"
         },
         {
-          "id": "toggle-sounds",
-          "label": "toggle sounds",
+          "id": "armor-durability",
+          "label": "armor durability",
           "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "irc",
-      "name": "IRC",
-      "category": "misc",
-      "description": "Чат nursultan.fun",
-      "settings": [
+        },
         {
           "id": "irc-ping",
           "label": "irc ping",
@@ -1086,166 +1853,534 @@
       ]
     },
     {
-      "id": "deathcoords",
-      "name": "DeathCoords",
-      "category": "misc",
-      "description": "Координаты смерти",
+      "id": "particles",
+      "name": "Particles",
+      "category": "visual",
+      "subcategory": "world",
+      "className": "KDFzREm.bK",
+      "bytecodeClass": "bK",
+      "description": "restored from bK.class · 49 methods · 23938 bytes",
+      "methodCount": 49,
+      "size": 23938,
       "settings": [
         {
-          "id": "save-waypoint",
-          "label": "save waypoint",
+          "id": "totem-popping",
+          "label": "totem popping",
           "type": "toggle"
         },
         {
-          "id": "automatic-add-waypoint",
-          "label": "automatic add waypoint",
-          "type": "toggle"
-        }
-      ]
-    },
-    {
-      "id": "potiontracker",
-      "name": "PotionTracker",
-      "category": "misc",
-      "description": "Трекинг зелий",
-      "settings": [
-        {
-          "id": "food-tracker",
-          "label": "food tracker",
+          "id": "thrown-item",
+          "label": "thrown item",
           "type": "toggle"
         },
         {
-          "id": "totem-tracker",
-          "label": "totem tracker",
+          "id": "critical-hit",
+          "label": "critical hit",
+          "type": "toggle"
+        },
+        {
+          "id": "color-selectable",
+          "label": "color selectable",
+          "type": "toggle"
+        },
+        {
+          "id": "color-range",
+          "label": "color range",
           "type": "toggle"
         }
       ]
     },
     {
-      "id": "noslow",
-      "name": "NoSlow",
-      "category": "misc",
-      "description": "Без слоу",
+      "id": "potions",
+      "name": "Potions",
+      "category": "visual",
+      "subcategory": "",
+      "className": "KDFzREm.je",
+      "bytecodeClass": "je",
+      "description": "restored from je.class · 10 methods · 7124 bytes",
+      "methodCount": 10,
+      "size": 7124,
+      "settings": []
+    },
+    {
+      "id": "predictions",
+      "name": "Predictions",
+      "category": "visual",
+      "subcategory": "world",
+      "className": "KDFzREm.bx",
+      "bytecodeClass": "bx",
+      "description": "restored from bx.class · 40 methods · 28417 bytes",
+      "methodCount": 40,
+      "size": 28417,
       "settings": [
         {
-          "id": "using-item",
-          "label": "using item",
+          "id": "predict-entity",
+          "label": "predict entity",
+          "type": "toggle"
+        },
+        {
+          "id": "line-color",
+          "label": "line color",
           "type": "toggle"
         }
       ]
     },
     {
-      "id": "watermark",
-      "name": "Watermark",
-      "category": "hud",
-      "description": "Водяной знак Nursultan",
+      "id": "removals",
+      "name": "Removals",
+      "category": "visual",
+      "subcategory": "screen",
+      "className": "KDFzREm.ji",
+      "bytecodeClass": "ji",
+      "description": "restored from ji.class · 62 methods · 29574 bytes",
+      "methodCount": 62,
+      "size": 29574,
       "settings": [
         {
-          "id": "hud-scale",
-          "label": "hud scale",
+          "id": "tilt-view",
+          "label": "tilt view",
+          "type": "toggle"
+        },
+        {
+          "id": "vignette-overlay",
+          "label": "vignette overlay",
+          "type": "toggle"
+        },
+        {
+          "id": "fire-overlay",
+          "label": "fire overlay",
+          "type": "toggle"
+        },
+        {
+          "id": "under-water-overlay",
+          "label": "under water overlay",
+          "type": "toggle"
+        },
+        {
+          "id": "wall-overlay",
+          "label": "wall overlay",
+          "type": "toggle"
+        },
+        {
+          "id": "totem-pop",
+          "label": "totem pop",
+          "type": "toggle"
+        },
+        {
+          "id": "status-effect-overlay",
+          "label": "status effect overlay",
+          "type": "toggle"
+        },
+        {
+          "id": "camera-clip",
+          "label": "camera clip",
+          "type": "toggle"
+        },
+        {
+          "id": "heart-effect",
+          "label": "heart effect",
+          "type": "toggle"
+        },
+        {
+          "id": "fishing-bobber",
+          "label": "fishing bobber",
+          "type": "toggle"
+        },
+        {
+          "id": "wither-spawn",
+          "label": "wither spawn",
+          "type": "toggle"
+        },
+        {
+          "id": "end-portal-open",
+          "label": "end portal open",
+          "type": "toggle"
+        },
+        {
+          "id": "anarchy-events",
+          "label": "anarchy events",
+          "type": "toggle"
+        },
+        {
+          "id": "exp-bottle",
+          "label": "exp bottle",
+          "type": "toggle"
+        },
+        {
+          "id": "sound-multiplier",
+          "label": "sound multiplier",
           "type": "toggle"
         }
       ]
     },
     {
-      "id": "coordinates",
-      "name": "Coordinates",
-      "category": "hud",
-      "description": "Координаты",
+      "id": "saturation",
+      "name": "Saturation",
+      "category": "visual",
+      "subcategory": "world",
+      "className": "KDFzREm.Tt",
+      "bytecodeClass": "Tt",
+      "description": "restored from Tt.class · 30 methods · 22307 bytes",
+      "methodCount": 30,
+      "size": 22307,
+      "settings": []
+    },
+    {
+      "id": "seeinvisible",
+      "name": "SeeInvisible",
+      "category": "visual",
+      "subcategory": "world",
+      "className": "KDFzREm.TG",
+      "bytecodeClass": "TG",
+      "description": "restored from TG.class · 20 methods · 9974 bytes",
+      "methodCount": 20,
+      "size": 9974,
+      "settings": []
+    },
+    {
+      "id": "shulkerpreview",
+      "name": "ShulkerPreview",
+      "category": "visual",
+      "subcategory": "screen",
+      "className": "KDFzREm.Tl",
+      "bytecodeClass": "Tl",
+      "description": "restored from Tl.class · 43 methods · 37102 bytes",
+      "methodCount": 43,
+      "size": 37102,
       "settings": [
         {
-          "id": "hud-scale",
-          "label": "hud scale",
+          "id": "show-in-world",
+          "label": "show in world",
           "type": "toggle"
         }
       ]
     },
     {
-      "id": "hotkeys",
-      "name": "Hotkeys",
-      "category": "hud",
-      "description": "Список биндов",
+      "id": "skycustomization",
+      "name": "SkyCustomization",
+      "category": "visual",
+      "subcategory": "world",
+      "className": "KDFzREm.jW",
+      "bytecodeClass": "jW",
+      "description": "restored from jW.class · 56 methods · 28400 bytes",
+      "methodCount": 56,
+      "size": 28400,
       "settings": [
         {
-          "id": "hud-hotkeys",
-          "label": "hud hotkeys",
+          "id": "aurora-first",
+          "label": "aurora first",
+          "type": "toggle"
+        },
+        {
+          "id": "aurora-second",
+          "label": "aurora second",
           "type": "toggle"
         }
       ]
     },
     {
-      "id": "effects",
-      "name": "Effects",
-      "category": "hud",
-      "description": "Эффекты зелий",
+      "id": "streamermode",
+      "name": "StreamerMode",
+      "category": "visual",
+      "subcategory": "screen",
+      "className": "KDFzREm.js",
+      "bytecodeClass": "js",
+      "description": "restored from js.class · 63 methods · 39477 bytes",
+      "methodCount": 63,
+      "size": 39477,
       "settings": [
         {
-          "id": "hud-effects",
-          "label": "hud effects",
+          "id": "hide-entries",
+          "label": "hide entries",
+          "type": "toggle"
+        },
+        {
+          "id": "custom-name",
+          "label": "custom name",
           "type": "toggle"
         }
       ]
     },
     {
-      "id": "inventory",
-      "name": "Inventory",
-      "category": "hud",
-      "description": "Превью инвентаря",
+      "id": "swinganimations",
+      "name": "SwingAnimations",
+      "category": "visual",
+      "subcategory": "world",
+      "className": "KDFzREm.jG",
+      "bytecodeClass": "jG",
+      "description": "restored from jG.class · 35 methods · 19924 bytes",
+      "methodCount": 35,
+      "size": 19924,
       "settings": [
         {
-          "id": "hud-inventory",
-          "label": "hud inventory",
+          "id": "swing-1",
+          "label": "swing 1",
+          "type": "toggle"
+        },
+        {
+          "id": "swing-2",
+          "label": "swing 2",
+          "type": "toggle"
+        },
+        {
+          "id": "swing-3",
+          "label": "swing 3",
+          "type": "toggle"
+        },
+        {
+          "id": "swing-4",
+          "label": "swing 4",
+          "type": "toggle"
+        },
+        {
+          "id": "swing-strength",
+          "label": "swing strength",
+          "type": "toggle"
+        },
+        {
+          "id": "spin-smoothness",
+          "label": "spin smoothness",
+          "type": "toggle"
+        },
+        {
+          "id": "only-while-have-target",
+          "label": "only while have target",
           "type": "toggle"
         }
       ]
     },
     {
-      "id": "cooldowns",
-      "name": "Cooldowns",
-      "category": "hud",
-      "description": "Откаты предметов",
-      "settings": [
-        {
-          "id": "hud-cooldowns",
-          "label": "hud cooldowns",
-          "type": "toggle"
-        }
-      ]
+      "id": "targetesp",
+      "name": "TargetEsp",
+      "category": "visual",
+      "subcategory": "world",
+      "className": "KDFzREm.jY",
+      "bytecodeClass": "jY",
+      "description": "restored from jY.class · 36 methods · 14985 bytes",
+      "methodCount": 36,
+      "size": 14985,
+      "settings": []
     },
     {
-      "id": "target",
-      "name": "Target",
-      "category": "hud",
-      "description": "Target HUD",
+      "id": "targetinfo",
+      "name": "TargetInfo",
+      "category": "visual",
+      "subcategory": "",
+      "className": "KDFzREm.jH",
+      "bytecodeClass": "jH",
+      "description": "restored from jH.class · 26 methods · 10982 bytes",
+      "methodCount": 26,
+      "size": 10982,
       "settings": [
         {
-          "id": "health-bar",
-          "label": "health bar",
+          "id": "show-from-mouse",
+          "label": "show from mouse",
           "type": "toggle"
         },
         {
           "id": "show-armor-details",
           "label": "show armor details",
           "type": "toggle"
+        },
+        {
+          "id": "show-absorption",
+          "label": "show absorption",
+          "type": "toggle"
         }
       ]
     },
     {
-      "id": "arrows",
-      "name": "Arrows",
-      "category": "hud",
-      "description": "Счётчик стрел",
+      "id": "timechanger",
+      "name": "TimeChanger",
+      "category": "visual",
+      "subcategory": "world",
+      "className": "KDFzREm.Tw",
+      "bytecodeClass": "Tw",
+      "description": "restored from Tw.class · 41 methods · 17995 bytes",
+      "methodCount": 41,
+      "size": 17995,
       "settings": []
     },
     {
-      "id": "potions",
-      "name": "Potions",
-      "category": "hud",
-      "description": "Счётчик зелий",
+      "id": "tracers",
+      "name": "Tracers",
+      "category": "visual",
+      "subcategory": "screen",
+      "className": "KDFzREm.jQ",
+      "bytecodeClass": "jQ",
+      "description": "restored from jQ.class · 23 methods · 17192 bytes",
+      "methodCount": 23,
+      "size": 17192,
+      "settings": []
+    },
+    {
+      "id": "trajectory",
+      "name": "Trajectory",
+      "category": "visual",
+      "subcategory": "world",
+      "className": "KDFzREm.bh",
+      "bytecodeClass": "bh",
+      "description": "restored from bh.class · 48 methods · 54973 bytes",
+      "methodCount": 48,
+      "size": 54973,
       "settings": [
         {
-          "id": "Potions",
-          "label": "Potions",
+          "id": "predict-entity",
+          "label": "predict entity",
+          "type": "toggle"
+        },
+        {
+          "id": "line-color",
+          "label": "line color",
+          "type": "toggle"
+        },
+        {
+          "id": "hit-line-color",
+          "label": "hit line color",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "viewmodel",
+      "name": "ViewModel",
+      "category": "visual",
+      "subcategory": "world",
+      "className": "KDFzREm.TY",
+      "bytecodeClass": "TY",
+      "description": "restored from TY.class · 27 methods · 16407 bytes",
+      "methodCount": 27,
+      "size": 16407,
+      "settings": [
+        {
+          "id": "right-hand-x",
+          "label": "right hand x",
+          "type": "toggle"
+        },
+        {
+          "id": "right-hand-y",
+          "label": "right hand y",
+          "type": "toggle"
+        },
+        {
+          "id": "right-hand-z",
+          "label": "right hand z",
+          "type": "toggle"
+        },
+        {
+          "id": "right-scale",
+          "label": "right scale",
+          "type": "toggle"
+        },
+        {
+          "id": "left-hand-x",
+          "label": "left hand x",
+          "type": "toggle"
+        },
+        {
+          "id": "left-hand-y",
+          "label": "left hand y",
+          "type": "toggle"
+        },
+        {
+          "id": "left-hand-z",
+          "label": "left hand z",
+          "type": "toggle"
+        },
+        {
+          "id": "left-scale",
+          "label": "left scale",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "anarchyhelper",
+      "name": "AnarchyHelper",
+      "category": "misc",
+      "subcategory": "helper",
+      "className": "KDFzREm.mZ",
+      "bytecodeClass": "mZ",
+      "description": "restored from mZ.class · 57 methods · 32936 bytes",
+      "methodCount": 57,
+      "size": 32936,
+      "settings": [
+        {
+          "id": "god-aura",
+          "label": "god aura",
+          "type": "toggle"
+        },
+        {
+          "id": "sheer-dust",
+          "label": "sheer dust",
+          "type": "toggle"
+        },
+        {
+          "id": "holy-water",
+          "label": "holy water",
+          "type": "toggle"
+        },
+        {
+          "id": "potion-holy-water",
+          "label": "potion holy water",
+          "type": "toggle"
+        },
+        {
+          "id": "potion-rage",
+          "label": "potion rage",
+          "type": "toggle"
+        },
+        {
+          "id": "potion-paladin",
+          "label": "potion paladin",
+          "type": "toggle"
+        },
+        {
+          "id": "potion-assassin",
+          "label": "potion assassin",
+          "type": "toggle"
+        },
+        {
+          "id": "potion-drowsiness",
+          "label": "potion drowsiness",
+          "type": "toggle"
+        },
+        {
+          "id": "potion-radiation",
+          "label": "potion radiation",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "auctionhelper",
+      "name": "AuctionHelper",
+      "category": "misc",
+      "subcategory": "helper",
+      "className": "KDFzREm.mc",
+      "bytecodeClass": "mc",
+      "description": "restored from mc.class · 77 methods · 44016 bytes",
+      "methodCount": 77,
+      "size": 44016,
+      "settings": [
+        {
+          "id": "profitable-color",
+          "label": "profitable color",
+          "type": "toggle"
+        },
+        {
+          "id": "profitable-items-count",
+          "label": "profitable items count",
+          "type": "toggle"
+        },
+        {
+          "id": "open-auction-from-item",
+          "label": "open auction from item",
+          "type": "toggle"
+        },
+        {
+          "id": "show-item-price",
+          "label": "show item price",
           "type": "toggle"
         }
       ]
@@ -1253,27 +2388,339 @@
     {
       "id": "autobuy",
       "name": "AutoBuy",
-      "category": "autobuy",
-      "description": "Автозакуп на аукционе",
+      "category": "misc",
+      "subcategory": "base",
+      "className": "KDFzREm.WV",
+      "bytecodeClass": "WV",
+      "description": "restored from WV.class · 50 methods · 29304 bytes",
+      "methodCount": 50,
+      "size": 29304,
       "settings": [
         {
-          "id": "max-price",
-          "label": "max price",
-          "type": "toggle"
-        },
-        {
-          "id": "min-count",
-          "label": "min count",
+          "id": "decrease-prices",
+          "label": "decrease prices",
           "type": "toggle"
         },
         {
           "id": "auto-parser",
           "label": "auto parser",
           "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "bypasshealth",
+      "name": "BypassHealth",
+      "category": "misc",
+      "subcategory": "base",
+      "className": "KDFzREm.Ww",
+      "bytecodeClass": "Ww",
+      "description": "restored from Ww.class · 8 methods · 6039 bytes",
+      "methodCount": 8,
+      "size": 6039,
+      "settings": []
+    },
+    {
+      "id": "chathelper",
+      "name": "ChatHelper",
+      "category": "misc",
+      "subcategory": "helper",
+      "className": "KDFzREm.ma",
+      "bytecodeClass": "ma",
+      "description": "restored from ma.class · 24 methods · 10668 bytes",
+      "methodCount": 24,
+      "size": 10668,
+      "settings": [
+        {
+          "id": "better-commands",
+          "label": "better commands",
+          "type": "toggle"
         },
         {
-          "id": "decrease-prices",
-          "label": "decrease prices",
+          "id": "chat-addons",
+          "label": "chat addons",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "clickaction",
+      "name": "ClickAction",
+      "category": "misc",
+      "subcategory": "base",
+      "className": "KDFzREm.Wr",
+      "bytecodeClass": "Wr",
+      "description": "restored from Wr.class · 16 methods · 10530 bytes",
+      "methodCount": 16,
+      "size": 10530,
+      "settings": []
+    },
+    {
+      "id": "clientsounds",
+      "name": "ClientSounds",
+      "category": "misc",
+      "subcategory": "",
+      "className": "KDFzREm.Wk",
+      "bytecodeClass": "Wk",
+      "description": "restored from Wk.class · 54 methods · 31074 bytes",
+      "methodCount": 54,
+      "size": 31074,
+      "settings": [
+        {
+          "id": "toggle-sounds",
+          "label": "toggle sounds",
+          "type": "toggle"
+        },
+        {
+          "id": "sound-type",
+          "label": "sound type",
+          "type": "toggle"
+        },
+        {
+          "id": "select-enable-sound",
+          "label": "select enable sound",
+          "type": "toggle"
+        },
+        {
+          "id": "select-disable-sound",
+          "label": "select disable sound",
+          "type": "toggle"
+        },
+        {
+          "id": "sound-does-not-exist",
+          "label": "sound does not exist",
+          "type": "toggle"
+        },
+        {
+          "id": "error-please-report",
+          "label": "error please report",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "customcape",
+      "name": "CustomCape",
+      "category": "misc",
+      "subcategory": "",
+      "className": "KDFzREm.WY",
+      "bytecodeClass": "WY",
+      "description": "restored from WY.class · 18 methods · 10581 bytes",
+      "methodCount": 18,
+      "size": 10581,
+      "settings": []
+    },
+    {
+      "id": "deathcoords",
+      "name": "DeathCoords",
+      "category": "misc",
+      "subcategory": "base",
+      "className": "KDFzREm.WQ",
+      "bytecodeClass": "WQ",
+      "description": "restored from WQ.class · 20 methods · 12761 bytes",
+      "methodCount": 20,
+      "size": 12761,
+      "settings": [
+        {
+          "id": "save-waypoint",
+          "label": "save waypoint",
+          "type": "toggle"
+        },
+        {
+          "id": "death-message",
+          "label": "death message",
+          "type": "toggle"
+        },
+        {
+          "id": "death-waypoint",
+          "label": "death waypoint",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "discordactivity",
+      "name": "DiscordActivity",
+      "category": "misc",
+      "subcategory": "",
+      "className": "KDFzREm.mu",
+      "bytecodeClass": "mu",
+      "description": "restored from mu.class · 10 methods · 7342 bytes",
+      "methodCount": 10,
+      "size": 7342,
+      "settings": []
+    },
+    {
+      "id": "elytrahelper",
+      "name": "ElytraHelper",
+      "category": "misc",
+      "subcategory": "helper",
+      "className": "KDFzREm.WO",
+      "bytecodeClass": "WO",
+      "description": "restored from WO.class · 41 methods · 25622 bytes",
+      "methodCount": 41,
+      "size": 25622,
+      "settings": [
+        {
+          "id": "swap-key",
+          "label": "swap key",
+          "type": "toggle"
+        },
+        {
+          "id": "firework-key",
+          "label": "firework key",
+          "type": "toggle"
+        },
+        {
+          "id": "only-space",
+          "label": "only space",
+          "type": "toggle"
+        },
+        {
+          "id": "auto-launch",
+          "label": "auto launch",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "holyhelper",
+      "name": "HolyHelper",
+      "category": "misc",
+      "subcategory": "helper",
+      "className": "KDFzREm.mO",
+      "bytecodeClass": "mO",
+      "description": "restored from mO.class · 38 methods · 23362 bytes",
+      "methodCount": 38,
+      "size": 23362,
+      "settings": [
+        {
+          "id": "explosive-stuff",
+          "label": "explosive stuff",
+          "type": "toggle"
+        },
+        {
+          "id": "exp-bottle",
+          "label": "exp bottle",
+          "type": "toggle"
+        },
+        {
+          "id": "explosive-trap",
+          "label": "explosive trap",
+          "type": "toggle"
+        },
+        {
+          "id": "snow-ball",
+          "label": "snow ball",
+          "type": "toggle"
+        },
+        {
+          "id": "show-stun-zone",
+          "label": "show stun zone",
+          "type": "toggle"
+        },
+        {
+          "id": "zone-color",
+          "label": "zone color",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "irc",
+      "name": "IRC",
+      "category": "misc",
+      "subcategory": "",
+      "className": "KDFzREm.Wg",
+      "bytecodeClass": "Wg",
+      "description": "restored from Wg.class · 8 methods · 6156 bytes",
+      "methodCount": 8,
+      "size": 6156,
+      "settings": []
+    },
+    {
+      "id": "openwalls",
+      "name": "OpenWalls",
+      "category": "misc",
+      "subcategory": "base",
+      "className": "KDFzREm.WI",
+      "bytecodeClass": "WI",
+      "description": "restored from WI.class · 13 methods · 10076 bytes",
+      "methodCount": 13,
+      "size": 10076,
+      "settings": []
+    },
+    {
+      "id": "potiontracker",
+      "name": "PotionTracker",
+      "category": "misc",
+      "subcategory": "trackers",
+      "className": "KDFzREm.WJ",
+      "bytecodeClass": "WJ",
+      "description": "restored from WJ.class · 43 methods · 34549 bytes",
+      "methodCount": 43,
+      "size": 34549,
+      "settings": [
+        {
+          "id": "ignore-self",
+          "label": "ignore self",
+          "type": "toggle"
+        },
+        {
+          "id": "ignore-common-splash-potions",
+          "label": "ignore common splash potions",
+          "type": "toggle"
+        },
+        {
+          "id": "ft-bypass",
+          "label": "ft bypass",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "srpspoofer",
+      "name": "SRPSpoofer",
+      "category": "misc",
+      "subcategory": "base",
+      "className": "KDFzREm.Wq",
+      "bytecodeClass": "Wq",
+      "description": "restored from Wq.class · 9 methods · 7818 bytes",
+      "methodCount": 9,
+      "size": 7818,
+      "settings": []
+    },
+    {
+      "id": "tickratesync",
+      "name": "TickRateSync",
+      "category": "misc",
+      "subcategory": "base",
+      "className": "KDFzREm.WK",
+      "bytecodeClass": "WK",
+      "description": "restored from WK.class · 11 methods · 7720 bytes",
+      "methodCount": 11,
+      "size": 7720,
+      "settings": []
+    },
+    {
+      "id": "usetracker",
+      "name": "UseTracker",
+      "category": "misc",
+      "subcategory": "trackers",
+      "className": "KDFzREm.mA",
+      "bytecodeClass": "mA",
+      "description": "restored from mA.class · 24 methods · 11760 bytes",
+      "methodCount": 24,
+      "size": 11760,
+      "settings": [
+        {
+          "id": "totem-tracker",
+          "label": "totem tracker",
+          "type": "toggle"
+        },
+        {
+          "id": "food-tracker",
+          "label": "food tracker",
           "type": "toggle"
         }
       ]
@@ -1307,6 +2754,7 @@
   ],
   "stats": {
     "classes": 3001,
-    "lambdas": 11267
+    "lambdas": 11267,
+    "modules": 109
   }
 }
