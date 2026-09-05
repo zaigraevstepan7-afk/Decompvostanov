@@ -47,6 +47,9 @@ public final class ConfigStore {
             if (root.has("descriptions")) {
                 ClientSettings.descriptions = root.get("descriptions").getAsBoolean();
             }
+            if (root.has("snapGuides")) {
+                ClientSettings.snapGuides = root.get("snapGuides").getAsBoolean();
+            }
             if (root.has("autoAuthPassword")) {
                 ClientSettings.autoAuthPassword = root.get("autoAuthPassword").getAsString();
             }
@@ -114,6 +117,7 @@ public final class ConfigStore {
             root.addProperty("language", ClientSettings.language);
             root.addProperty("autoSavePreset", ClientSettings.autoSavePreset);
             root.addProperty("descriptions", ClientSettings.descriptions);
+            root.addProperty("snapGuides", ClientSettings.snapGuides);
             root.addProperty("autoAuthPassword", ClientSettings.autoAuthPassword == null ? "" : ClientSettings.autoAuthPassword);
             var friends = new com.google.gson.JsonArray();
             Friends.all().forEach(friends::add);

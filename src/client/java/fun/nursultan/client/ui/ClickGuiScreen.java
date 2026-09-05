@@ -352,21 +352,26 @@ public final class ClickGuiScreen extends Screen {
     private void drawBurgerMenu(GuiGraphics g) {
         int mx = winX + winW - 168;
         int my = winY + 40;
-        round(g, mx, my, 152, 88, 5, 0xF01C1C20);
+        round(g, mx, my, 152, 106, 5, 0xF01C1C20);
         String lang = ClientSettings.ru() ? "Язык: RU" : "Language: EN";
         String menu = (ClientSettings.ru() ? "Меню " : "Menu ") + ClientSettings.menuScale;
         String hud = "HUD " + ClientSettings.hudScale;
         String desc = ClientSettings.descriptions
                 ? (ClientSettings.ru() ? "Описания вкл" : "Descriptions on")
                 : (ClientSettings.ru() ? "Описания выкл" : "Descriptions off");
+        String snap = ClientSettings.snapGuides
+                ? (ClientSettings.ru() ? "Направляющие вкл" : "Snap guides on")
+                : (ClientSettings.ru() ? "Направляющие выкл" : "Snap guides off");
         g.drawString(font, lang, mx + 10, my + 10, TEXT, false);
         g.drawString(font, menu, mx + 10, my + 28, TEXT, false);
         g.drawString(font, hud, mx + 10, my + 46, TEXT, false);
         g.drawString(font, desc, mx + 10, my + 64, TEXT, false);
+        g.drawString(font, snap, mx + 10, my + 82, TEXT, false);
         hit("lang", mx, my + 6, 152, 18, null);
         hit("menu-scale", mx, my + 24, 152, 18, null);
         hit("hud-scale", mx, my + 42, 152, 18, null);
         hit("desc", mx, my + 60, 152, 18, null);
+        hit("snap", mx, my + 78, 152, 18, null);
     }
 
     private Map<String, List<Module>> groups() {
@@ -470,7 +475,7 @@ public final class ClickGuiScreen extends Screen {
         int button = event.button();
         frame();
         if (burger) {
-            Hit item = at(mx, my, "lang", "menu-scale", "hud-scale", "desc", "burger");
+            Hit item = at(mx, my, "lang", "menu-scale", "hud-scale", "desc", "snap", "burger");
             burger = false;
             if (item != null) {
                 switch (item.kind) {
@@ -478,6 +483,7 @@ public final class ClickGuiScreen extends Screen {
                     case "menu-scale" -> ClientSettings.cycleMenuScale();
                     case "hud-scale" -> ClientSettings.cycleHudScale();
                     case "desc" -> ClientSettings.toggleDescriptions();
+                    case "snap" -> ClientSettings.toggleSnapGuides();
                     default -> burger = true;
                 }
                 return true;

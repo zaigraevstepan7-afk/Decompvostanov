@@ -6,6 +6,7 @@ public final class ClientSettings {
     public static float hudScale = 1.0F;
     public static int accent = 0xFFD48A00;
     public static boolean descriptions = false;
+    public static boolean snapGuides = false;
     public static boolean autoSavePreset = true;
     public static boolean loading;
     public static String language = "ru";
@@ -38,6 +39,13 @@ public final class ClientSettings {
 
     public static void toggleDescriptions() {
         descriptions = !descriptions;
+        if (autoSavePreset && !loading) {
+            fun.nursultan.client.config.ConfigStore.save();
+        }
+    }
+
+    public static void toggleSnapGuides() {
+        snapGuides = !snapGuides;
         if (autoSavePreset && !loading) {
             fun.nursultan.client.config.ConfigStore.save();
         }
