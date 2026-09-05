@@ -18,6 +18,7 @@ public final class AutoBuy extends Module {
         bool("checker", false);
         bool("decrease-prices", true);
         bool("auto-parser", true);
+        bool("auto-parser.complete", true);
     }
 
     @Override
@@ -44,7 +45,9 @@ public final class AutoBuy extends Module {
                 continue;
             }
             Inventories.click(mc, slot.index, 0, ClickType.PICKUP);
-            return;
+            if (setting("auto-parser.complete")) {
+                return;
+            }
         }
     }
 }

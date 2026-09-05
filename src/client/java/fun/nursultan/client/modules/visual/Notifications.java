@@ -19,6 +19,7 @@ public final class Notifications extends Module {
 
     public Notifications() {
         super("notifications", "Notifications", Category.VISUAL, "interface", "KDFzREm.jc", 29);
+        bool("notifications", true);
         bool("module-toggle", true);
         bool("armor-durability", true);
         bool("irc-ping", false);
@@ -26,6 +27,9 @@ public final class Notifications extends Module {
 
     @Override
     public void onTick(Minecraft mc) {
+        if (!setting("notifications")) {
+            return;
+        }
         if (setting("module-toggle")) {
             for (Module module : ModuleManager.INSTANCE.modules) {
                 Boolean prev = last.put(module.id, module.enabled);
@@ -61,7 +65,7 @@ public final class Notifications extends Module {
     @Override
     public void onHud(GuiGraphics g, int width, int height) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null) {
+        if (mc.player == null || !setting("notifications")) {
             return;
         }
         int y = 60;

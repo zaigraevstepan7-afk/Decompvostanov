@@ -8,6 +8,7 @@ import net.minecraft.client.Minecraft;
 public final class Removals extends Module {
     public Removals() {
         super("removals", "Removals", Category.VISUAL, "screen", "KDFzREm.ji", 62);
+        bool("removals", true);
         bool("tilt-view", true);
         bool("vignette-overlay", true);
         bool("fire-overlay", true);
@@ -34,7 +35,7 @@ public final class Removals extends Module {
 
     @Override
     public void onTick(Minecraft mc) {
-        if (mc.player == null) {
+        if (mc.player == null || !setting("removals")) {
             return;
         }
         if (setting("tilt-view") || setting("heart-effect")) {

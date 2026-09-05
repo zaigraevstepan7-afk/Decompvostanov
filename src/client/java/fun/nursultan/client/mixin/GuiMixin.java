@@ -15,7 +15,7 @@ public class GuiMixin {
     @Inject(method = "renderScoreboardSidebar", at = @At("HEAD"), cancellable = true)
     private void nursultan$scoreboard(GuiGraphics graphics, DeltaTracker tracker, CallbackInfo ci) {
         Module removals = ClientHooks.module("removals");
-        if (removals != null && removals.enabled && removals.setting("scoreboard")) {
+        if (removals != null && removals.enabled && removals.setting("removals") && removals.setting("scoreboard")) {
             ci.cancel();
         }
     }
@@ -23,7 +23,7 @@ public class GuiMixin {
     @Inject(method = "renderEffects", at = @At("HEAD"), cancellable = true)
     private void nursultan$effects(GuiGraphics graphics, DeltaTracker tracker, CallbackInfo ci) {
         Module removals = ClientHooks.module("removals");
-        if (removals != null && removals.enabled && removals.setting("status-effect-overlay")) {
+        if (removals != null && removals.enabled && removals.setting("removals") && removals.setting("status-effect-overlay")) {
             ci.cancel();
         }
     }
@@ -31,7 +31,7 @@ public class GuiMixin {
     @Inject(method = "renderCameraOverlays", at = @At("HEAD"), cancellable = true)
     private void nursultan$vignette(GuiGraphics graphics, DeltaTracker tracker, CallbackInfo ci) {
         Module removals = ClientHooks.module("removals");
-        if (removals != null && removals.enabled && removals.setting("vignette-overlay")) {
+        if (removals != null && removals.enabled && removals.setting("removals") && removals.setting("vignette-overlay")) {
             ci.cancel();
         }
     }

@@ -17,6 +17,7 @@ public final class ShulkerPreview extends Module {
         super("shulkerpreview", "ShulkerPreview", Category.VISUAL, "screen", "KDFzREm.Tl", 43);
         bool("show-in-world", true);
         bool("shulker.holdControl", false);
+        bool("shulker.contains", true);
     }
 
     @Override
@@ -34,6 +35,9 @@ public final class ShulkerPreview extends Module {
             return;
         }
         ItemContainerContents contents = stack.get(DataComponents.CONTAINER);
+        if (setting("shulker.contains") && (contents == null || !contents.nonEmptyItems().iterator().hasNext())) {
+            return;
+        }
         int x = width / 2 + 16;
         int y = height / 2 - 20;
         int i = 0;

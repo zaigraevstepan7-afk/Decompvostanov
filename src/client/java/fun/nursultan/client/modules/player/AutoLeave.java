@@ -11,6 +11,7 @@ public final class AutoLeave extends Module {
     public AutoLeave() {
         super("autoleave", "AutoLeave", Category.PLAYER, "auto", "KDFzREm.sv", 31);
         bool("action", true);
+        bool("triggers", true);
         bool("hub", true);
         bool("spawn", false);
         bool("custom-command", false);
@@ -22,7 +23,7 @@ public final class AutoLeave extends Module {
 
     @Override
     public void onTick(Minecraft mc) {
-        if (!setting("action") || mc.player == null || mc.level == null) {
+        if (!setting("action") || !setting("triggers") || mc.player == null || mc.level == null) {
             return;
         }
         boolean low = mc.player.getHealth() <= numberValue("health", 6);

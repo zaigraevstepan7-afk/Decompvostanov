@@ -24,6 +24,7 @@ public final class Scaffold extends Module {
         bool("telly", false);
         bool("grim", false);
         bool("basic", true);
+        bool("none", false);
         bool("sneak", false);
         number("delay", 0, 0, 10, 1);
     }
@@ -35,7 +36,7 @@ public final class Scaffold extends Module {
 
     @Override
     public void onTick(Minecraft mc) {
-        if (mc.player == null || mc.level == null || mc.gameMode == null) {
+        if (setting("none") || mc.player == null || mc.level == null || mc.gameMode == null) {
             return;
         }
         if (Double.isNaN(savedY)) {

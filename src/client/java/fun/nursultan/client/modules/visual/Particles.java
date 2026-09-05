@@ -18,6 +18,8 @@ public final class Particles extends Module {
         bool("color-range", false);
         bool("pinch", false);
         bool("hsv", false);
+        bool("color", true);
+        bool("custom", false);
         number("size", 1, 0.2F, 3, 0.1F);
     }
 
@@ -28,7 +30,9 @@ public final class Particles extends Module {
         }
         float size = numberValue("size", 1);
         if (setting("critical-hit") && mc.player.swingTime == 1) {
-            mc.level.addParticle(ParticleTypes.CRIT, mc.player.getX(), mc.player.getY() + 1, mc.player.getZ(), 0, 0.1 * size, 0);
+            mc.level.addParticle(
+                    setting("color") ? ParticleTypes.CRIT : ParticleTypes.SMOKE,
+                    mc.player.getX(), mc.player.getY() + 1, mc.player.getZ(), 0, 0.1 * size, 0);
         }
         if (setting("ambience") && mc.player.tickCount % 4 == 0) {
             mc.level.addParticle(

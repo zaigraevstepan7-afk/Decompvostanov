@@ -20,6 +20,7 @@ public final class Logo extends Module {
         bool("details", true);
         bool("left", true);
         bool("right", false);
+        bool("position", true);
         enabled = true;
     }
 
@@ -30,7 +31,7 @@ public final class Logo extends Module {
             return;
         }
         int y = (int) (6 * ClientSettings.hudScale);
-        int x = setting("right") && !setting("left") ? width - 160 : 6;
+        int x = setting("position") && setting("right") && !setting("left") ? width - 160 : 6;
         g.drawString(mc.font, "NURSULTAN", x, y, ClientSettings.accent, false);
         y += 10;
         StringBuilder line = new StringBuilder();

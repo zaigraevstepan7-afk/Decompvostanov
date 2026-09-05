@@ -212,30 +212,35 @@ public final class ClientHooks {
         return name == null || name.isBlank() || name.contains(" ") || name.length() > 16;
     }
 
+    public static boolean removalsOn() {
+        Module module = module("removals");
+        return module != null && module.enabled && module.setting("removals");
+    }
+
     public static float soundMultiplier() {
         Module module = module("removals");
-        return module != null && module.enabled ? module.numberValue("sound-multiplier", 1) : 1.0F;
+        return removalsOn() ? module.numberValue("sound-multiplier", 1) : 1.0F;
     }
 
     public static boolean cameraClip() {
         Module module = module("removals");
-        return module != null && module.enabled && module.setting("camera-clip");
+        return removalsOn() && module.setting("camera-clip");
     }
 
     public static boolean removeScreenEffects() {
         Module module = module("removals");
-        return module != null && module.enabled
+        return removalsOn()
                 && (module.setting("fire-overlay") || module.setting("under-water-overlay") || module.setting("wall-overlay"));
     }
 
     public static boolean removeTotemPop() {
         Module module = module("removals");
-        return module != null && module.enabled && module.setting("totem-pop");
+        return removalsOn() && module.setting("totem-pop");
     }
 
     public static boolean removeFog() {
         Module module = module("removals");
-        return module != null && module.enabled && module.setting("fog");
+        return removalsOn() && module.setting("fog");
     }
 
     public static org.joml.Vector4f fogColor(org.joml.Vector4f current) {
@@ -243,7 +248,7 @@ public final class ClientHooks {
             return new org.joml.Vector4f(current.x, current.y, current.z, 0);
         }
         Module fog = module("fog");
-        if (fog != null && fog.enabled && fog.setting("color")) {
+        if (fog != null && fog.enabled && fog.setting("color") && fog.setting("details")) {
             int accent = fun.nursultan.client.ClientSettings.accent;
             float alpha = current.w;
             float dist = fog.numberValue("distance", 192);
