@@ -1,5 +1,6 @@
 package fun.nursultan.client.util;
 
+import fun.nursultan.client.config.ConfigStore;
 import fun.nursultan.client.module.Module;
 import fun.nursultan.client.module.ModuleManager;
 import java.util.ArrayDeque;
@@ -93,6 +94,97 @@ public final class ClientHooks {
         }
         String name = player.getGameProfile().name();
         return name == null || name.isBlank() || name.contains(" ") || name.length() > 16;
+    }
+
+    public static boolean cameraClip() {
+        Module module = module("removals");
+        return module != null && module.enabled && module.setting("camera-clip");
+    }
+
+    public static boolean removeScreenEffects() {
+        Module module = module("removals");
+        return module != null && module.enabled
+                && (module.setting("fire-overlay") || module.setting("under-water-overlay") || module.setting("wall-overlay"));
+    }
+
+    public static boolean removeTotemPop() {
+        Module module = module("removals");
+        return module != null && module.enabled && module.setting("totem-pop");
+    }
+
+    public static boolean removeFog() {
+        Module module = module("removals");
+        return module != null && module.enabled && module.setting("fog");
+    }
+
+    public static org.joml.Vector4f fogColor(org.joml.Vector4f current) {
+        if (removeFog()) {
+            return new org.joml.Vector4f(current.x, current.y, current.z, 0);
+        }
+        Module fog = module("fog");
+        if (fog != null && fog.enabled && fog.setting("color")) {
+            int accent = fun.nursultan.client.ClientSettings.accent;
+            return new org.joml.Vector4f(
+                    ((accent >> 16) & 0xFF) / 255F,
+                    ((accent >> 8) & 0xFF) / 255F,
+                    (accent & 0xFF) / 255F,
+                    current.w);
+        }
+        return current;
+    }
+
+    public static float aspectScale() {
+        Module module = module("aspectratio");
+        if (module == null || !module.enabled || !module.setting("aspect-ratio")) {
+            return 1.0F;
+        }
+        float custom = module.numberValue("custom-ratio", 1.777F);
+        if (module.setting("_16_9")) {
+            custom = 16F / 9F;
+        } else if (module.setting("_16_10")) {
+            custom = 16F / 10F;
+        } else if (module.setting("_21_9")) {
+            custom = 21F / 9F;
+        } else if (module.setting("_4_3")) {
+            custom = 4F / 3F;
+        }
+        return custom <= 0.01F ? 1.0F : (16F / 9F) / custom;
+    }
+
+    public static boolean noSlow() {
+        return enabled("noslow");
+    }
+
+    public static float noSlowSpeed() {
+        Module module = module("noslow");
+        return module != null && module.setting("spooky-time-duels") ? 0.28F : 0.22F;
+    }
+
+    public static boolean noEntityPush() {
+        Module module = module("nopush");
+        return module != null && module.enabled && module.setting("entity-push");
+    }
+
+    public static boolean freeLook() {
+        return enabled("freelook");
+    }
+
+    public static boolean handleClientChat(String message) {
+        if (message == null) {
+            return false;
+        }
+        String t = message.trim();
+        if (t.startsWith(".friend add ")) {
+            Friends.add(t.substring(".friend add ".length()).trim());
+            ConfigStore.save();
+            return true;
+        }
+        if (t.startsWith(".friend del ")) {
+            Friends.remove(t.substring(".friend del ".length()).trim());
+            ConfigStore.save();
+            return true;
+        }
+        return false;
     }
 
     private ClientHooks() {}

@@ -40,6 +40,9 @@ public abstract class Module {
         } else {
             onDisable();
         }
+        if (fun.nursultan.client.ClientSettings.autoSavePreset && !fun.nursultan.client.ClientSettings.loading) {
+            fun.nursultan.client.config.ConfigStore.save();
+        }
     }
 
     public boolean setting(String id) {

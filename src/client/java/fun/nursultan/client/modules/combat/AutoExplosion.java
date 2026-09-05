@@ -16,6 +16,8 @@ import net.minecraft.world.phys.Vec3;
 public final class AutoExplosion extends Module {
     public AutoExplosion() {
         super("autoexplosion", "AutoExplosion", Category.COMBAT, "fighting", "KDFzREm.WZ", 39);
+        bool("crystals", true);
+        bool("anchor", true);
         bool("any-item-click", false);
         bool("reset-slot", true);
     }
@@ -26,13 +28,16 @@ public final class AutoExplosion extends Module {
             return;
         }
         BlockPos feet = mc.player.blockPosition();
-        int crystal = Inventories.findHotbar(mc.player.getInventory(), Items.END_CRYSTAL);
-        if (crystal < 0 && !setting("any-item-click")) {
+        int crystal = setting("crystals") ? Inventories.findHotbar(mc.player.getInventory(), Items.END_CRYSTAL) : -1;
+        int anchor = setting("anchor") ? Inventories.findHotbar(mc.player.getInventory(), Items.RESPAWN_ANCHOR) : -1;
+        if (crystal < 0 && anchor < 0 && !setting("any-item-click")) {
             return;
         }
         int prev = mc.player.getInventory().getSelectedSlot();
         if (crystal >= 0) {
             mc.player.getInventory().setSelectedSlot(crystal);
+        } else if (anchor >= 0) {
+            mc.player.getInventory().setSelectedSlot(anchor);
         }
         for (BlockPos pos : BlockPos.betweenClosed(feet.offset(-3, -1, -3), feet.offset(3, 2, 3))) {
             if (mc.level.getBlockState(pos).is(Blocks.OBSIDIAN) || mc.level.getBlockState(pos).is(Blocks.BEDROCK)) {

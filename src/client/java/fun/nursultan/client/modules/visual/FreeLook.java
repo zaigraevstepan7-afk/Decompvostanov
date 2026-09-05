@@ -4,14 +4,23 @@ import fun.nursultan.client.module.Category;
 import fun.nursultan.client.module.Module;
 import net.minecraft.client.Minecraft;
 
-/** Restored from KDFzREm.bG @UZ FreeLook */
+/** Restored from KDFzREm.bG @UZ FreeLook — pov / back / front */
 public final class FreeLook extends Module {
+    public static float camYaw;
+    public static float camPitch;
     private float yaw;
     private float pitch;
 
     public FreeLook() {
         super("freelook", "FreeLook", Category.VISUAL, "world", "KDFzREm.bG", 28);
         bool("pov", true);
+        bool("back", true);
+        bool("front", false);
+    }
+
+    public static void add(float dx, float dy) {
+        camYaw += dx * 0.15F;
+        camPitch = Math.max(-90, Math.min(90, camPitch + dy * 0.15F));
     }
 
     @Override
@@ -20,8 +29,12 @@ public final class FreeLook extends Module {
         if (mc.player != null) {
             yaw = mc.player.getYRot();
             pitch = mc.player.getXRot();
+            camYaw = yaw;
+            camPitch = pitch;
             if (setting("pov")) {
-                mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
+                mc.options.setCameraType(setting("front")
+                        ? net.minecraft.client.CameraType.THIRD_PERSON_FRONT
+                        : net.minecraft.client.CameraType.THIRD_PERSON_BACK);
             }
         }
     }

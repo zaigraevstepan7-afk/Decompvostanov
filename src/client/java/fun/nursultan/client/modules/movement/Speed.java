@@ -11,11 +11,15 @@ public final class Speed extends Module {
         super("speed", "Speed", Category.MOVEMENT, "", "KDFzREm.Pg", 18);
         bool("speed-xz", true);
         bool("ground-only", false);
+        bool("collision", false);
     }
 
     @Override
     public void onTick(Minecraft mc) {
         if (mc.player == null || !mc.player.onGround() && setting("ground-only")) {
+            return;
+        }
+        if (setting("collision") && mc.player.horizontalCollision) {
             return;
         }
         if (!setting("speed-xz")) {

@@ -7,6 +7,7 @@ public final class ClientSettings {
     public static int accent = 0xFF9FCA2B;
     public static boolean descriptions = true;
     public static boolean autoSavePreset = true;
+    public static boolean loading;
     public static String language = "ru";
 
     public static void cycleMenuScale() {
@@ -16,6 +17,9 @@ public final class ClientSettings {
             menuScale = 2.0F;
         } else {
             menuScale = 1.0F;
+        }
+        if (autoSavePreset && !loading) {
+            fun.nursultan.client.config.ConfigStore.save();
         }
     }
 

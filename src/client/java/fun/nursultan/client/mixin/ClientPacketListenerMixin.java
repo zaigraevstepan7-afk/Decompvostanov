@@ -2,7 +2,6 @@ package fun.nursultan.client.mixin;
 
 import fun.nursultan.client.util.ChatLog;
 import fun.nursultan.client.util.ClientHooks;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
 import net.minecraft.network.protocol.game.ClientboundPlayerRotationPacket;
@@ -31,6 +30,12 @@ public class ClientPacketListenerMixin {
     @Inject(method = "handleSystemChat", at = @At("TAIL"))
     private void nursultan$chat(ClientboundSystemChatPacket packet, CallbackInfo ci) {
         ChatLog.push(packet.content().getString());
-        Minecraft.getInstance();
+    }
+
+    @Inject(method = "sendChat", at = @At("HEAD"), cancellable = true)
+    private void nursultan$clientCmd(String message, CallbackInfo ci) {
+        if (ClientHooks.handleClientChat(message)) {
+            ci.cancel();
+        }
     }
 }

@@ -15,6 +15,7 @@ public final class Logo extends Module {
         bool("time", true);
         bool("tps", true);
         bool("coordinates", true);
+        bool("bps", true);
         bool("details", true);
         enabled = true;
     }
@@ -38,6 +39,14 @@ public final class Logo extends Module {
         }
         if (setting("tps") && mc.level != null) {
             line.append(String.format("tps %.0f  ", mc.level.tickRateManager().tickrate()));
+        }
+        if (setting("time")) {
+            long day = mc.level == null ? 0 : mc.level.getDayTime() % 24000;
+            line.append(String.format("%02d:%02d  ", (6 + day / 1000) % 24, (int) ((day % 1000) * 60 / 1000)));
+        }
+        if (setting("bps")) {
+            var v = mc.player.getDeltaMovement();
+            line.append(String.format("%.1f bps  ", Math.hypot(v.x, v.z) * 20));
         }
         if (setting("coordinates")) {
             line.append((int) mc.player.getX()).append(' ').append((int) mc.player.getY()).append(' ').append((int) mc.player.getZ());

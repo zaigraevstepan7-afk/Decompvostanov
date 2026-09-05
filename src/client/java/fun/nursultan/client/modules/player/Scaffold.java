@@ -37,10 +37,12 @@ public final class Scaffold extends Module {
         if (Double.isNaN(savedY)) {
             savedY = Math.floor(mc.player.getY());
         }
-        if (setting("auto-jump") && mc.player.onGround()) {
+        boolean moving = mc.options.keyUp.isDown() || mc.options.keyDown.isDown()
+                || mc.options.keyLeft.isDown() || mc.options.keyRight.isDown();
+        if ((setting("auto-jump") || setting("telly")) && mc.player.onGround() && moving) {
             mc.player.jumpFromGround();
         }
-        if (setting("safe-walk")) {
+        if (setting("safe-walk") && !setting("telly")) {
             mc.player.setShiftKeyDown(true);
         }
         int slot = findBlock(mc);
@@ -52,7 +54,11 @@ public final class Scaffold extends Module {
         double y = setting("save-y") ? savedY - 1 : mc.player.getY() - 1;
         BlockPos pos = BlockPos.containing(mc.player.getX(), y, mc.player.getZ());
         if (mc.level.getBlockState(pos).isAir()) {
-            BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false);
+            Direction face = setting("grim") ? Direction.DOWN : Direction.UP;
+            if (setting("telly") && !mc.player.onGround()) {
+                face = Direction.DOWN;
+            }
+            BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(pos), face, pos, false);
             mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND, hit);
         }
         mc.player.getInventory().setSelectedSlot(prev);

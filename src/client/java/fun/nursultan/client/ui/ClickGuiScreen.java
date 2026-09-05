@@ -215,6 +215,7 @@ public final class ClickGuiScreen extends Screen {
             for (BoolSetting setting : open.settings) {
                 if (inside(mouseX, mouseY, sx + 10, sy, 200, 12)) {
                     setting.value = !setting.value;
+                    fun.nursultan.client.config.ConfigStore.save();
                     return true;
                 }
                 sy += 13;
@@ -222,6 +223,7 @@ public final class ClickGuiScreen extends Screen {
             for (NumberSetting setting : open.numbers) {
                 if (inside(mouseX, mouseY, sx + 10, sy, 240, 12)) {
                     setting.nudge(button == 1 ? -1 : 1);
+                    fun.nursultan.client.config.ConfigStore.save();
                     return true;
                 }
                 sy += 13;
@@ -243,6 +245,7 @@ public final class ClickGuiScreen extends Screen {
             String name = org.lwjgl.glfw.GLFW.glfwGetKeyName(event.key(), event.scancode());
             open.bind = name == null ? "" : name.toUpperCase(Locale.ROOT);
             binding = false;
+            fun.nursultan.client.config.ConfigStore.save();
             return true;
         }
         if (typing) {

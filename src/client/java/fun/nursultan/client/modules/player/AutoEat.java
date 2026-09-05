@@ -26,7 +26,17 @@ public final class AutoEat extends Module {
         }
         if (!fun.nursultan.client.util.Inventories.isFood(mc.player.getMainHandItem())
                 && !fun.nursultan.client.util.Inventories.isFood(mc.player.getOffhandItem())) {
-            return;
+            int food = -1;
+            for (int i = 0; i < 9; i++) {
+                if (fun.nursultan.client.util.Inventories.isFood(mc.player.getInventory().getItem(i))) {
+                    food = i;
+                    break;
+                }
+            }
+            if (food < 0) {
+                return;
+            }
+            mc.player.getInventory().setSelectedSlot(food);
         }
         mc.options.keyUse.setDown(true);
         mc.player.startUsingItem(InteractionHand.MAIN_HAND);

@@ -15,6 +15,10 @@ public final class Removals extends Module {
         bool("wall-overlay", true);
         bool("totem-pop", false);
         bool("status-effect-overlay", true);
+        bool("fog", false);
+        bool("rain", false);
+        bool("blindness", true);
+        bool("nausea", true);
         bool("camera-clip", true);
         bool("heart-effect", true);
         bool("fishing-bobber", false);

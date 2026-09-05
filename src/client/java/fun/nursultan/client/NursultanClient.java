@@ -1,5 +1,6 @@
 package fun.nursultan.client;
 
+import fun.nursultan.client.config.ConfigStore;
 import fun.nursultan.client.module.ModuleManager;
 import fun.nursultan.client.ui.ClickGuiScreen;
 import fun.nursultan.client.ui.HudOverlay;
@@ -18,6 +19,7 @@ public final class NursultanClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         ModuleManager.INSTANCE.getClass();
+        ConfigStore.load();
         KeyMapping.Category category = KeyMapping.Category.register(Identifier.fromNamespaceAndPath("nursultan", "menu"));
         menuKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
                 "key.nursultan.menu",
