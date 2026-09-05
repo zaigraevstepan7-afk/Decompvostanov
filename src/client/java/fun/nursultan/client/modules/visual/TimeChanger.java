@@ -8,6 +8,8 @@ import net.minecraft.client.Minecraft;
 public final class TimeChanger extends Module {
     public TimeChanger() {
         super("timechanger", "TimeChanger", Category.VISUAL, "world", "KDFzREm.Tw", 41);
+        bool("select", true);
+        bool("time", true);
         bool("dawn", false);
         bool("morning", false);
         bool("day", true);
@@ -18,7 +20,7 @@ public final class TimeChanger extends Module {
 
     @Override
     public void onTick(Minecraft mc) {
-        if (mc.level == null) {
+        if (mc.level == null || !setting("select") && !setting("time")) {
             return;
         }
         long time = 6000;

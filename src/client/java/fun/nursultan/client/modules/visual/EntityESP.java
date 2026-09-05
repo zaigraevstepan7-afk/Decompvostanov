@@ -42,6 +42,14 @@ public final class EntityESP extends Module {
         bool("hold-in-hands", false);
         bool("item-name", false);
         bool("health-bar-mode", true);
+        bool("details", true);
+        bool("_1x", true);
+        bool("_2x", false);
+        bool("custom", false);
+        bool("client", true);
+        bool("formatted", true);
+        bool("both", false);
+        bool("target-condition", false);
         number("scale", 1, 0.5F, 2, 0.1F);
     }
 

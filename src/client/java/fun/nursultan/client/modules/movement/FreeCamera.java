@@ -45,6 +45,10 @@ public final class FreeCamera extends Module {
             return;
         }
         mc.player.noPhysics = true;
+        if (setting("walk-by-click") && !mc.options.keyAttack.isDown() && !mc.options.keyUse.isDown()) {
+            mc.player.setDeltaMovement(0, 0, 0);
+            return;
+        }
         double yaw = Math.toRadians(mc.player.getYRot());
         double speed = numberValue("speed-xz", 0.8F);
         double y = 0;
