@@ -15,6 +15,7 @@ public final class ClientSounds extends Module {
         bool("sound-type", true);
         bool("select-enable-sound", true);
         bool("select-disable-sound", true);
+        number("volume", 0.4F, 0, 1, 0.05F);
     }
 
     @Override
@@ -25,7 +26,8 @@ public final class ClientSounds extends Module {
         for (var module : fun.nursultan.client.module.ModuleManager.INSTANCE.modules) {
             Boolean prev = last.put(module.id, module.enabled);
             if (prev != null && prev != module.enabled) {
-                mc.player.playSound(module.enabled ? SoundEvents.NOTE_BLOCK_PLING.value() : SoundEvents.NOTE_BLOCK_BASS.value(), 0.4F, 1.2F);
+                float vol = numberValue("volume", 0.4F);
+                mc.player.playSound(module.enabled ? SoundEvents.NOTE_BLOCK_PLING.value() : SoundEvents.NOTE_BLOCK_BASS.value(), vol, 1.2F);
             }
         }
     }

@@ -11,6 +11,7 @@ public final class SpearBoost extends Module {
     public SpearBoost() {
         super("spearboost", "SpearBoost", Category.MOVEMENT, "tools", "KDFzREm.PM", 43);
         bool("auto-jump", true);
+        bool("rapid", false);
         bool("boost-key", true);
     }
 
@@ -29,7 +30,8 @@ public final class SpearBoost extends Module {
         if (setting("auto-jump") && mc.player.onGround()) {
             mc.player.jumpFromGround();
         }
-        Vec3 look = mc.player.getLookAngle().scale(1.35);
+        double scale = setting("rapid") ? 1.7 : 1.35;
+        Vec3 look = mc.player.getLookAngle().scale(scale);
         mc.player.setDeltaMovement(look.x, Math.max(0.42, look.y), look.z);
     }
 }

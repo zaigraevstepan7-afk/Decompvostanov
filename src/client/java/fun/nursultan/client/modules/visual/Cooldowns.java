@@ -11,6 +11,7 @@ public final class Cooldowns extends Module {
         super("cooldowns", "Cooldowns", Category.VISUAL, "", "KDFzREm.jo", 28);
         bool("render-on-items", true);
         bool("inventory-only", false);
+        bool("99+", true);
     }
 
     @Override

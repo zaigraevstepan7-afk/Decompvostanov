@@ -10,6 +10,11 @@ import net.minecraft.world.entity.player.Player;
 public final class Arrows extends Module {
     public Arrows() {
         super("arrows", "Arrows", Category.VISUAL, "screen", "KDFzREm.TQ", 40);
+        bool("players", true);
+        bool("friends", true);
+        bool("villagers", false);
+        bool("monsters", false);
+        bool("animals", false);
     }
 
     @Override
@@ -21,7 +26,10 @@ public final class Arrows extends Module {
         int cx = width / 2;
         int cy = height / 2;
         for (Player player : mc.level.players()) {
-            if (player == mc.player) {
+            if (player == mc.player || !setting("players")) {
+                continue;
+            }
+            if (fun.nursultan.client.util.Friends.isFriend(player) && !setting("friends")) {
                 continue;
             }
             double dx = player.getX() - mc.player.getX();

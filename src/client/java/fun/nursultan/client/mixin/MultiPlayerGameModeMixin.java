@@ -61,7 +61,13 @@ public class MultiPlayerGameModeMixin {
     @Inject(method = "handleInventoryMouseClick", at = @At("HEAD"), cancellable = true)
     private void nursultan$lockSlots(int containerId, int slotId, int button, ClickType type, Player player, CallbackInfo ci) {
         Module lock = ClientHooks.module("lockslots");
-        if (lock != null && lock.enabled && lock.setting("from-inventory") && slotId >= 0 && slotId <= 8) {
+        if (lock instanceof fun.nursultan.client.modules.player.LockSlots slots
+                && slots.enabled && slots.setting("from-inventory") && slotId >= 36 && slotId <= 44
+                && slots.locked(slotId - 36)) {
+            ci.cancel();
+        } else if (lock instanceof fun.nursultan.client.modules.player.LockSlots slots
+                && slots.enabled && slots.setting("from-inventory") && slotId >= 0 && slotId <= 8
+                && slots.locked(slotId)) {
             ci.cancel();
         }
     }

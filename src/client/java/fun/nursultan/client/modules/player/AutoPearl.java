@@ -16,6 +16,7 @@ public final class AutoPearl extends Module {
         super("autopearl", "AutoPearl", Category.PLAYER, "auto", "KDFzREm.PX", 36);
         bool("only-in-pvp", true);
         bool("target-follow", true);
+        number("threshold", 8, 1, 24, 1);
         number("min-distance", 6, 1, 24, 1);
     }
 
@@ -31,7 +32,7 @@ public final class AutoPearl extends Module {
         if (target == null) {
             return;
         }
-        double min = numberValue("min-distance", 6);
+        double min = Math.max(numberValue("min-distance", 6), numberValue("threshold", 8));
         if (mc.player.distanceTo(target) < min) {
             return;
         }

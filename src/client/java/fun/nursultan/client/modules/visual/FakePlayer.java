@@ -9,6 +9,9 @@ import net.minecraft.network.chat.Component;
 public final class FakePlayer extends Module {
     public FakePlayer() {
         super("fakeplayer", "FakePlayer", Category.VISUAL, "world", "KDFzREm.TP", 54);
+        bool("walk", true);
+        bool("rotate", true);
+        bool("Steve", true);
     }
 
     @Override
