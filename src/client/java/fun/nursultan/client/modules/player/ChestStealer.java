@@ -105,6 +105,16 @@ public final class ChestStealer extends Module {
                 || id.contains("apple")
                 || id.contains("potion")
                 || id.contains("shulker")
+                || id.contains("ancient_debris")
+                || id.contains("experience_bottle")
+                || id.contains("gunpowder")
+                || id.contains("blaze_rod")
+                || id.contains("emerald")
+                || id.contains("beacon")
+                || id.contains("spawn_egg")
+                || id.contains("dragon_head")
+                || id.contains("wind_charge")
+                || id.contains("heavy_core")
                 || stack.hasFoil();
     }
 }
