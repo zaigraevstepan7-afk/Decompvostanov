@@ -93,6 +93,25 @@ public final class ModuleManager {
             case "SPACE" -> org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE;
             case "TAB" -> org.lwjgl.glfw.GLFW.GLFW_KEY_TAB;
             case "CTRL", "LCTRL" -> org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_CONTROL;
+            case "RCTRL" -> org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_CONTROL;
+            case "ALT", "LALT" -> org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_ALT;
+            case "RALT" -> org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_ALT;
+            case "INSERT" -> org.lwjgl.glfw.GLFW.GLFW_KEY_INSERT;
+            case "DELETE" -> org.lwjgl.glfw.GLFW.GLFW_KEY_DELETE;
+            case "HOME" -> org.lwjgl.glfw.GLFW.GLFW_KEY_HOME;
+            case "END" -> org.lwjgl.glfw.GLFW.GLFW_KEY_END;
+            case "F1" -> org.lwjgl.glfw.GLFW.GLFW_KEY_F1;
+            case "F2" -> org.lwjgl.glfw.GLFW.GLFW_KEY_F2;
+            case "F3" -> org.lwjgl.glfw.GLFW.GLFW_KEY_F3;
+            case "F4" -> org.lwjgl.glfw.GLFW.GLFW_KEY_F4;
+            case "F5" -> org.lwjgl.glfw.GLFW.GLFW_KEY_F5;
+            case "F6" -> org.lwjgl.glfw.GLFW.GLFW_KEY_F6;
+            case "F7" -> org.lwjgl.glfw.GLFW.GLFW_KEY_F7;
+            case "F8" -> org.lwjgl.glfw.GLFW.GLFW_KEY_F8;
+            case "F9" -> org.lwjgl.glfw.GLFW.GLFW_KEY_F9;
+            case "F10" -> org.lwjgl.glfw.GLFW.GLFW_KEY_F10;
+            case "F11" -> org.lwjgl.glfw.GLFW.GLFW_KEY_F11;
+            case "F12" -> org.lwjgl.glfw.GLFW.GLFW_KEY_F12;
             default -> -1;
         };
     }
