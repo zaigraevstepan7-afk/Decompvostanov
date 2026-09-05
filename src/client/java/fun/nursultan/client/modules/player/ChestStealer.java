@@ -43,7 +43,7 @@ public final class ChestStealer extends Module {
         if (setting("shuffle")) {
             java.util.List<Integer> filled = new java.util.ArrayList<>();
             for (int i = 0; i < containerSlots; i++) {
-                if (!menu.getSlot(i).getItem().isEmpty()) {
+                if (!menu.getSlot(i).getItem().isEmpty() && lootOk(menu.getSlot(i).getItem())) {
                     filled.add(i);
                 }
             }
@@ -55,7 +55,7 @@ public final class ChestStealer extends Module {
             int start = setting("reverse") ? containerSlots - 1 : 0;
             int step = setting("reverse") ? -1 : 1;
             for (int i = start; i >= 0 && i < containerSlots; i += step) {
-                if (!menu.getSlot(i).getItem().isEmpty()) {
+                if (!menu.getSlot(i).getItem().isEmpty() && lootOk(menu.getSlot(i).getItem())) {
                     Inventories.click(mc, i, 0, ClickType.QUICK_MOVE);
                     return;
                 }
@@ -64,5 +64,24 @@ public final class ChestStealer extends Module {
         if (setting("auto-close")) {
             mc.player.closeContainer();
         }
+    }
+
+    private boolean lootOk(net.minecraft.world.item.ItemStack stack) {
+        if (!setting("loot-type")) {
+            return true;
+        }
+        String id = stack.getItem().getDescriptionId();
+        return stack.isEnchanted()
+                || Inventories.isFood(stack)
+                || id.contains("diamond")
+                || id.contains("netherite")
+                || id.contains("gold")
+                || id.contains("totem")
+                || id.contains("elytra")
+                || id.contains("pearl")
+                || id.contains("apple")
+                || id.contains("potion")
+                || id.contains("shulker")
+                || stack.hasFoil();
     }
 }

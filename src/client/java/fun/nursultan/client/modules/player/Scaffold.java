@@ -14,6 +14,7 @@ import net.minecraft.world.phys.Vec3;
 /** Restored from KDFzREm.TM @UZ Scaffold — telly/grim/basic, auto-jump, safe-walk, save-y */
 public final class Scaffold extends Module {
     private double savedY = Double.NaN;
+    private int wait;
 
     public Scaffold() {
         super("scaffold", "Scaffold", Category.PLAYER, "base", "KDFzREm.TM", 36);
@@ -48,6 +49,10 @@ public final class Scaffold extends Module {
         if ((setting("safe-walk") || setting("sneak")) && !setting("telly")) {
             mc.player.setShiftKeyDown(true);
         }
+        if (++wait < numberValue("delay", 0)) {
+            return;
+        }
+        wait = 0;
         int slot = findBlock(mc);
         if (slot < 0) {
             return;

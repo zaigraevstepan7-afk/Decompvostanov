@@ -25,6 +25,25 @@ public final class ElytraHelper extends Module {
         if (mc.player == null || mc.gameMode == null) {
             return;
         }
+        if (setting("swap-key") && mc.options.keySwapOffhand.isDown()) {
+            int chest = -1;
+            boolean wearingElytra = mc.player.getItemBySlot(EquipmentSlot.CHEST).is(Items.ELYTRA);
+            for (int i = 0; i < 36; i++) {
+                var stack = mc.player.getInventory().getItem(i);
+                if (wearingElytra && stack.get(net.minecraft.core.component.DataComponents.EQUIPPABLE) != null
+                        && !stack.is(Items.ELYTRA)) {
+                    chest = i;
+                    break;
+                }
+                if (!wearingElytra && stack.is(Items.ELYTRA)) {
+                    chest = i;
+                    break;
+                }
+            }
+            if (chest >= 0) {
+                Inventories.click(mc, Inventories.containerSlot(chest), 0, net.minecraft.world.inventory.ClickType.QUICK_MOVE);
+            }
+        }
         if (setting("auto-launch") && mc.options.keyJump.isDown() && mc.player.onGround()
                 && mc.player.getItemBySlot(EquipmentSlot.CHEST).is(Items.ELYTRA)) {
             mc.player.jumpFromGround();

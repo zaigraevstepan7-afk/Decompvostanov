@@ -73,6 +73,10 @@ public final class AutoSwap extends Module {
         int slot = first ? a : b;
         if (slot >= 0) {
             mc.player.getInventory().setSelectedSlot(slot);
+            if (setting("log-swapped-item")) {
+                mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal(
+                        "swap " + mc.player.getInventory().getItem(slot).getHoverName().getString()), true);
+            }
             first = !first;
         }
     }

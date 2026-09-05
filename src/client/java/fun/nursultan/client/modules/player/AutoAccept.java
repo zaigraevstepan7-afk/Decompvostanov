@@ -24,15 +24,15 @@ public final class AutoAccept extends Module {
         if (!setting("accept") || mc.player == null || mc.player.connection == null || --cool > 0) {
             return;
         }
-        if (setting("teleport-request") && friendOk("телепорт", "teleport", "tpaccept")) {
+        if (setting("teleport-request") && friendOk("телепорт", "teleport", "tpaccept", "просит телепортироваться", "хочет телепортироваться")) {
             mc.player.connection.sendCommand("tpaccept");
             cool = 40;
         }
-        if (setting("command-duel-request") && friendOk("дуэль", "duel")) {
+        if (setting("command-duel-request") && friendOk("дуэль", "duel", "дуэльную команду")) {
             mc.player.connection.sendCommand("duel accept");
             cool = 40;
         }
-        if (setting("clan-invite-request") && friendOk("клан", "clan")) {
+        if (setting("clan-invite-request") && friendOk("клан", "clan", "приглашает вас в клан", "приглашает Вас в клан")) {
             mc.player.connection.sendCommand("clan accept");
             cool = 40;
         }

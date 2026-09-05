@@ -30,6 +30,12 @@ public final class Predictions extends Module {
             if (entity instanceof ThrowableItemProjectile proj && accept(proj.getItem())) {
                 Vec3 p = proj.position().add(proj.getDeltaMovement().scale(8));
                 mc.level.addParticle(ParticleTypes.CRIT, p.x, p.y, p.z, 0, 0, 0);
+            } else if (setting("arrow") && entity instanceof net.minecraft.world.entity.projectile.arrow.AbstractArrow arrow) {
+                Vec3 p = arrow.position().add(arrow.getDeltaMovement().scale(10));
+                mc.level.addParticle(ParticleTypes.CRIT, p.x, p.y, p.z, 0, 0, 0);
+            } else if (setting("trident") && entity instanceof net.minecraft.world.entity.projectile.arrow.ThrownTrident trident) {
+                Vec3 p = trident.position().add(trident.getDeltaMovement().scale(10));
+                mc.level.addParticle(ParticleTypes.CRIT, p.x, p.y, p.z, 0, 0, 0);
             }
         }
     }

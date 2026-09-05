@@ -158,7 +158,17 @@ public final class ClientHooks {
     }
 
     public static boolean skipFriendAttack(net.minecraft.world.entity.Entity entity) {
-        return enabled("nofrienddamage") && Friends.isFriend(entity);
+        if (!enabled("nofrienddamage")) {
+            return false;
+        }
+        if (Friends.isFriend(entity)) {
+            return true;
+        }
+        Module module = module("nofrienddamage");
+        Minecraft mc = Minecraft.getInstance();
+        return module != null && module.setting("teams")
+                && mc.player != null && entity instanceof net.minecraft.world.entity.player.Player other
+                && mc.player.isAlliedTo(other);
     }
 
     public static boolean skipBot(net.minecraft.world.entity.Entity entity) {

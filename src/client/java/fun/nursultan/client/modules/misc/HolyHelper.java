@@ -39,5 +39,22 @@ public final class HolyHelper extends Module {
         if (setting("exp-bottle") && mc.player.getMainHandItem().is(Items.EXPERIENCE_BOTTLE) && mc.options.keyUse.isDown()) {
             mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
         }
+        if (setting("explosive-stuff") || setting("explosive-trap") || setting("stun") || setting("trap")) {
+            for (int i = 0; i < 9; i++) {
+                String name = mc.player.getInventory().getItem(i).getHoverName().getString().toLowerCase();
+                if ((setting("stun") && name.contains("стан"))
+                        || (setting("trap") && name.contains("трап"))
+                        || (setting("explosive-trap") && (name.contains("взрыв") || name.contains("trap")))
+                        || (setting("explosive-stuff") && name.contains("динамит"))) {
+                    int prev = mc.player.getInventory().getSelectedSlot();
+                    mc.player.getInventory().setSelectedSlot(i);
+                    if (mc.options.keyUse.isDown()) {
+                        mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+                    }
+                    mc.player.getInventory().setSelectedSlot(prev);
+                    break;
+                }
+            }
+        }
     }
 }
