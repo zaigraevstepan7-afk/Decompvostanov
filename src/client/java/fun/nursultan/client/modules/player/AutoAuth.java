@@ -33,7 +33,11 @@ public final class AutoAuth extends Module {
 
     @Override
     public void onTick(Minecraft mc) {
-        if (!setting("auth") || !setting("password") || mc.player == null || mc.player.connection == null || sent) {
+        if (mc.player == null || mc.player.connection == null) {
+            sent = false;
+            return;
+        }
+        if (!setting("auth") || !setting("password") || sent) {
             return;
         }
         String secret = ClientSettings.autoAuthPassword;

@@ -40,6 +40,8 @@ public final class NursultanClient implements ClientModInitializer {
             ModuleManager.INSTANCE.tick(mc);
         });
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("nursultan", "hud"), (graphics, tickCounter) -> HudOverlay.render(graphics));
+        // dump KDFzREm.y leftover thread name
+        Runtime.getRuntime().addShutdownHook(new Thread(ConfigStore::save, "Nursultan Shutdown Thread"));
         // dump KDFzREm.y: "Nursultan initialized in {} ms"
         System.out.println("Nursultan initialized in " + (System.currentTimeMillis() - started) + " ms · "
                 + ModuleManager.INSTANCE.modules.size() + " modules · menu Right Shift");

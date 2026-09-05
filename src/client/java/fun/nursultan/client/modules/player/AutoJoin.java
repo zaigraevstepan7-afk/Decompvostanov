@@ -24,7 +24,11 @@ public final class AutoJoin extends Module {
 
     @Override
     public void onTick(Minecraft mc) {
-        if (mc.player == null || mc.player.connection == null || --cool > 0) {
+        if (mc.player == null || mc.player.connection == null) {
+            sentWorld = false;
+            return;
+        }
+        if (--cool > 0) {
             return;
         }
         if (mc.screen instanceof ContainerScreen) {
