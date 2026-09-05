@@ -10,13 +10,14 @@ public final class Gamma extends Module {
 
     public Gamma() {
         super("gamma", "Gamma", Category.VISUAL, "world", "KDFzREm.TT", 21);
+        number("gamma", 16, 1, 16, 1);
     }
 
     @Override
     public void onEnable() {
         Minecraft mc = Minecraft.getInstance();
         previous = mc.options.gamma().get();
-        mc.options.gamma().set(16.0);
+        mc.options.gamma().set((double) numberValue("gamma", 16));
     }
 
     @Override

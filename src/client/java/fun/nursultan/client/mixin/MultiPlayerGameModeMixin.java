@@ -24,7 +24,7 @@ public class MultiPlayerGameModeMixin {
     private int destroyDelay;
     @Inject(method = "useItemOn", at = @At("HEAD"), cancellable = true)
     private void nursultan$noInteractBlock(LocalPlayer player, InteractionHand hand, BlockHitResult hit, CallbackInfoReturnable<InteractionResult> cir) {
-        if (ClientHooks.skipBlockInteract()) {
+        if (ClientHooks.skipBlockInteract(hit)) {
             cir.setReturnValue(InteractionResult.PASS);
         }
     }

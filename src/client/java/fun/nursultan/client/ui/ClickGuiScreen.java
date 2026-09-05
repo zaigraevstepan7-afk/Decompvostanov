@@ -67,7 +67,7 @@ public final class ClickGuiScreen extends Screen {
         g.fill(x, y, x + w, y + h, PANEL);
         g.fill(x, y, x + w, y + 2, accent());
         g.drawString(font, "NURSULTAN", x + 16, y + 12, accent(), false);
-        g.drawString(font, "Gs · menu-scale " + ClientSettings.menuScale + " · " + ModuleManager.INSTANCE.modules.size(), x + 16, y + 24, MUTED, false);
+        g.drawString(font, "Gs · menu " + ClientSettings.menuScale + " · hud " + ClientSettings.hudScale + " · " + ModuleManager.INSTANCE.modules.size(), x + 16, y + 24, MUTED, false);
 
         String search = (typing ? ">" : "") + (query.isBlank() ? "search" : query);
         g.fill(x + w - 220, y + 10, x + w - 14, y + 28, CARD);
@@ -166,7 +166,11 @@ public final class ClickGuiScreen extends Screen {
             return true;
         }
         if (inside(mouseX, mouseY, x + 16, y + 20, 200, 14)) {
-            ClientSettings.cycleMenuScale();
+            if (button == 1) {
+                ClientSettings.cycleHudScale();
+            } else {
+                ClientSettings.cycleMenuScale();
+            }
             return true;
         }
         typing = false;

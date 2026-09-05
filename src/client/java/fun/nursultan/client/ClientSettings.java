@@ -23,5 +23,18 @@ public final class ClientSettings {
         }
     }
 
+    public static void cycleHudScale() {
+        if (hudScale < 1.25F) {
+            hudScale = 1.5F;
+        } else if (hudScale < 1.75F) {
+            hudScale = 2.0F;
+        } else {
+            hudScale = 1.0F;
+        }
+        if (autoSavePreset && !loading) {
+            fun.nursultan.client.config.ConfigStore.save();
+        }
+    }
+
     private ClientSettings() {}
 }

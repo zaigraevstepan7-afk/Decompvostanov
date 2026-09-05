@@ -11,6 +11,12 @@ import net.minecraft.world.phys.Vec3;
 public final class Predictions extends Module {
     public Predictions() {
         super("predictions", "Predictions", Category.VISUAL, "world", "KDFzREm.bx", 40);
+        bool("pearl", true);
+        bool("trident", true);
+        bool("arrow", true);
+        bool("potions", true);
+        bool("snowball", true);
+        bool("windcharge", true);
         bool("predict-entity", true);
         bool("line-color", true);
     }

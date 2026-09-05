@@ -10,6 +10,10 @@ import net.minecraft.world.entity.player.Player;
 public final class StreamerMode extends Module {
     public StreamerMode() {
         super("streamermode", "StreamerMode", Category.VISUAL, "screen", "KDFzREm.js", 63);
+        bool("skins", false);
+        bool("name", true);
+        bool("links", true);
+        bool("ft", false);
         bool("hide-entries", true);
         bool("custom-name", true);
     }

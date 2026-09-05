@@ -18,7 +18,18 @@ public final class InventoryHud extends Module {
             return;
         }
         int empty = 0;
-        for (int i = 0; i < 36; i++) {
+        int x = 8;
+        int y = height - 70;
+        for (int i = 0; i < 9; i++) {
+            var stack = mc.player.getInventory().getItem(i);
+            g.fill(x + i * 18, y, x + i * 18 + 16, y + 16, 0x66000000);
+            if (!stack.isEmpty()) {
+                g.renderItem(stack, x + i * 18, y);
+            } else {
+                empty++;
+            }
+        }
+        for (int i = 9; i < 36; i++) {
             if (mc.player.getInventory().getItem(i).isEmpty()) {
                 empty++;
             }

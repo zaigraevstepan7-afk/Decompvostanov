@@ -11,11 +11,27 @@ public final class NoInteract extends Module {
         bool("pvp-only", false);
         bool("dont-place-orbs", true);
         bool("block-interact", true);
+        bool("furnace", true);
+        bool("signs", true);
+        bool("hopper", true);
+        bool("dispenser", true);
+        bool("dropper", true);
+        bool("shulker", true);
+        bool("barrel", true);
+        bool("door", true);
+        bool("chest", true);
+        bool("anvil", true);
+        bool("lever", true);
+        bool("bed", true);
         bool("note-block", true);
         bool("enchant-tables", true);
         bool("brewing-stands", true);
+        bool("button", true);
+        bool("trapdoor", true);
         bool("crafting-tables", true);
         bool("entity-interact", true);
         bool("armor-stand", true);
+        bool("boat", true);
+        bool("minecart", true);
     }
 }

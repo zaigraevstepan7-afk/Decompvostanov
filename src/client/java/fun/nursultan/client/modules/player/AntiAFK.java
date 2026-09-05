@@ -11,6 +11,8 @@ public final class AntiAFK extends Module {
     public AntiAFK() {
         super("antiafk", "AntiAFK", Category.PLAYER, "base", "KDFzREm.su", 24);
         bool("camera-shake", true);
+        bool("click", false);
+        bool("ft", false);
     }
 
     @Override
@@ -21,9 +23,14 @@ public final class AntiAFK extends Module {
         ticks++;
         if (ticks % 80 == 0) {
             if (setting("camera-shake")) {
-                mc.player.setYRot(mc.player.getYRot() + 8);
+                mc.player.setYRot(mc.player.getYRot() + (setting("ft") ? 3 : 8));
             }
-            mc.player.jumpFromGround();
+            if (mc.player.onGround()) {
+                mc.player.jumpFromGround();
+            }
+        }
+        if (setting("click") && ticks % 40 == 0 && mc.gameMode != null) {
+            mc.gameMode.useItem(mc.player, net.minecraft.world.InteractionHand.MAIN_HAND);
         }
     }
 }

@@ -19,14 +19,25 @@ public final class TargetInfo extends Module {
     @Override
     public void onHud(GuiGraphics g, int width, int height) {
         Minecraft mc = Minecraft.getInstance();
-        LivingEntity target = Targeting.nearest(mc, 24);
+        LivingEntity target = null;
+        if (setting("show-from-mouse") && mc.hitResult instanceof net.minecraft.world.phys.EntityHitResult hit
+                && hit.getEntity() instanceof LivingEntity living) {
+            target = living;
+        }
+        if (target == null) {
+            target = Targeting.nearest(mc, 24);
+        }
         if (target == null) {
             return;
         }
         int x = width / 2 - 60;
         int y = height / 2 + 24;
-        g.fill(x, y, x + 120, y + 28, 0xE00E0E12);
+        g.fill(x, y, x + 120, y + 40, 0xE00E0E12);
         g.drawString(mc.font, target.getName().getString(), x + 4, y + 4, 0xFFF2E9FF, false);
-        g.drawString(mc.font, String.format("hp %.1f", target.getHealth() + (setting("show-absorption") ? target.getAbsorptionAmount() : 0)), x + 4, y + 14, 0xFF9FCA2B, false);
+        float hp = target.getHealth() + (setting("show-absorption") ? target.getAbsorptionAmount() : 0);
+        g.drawString(mc.font, String.format("hp %.1f", hp), x + 4, y + 14, 0xFF9FCA2B, false);
+        if (setting("show-armor-details") && target instanceof net.minecraft.world.entity.player.Player player) {
+            g.drawString(mc.font, "armor " + player.getArmorValue(), x + 4, y + 24, 0xFF8A8A96, false);
+        }
     }
 }

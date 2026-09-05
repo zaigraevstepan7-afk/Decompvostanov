@@ -10,6 +10,7 @@ import net.minecraft.client.gui.GuiGraphics;
 public final class Logo extends Module {
     public Logo() {
         super("logo", "Logo", Category.VISUAL, "", "KDFzREm.jV", 42);
+        bool("login", true);
         bool("fps", true);
         bool("ping", true);
         bool("time", true);
@@ -17,6 +18,8 @@ public final class Logo extends Module {
         bool("coordinates", true);
         bool("bps", true);
         bool("details", true);
+        bool("left", true);
+        bool("right", false);
         enabled = true;
     }
 
@@ -27,9 +30,13 @@ public final class Logo extends Module {
             return;
         }
         int y = (int) (6 * ClientSettings.hudScale);
-        g.drawString(mc.font, "NURSULTAN", 6, y, ClientSettings.accent, false);
+        int x = setting("right") && !setting("left") ? width - 160 : 6;
+        g.drawString(mc.font, "NURSULTAN", x, y, ClientSettings.accent, false);
         y += 10;
         StringBuilder line = new StringBuilder();
+        if (setting("login") && mc.player.getGameProfile().name() != null) {
+            line.append(mc.player.getGameProfile().name()).append("  ");
+        }
         if (setting("fps")) {
             line.append(mc.getFps()).append(" fps  ");
         }
@@ -52,7 +59,7 @@ public final class Logo extends Module {
             line.append((int) mc.player.getX()).append(' ').append((int) mc.player.getY()).append(' ').append((int) mc.player.getZ());
         }
         if (!line.isEmpty()) {
-            g.drawString(mc.font, line.toString(), 6, y, 0xFFF2E9FF, false);
+            g.drawString(mc.font, line.toString(), x, y, 0xFFF2E9FF, false);
         }
     }
 }

@@ -10,7 +10,10 @@ import net.minecraft.network.chat.Component;
 public final class AutoLeave extends Module {
     public AutoLeave() {
         super("autoleave", "AutoLeave", Category.PLAYER, "auto", "KDFzREm.sv", 31);
+        bool("hub", true);
+        bool("spawn", false);
         bool("custom-command", false);
+        bool("disconnect", true);
         bool("player-nearby", true);
         bool("was-in-pvp", true);
         number("health", 6, 1, 20, 1);
@@ -27,9 +30,9 @@ public final class AutoLeave extends Module {
         if (!low || !pvp || !nearby) {
             return;
         }
-        if (setting("custom-command") && mc.player.connection != null) {
-            mc.player.connection.sendCommand("hub");
-        } else {
+        if (mc.player.connection != null && (setting("custom-command") || setting("hub") || setting("spawn"))) {
+            mc.player.connection.sendCommand(setting("spawn") ? "spawn" : "hub");
+        } else if (setting("disconnect")) {
             mc.disconnectFromWorld(Component.literal("AutoLeave"));
         }
         setEnabled(false);

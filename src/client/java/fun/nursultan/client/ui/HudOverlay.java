@@ -24,7 +24,8 @@ public final class HudOverlay {
         }
         Module logo = ModuleManager.INSTANCE.byName("logo");
         if (logo != null && logo.enabled && logo.setting("details")) {
-            g.drawString(mc.font, "td · hud-scale " + fun.nursultan.client.ClientSettings.hudScale, 6, 28, TEXT, false);
+            g.drawString(mc.font, "td · hud-scale " + fun.nursultan.client.ClientSettings.hudScale
+                    + " · " + ModuleManager.INSTANCE.modules.stream().filter(m -> m.enabled).count(), 6, 28, TEXT, false);
         }
     }
 

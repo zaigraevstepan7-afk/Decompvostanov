@@ -15,6 +15,7 @@ public final class TargetEsp extends Module {
         bool("square", true);
         bool("jello", false);
         bool("scan", false);
+        bool("color", true);
     }
 
     @Override

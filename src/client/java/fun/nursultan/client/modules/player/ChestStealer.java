@@ -39,12 +39,25 @@ public final class ChestStealer extends Module {
         }
         delay = 0;
         int containerSlots = menu.getRowCount() * 9;
-        int start = setting("reverse") ? containerSlots - 1 : 0;
-        int step = setting("reverse") ? -1 : 1;
-        for (int i = start; i >= 0 && i < containerSlots; i += step) {
-            if (!menu.getSlot(i).getItem().isEmpty()) {
-                Inventories.click(mc, i, 0, ClickType.QUICK_MOVE);
+        if (setting("shuffle")) {
+            java.util.List<Integer> filled = new java.util.ArrayList<>();
+            for (int i = 0; i < containerSlots; i++) {
+                if (!menu.getSlot(i).getItem().isEmpty()) {
+                    filled.add(i);
+                }
+            }
+            if (!filled.isEmpty()) {
+                Inventories.click(mc, filled.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(filled.size())), 0, ClickType.QUICK_MOVE);
                 return;
+            }
+        } else {
+            int start = setting("reverse") ? containerSlots - 1 : 0;
+            int step = setting("reverse") ? -1 : 1;
+            for (int i = start; i >= 0 && i < containerSlots; i += step) {
+                if (!menu.getSlot(i).getItem().isEmpty()) {
+                    Inventories.click(mc, i, 0, ClickType.QUICK_MOVE);
+                    return;
+                }
             }
         }
         if (setting("auto-close")) {

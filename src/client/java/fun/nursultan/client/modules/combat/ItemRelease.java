@@ -8,12 +8,21 @@ import net.minecraft.client.Minecraft;
 public final class ItemRelease extends Module {
     public ItemRelease() {
         super("itemrelease", "ItemRelease", Category.COMBAT, "base", "KDFzREm.WU", 26);
+        bool("trident", true);
+        bool("crossbow", true);
         bool("hit-only", true);
     }
 
     @Override
     public void onTick(Minecraft mc) {
         if (mc.player == null || !mc.player.isUsingItem()) {
+            return;
+        }
+        var used = mc.player.getUseItem();
+        if (used.is(net.minecraft.world.item.Items.TRIDENT) && !setting("trident")) {
+            return;
+        }
+        if (used.is(net.minecraft.world.item.Items.CROSSBOW) && !setting("crossbow")) {
             return;
         }
         if (setting("hit-only") && mc.player.getAttackStrengthScale(0.0F) > 0.2F && mc.player.getLastHurtMob() == null) {

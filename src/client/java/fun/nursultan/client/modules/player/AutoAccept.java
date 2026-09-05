@@ -3,6 +3,7 @@ package fun.nursultan.client.modules.player;
 import fun.nursultan.client.module.Category;
 import fun.nursultan.client.module.Module;
 import fun.nursultan.client.util.ChatLog;
+import fun.nursultan.client.util.Friends;
 import net.minecraft.client.Minecraft;
 
 /** Restored from KDFzREm.Pq @UZ AutoAccept */
@@ -22,17 +23,42 @@ public final class AutoAccept extends Module {
         if (mc.player == null || mc.player.connection == null || --cool > 0) {
             return;
         }
-        if (setting("teleport-request") && (ChatLog.recentContains("телепорт") || ChatLog.recentContains("teleport") || ChatLog.recentContains("tpaccept"))) {
+        if (setting("teleport-request") && friendOk("телепорт", "teleport", "tpaccept")) {
             mc.player.connection.sendCommand("tpaccept");
             cool = 40;
         }
-        if (setting("command-duel-request") && (ChatLog.recentContains("дуэль") || ChatLog.recentContains("duel"))) {
+        if (setting("command-duel-request") && friendOk("дуэль", "duel")) {
             mc.player.connection.sendCommand("duel accept");
             cool = 40;
         }
-        if (setting("clan-invite-request") && (ChatLog.recentContains("клан") || ChatLog.recentContains("clan"))) {
+        if (setting("clan-invite-request") && friendOk("клан", "clan")) {
             mc.player.connection.sendCommand("clan accept");
             cool = 40;
         }
+    }
+
+    private boolean friendOk(String... needles) {
+        boolean hit = false;
+        for (String needle : needles) {
+            if (ChatLog.recentContains(needle)) {
+                hit = true;
+                break;
+            }
+        }
+        if (!hit) {
+            return false;
+        }
+        if (!setting("friends-accept-only")) {
+            return true;
+        }
+        for (String line : ChatLog.snapshot()) {
+            String lower = line.toLowerCase();
+            for (String friend : Friends.all()) {
+                if (lower.contains(friend)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }

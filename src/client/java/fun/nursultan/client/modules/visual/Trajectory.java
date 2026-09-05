@@ -11,6 +11,13 @@ import net.minecraft.world.phys.Vec3;
 public final class Trajectory extends Module {
     public Trajectory() {
         super("trajectory", "Trajectory", Category.VISUAL, "world", "KDFzREm.bh", 48);
+        bool("pearl", true);
+        bool("trident", true);
+        bool("bow", true);
+        bool("potions", true);
+        bool("crossbow", true);
+        bool("snowball", true);
+        bool("windcharge", true);
         bool("predict-entity", true);
         bool("line-color", true);
         bool("hit-line-color", true);
@@ -21,10 +28,14 @@ public final class Trajectory extends Module {
         if (mc.player == null || mc.level == null) {
             return;
         }
-        boolean thrower = mc.player.getMainHandItem().is(Items.ENDER_PEARL)
-                || mc.player.getMainHandItem().is(Items.BOW)
-                || mc.player.getMainHandItem().is(Items.TRIDENT)
-                || mc.player.getMainHandItem().is(Items.SNOWBALL);
+        var hand = mc.player.getMainHandItem();
+        boolean thrower = setting("pearl") && hand.is(Items.ENDER_PEARL)
+                || setting("bow") && hand.is(Items.BOW)
+                || setting("trident") && hand.is(Items.TRIDENT)
+                || setting("snowball") && hand.is(Items.SNOWBALL)
+                || setting("crossbow") && hand.is(Items.CROSSBOW)
+                || setting("potions") && (hand.is(Items.SPLASH_POTION) || hand.is(Items.LINGERING_POTION))
+                || setting("windcharge") && hand.is(Items.WIND_CHARGE);
         if (!thrower) {
             return;
         }

@@ -70,14 +70,83 @@ public final class ClientHooks {
     }
 
     public static boolean skipBlockInteract() {
+        return skipBlockInteract(null);
+    }
+
+    public static boolean skipBlockInteract(net.minecraft.world.phys.BlockHitResult hit) {
         if (!enabled("nointeract")) {
             return false;
         }
         Module module = module("nointeract");
+        Minecraft mc = Minecraft.getInstance();
         if (module != null && module.setting("aura-only") && !enabled("attackaura")) {
             return false;
         }
+        if (module != null && module.setting("pvp-only") && (mc.player == null || mc.player.getLastHurtByMob() == null)) {
+            return false;
+        }
+        if (module != null && hit != null && mc.level != null) {
+            var state = mc.level.getBlockState(hit.getBlockPos());
+            if (matchNoInteract(module, state)) {
+                return true;
+            }
+        }
         return module == null || module.setting("block-interact") || !module.setting("aura-only");
+    }
+
+    private static boolean matchNoInteract(Module module, net.minecraft.world.level.block.state.BlockState state) {
+        if (module.setting("chest") && (state.is(net.minecraft.world.level.block.Blocks.CHEST) || state.is(net.minecraft.world.level.block.Blocks.TRAPPED_CHEST) || state.is(net.minecraft.world.level.block.Blocks.ENDER_CHEST))) {
+            return true;
+        }
+        if (module.setting("furnace") && (state.is(net.minecraft.world.level.block.Blocks.FURNACE) || state.is(net.minecraft.world.level.block.Blocks.BLAST_FURNACE) || state.is(net.minecraft.world.level.block.Blocks.SMOKER))) {
+            return true;
+        }
+        if (module.setting("hopper") && state.is(net.minecraft.world.level.block.Blocks.HOPPER)) {
+            return true;
+        }
+        if (module.setting("anvil") && (state.is(net.minecraft.world.level.block.Blocks.ANVIL) || state.is(net.minecraft.world.level.block.Blocks.CHIPPED_ANVIL) || state.is(net.minecraft.world.level.block.Blocks.DAMAGED_ANVIL))) {
+            return true;
+        }
+        if (module.setting("crafting-tables") && state.is(net.minecraft.world.level.block.Blocks.CRAFTING_TABLE)) {
+            return true;
+        }
+        if (module.setting("enchant-tables") && state.is(net.minecraft.world.level.block.Blocks.ENCHANTING_TABLE)) {
+            return true;
+        }
+        if (module.setting("brewing-stands") && state.is(net.minecraft.world.level.block.Blocks.BREWING_STAND)) {
+            return true;
+        }
+        if (module.setting("barrel") && state.is(net.minecraft.world.level.block.Blocks.BARREL)) {
+            return true;
+        }
+        if (module.setting("shulker") && state.getBlock().toString().contains("shulker")) {
+            return true;
+        }
+        if (module.setting("bed") && state.is(net.minecraft.tags.BlockTags.BEDS)) {
+            return true;
+        }
+        if (module.setting("door") && state.is(net.minecraft.tags.BlockTags.DOORS)) {
+            return true;
+        }
+        if (module.setting("trapdoor") && state.is(net.minecraft.tags.BlockTags.TRAPDOORS)) {
+            return true;
+        }
+        if (module.setting("button") && state.is(net.minecraft.tags.BlockTags.BUTTONS)) {
+            return true;
+        }
+        if (module.setting("lever") && state.is(net.minecraft.world.level.block.Blocks.LEVER)) {
+            return true;
+        }
+        if (module.setting("note-block") && state.is(net.minecraft.world.level.block.Blocks.NOTE_BLOCK)) {
+            return true;
+        }
+        if (module.setting("dispenser") && state.is(net.minecraft.world.level.block.Blocks.DISPENSER)) {
+            return true;
+        }
+        if (module.setting("dropper") && state.is(net.minecraft.world.level.block.Blocks.DROPPER)) {
+            return true;
+        }
+        return false;
     }
 
     public static boolean skipEntityInteract() {

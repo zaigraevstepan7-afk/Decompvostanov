@@ -12,6 +12,7 @@ import net.minecraft.world.phys.Vec3;
 public final class SuperFirework extends Module {
     public SuperFirework() {
         super("superfirework", "SuperFirework", Category.MOVEMENT, "tools", "KDFzREm.PZ", 18);
+        number("speed", 1.6F, 0.8F, 3.0F, 0.1F);
     }
 
     @Override
@@ -28,6 +29,7 @@ public final class SuperFirework extends Module {
         mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
         mc.player.getInventory().setSelectedSlot(prev);
         Vec3 look = mc.player.getLookAngle();
-        mc.player.setDeltaMovement(look.x * 1.6, look.y * 1.6, look.z * 1.6);
+        float speed = numberValue("speed", 1.6F);
+        mc.player.setDeltaMovement(look.x * speed, look.y * speed, look.z * speed);
     }
 }

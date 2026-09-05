@@ -38,5 +38,9 @@ public final class Removals extends Module {
             mc.player.hurtTime = 0;
             mc.player.hurtDuration = 0;
         }
+        if (setting("rain") && mc.level != null) {
+            mc.level.setRainLevel(0);
+            mc.level.setThunderLevel(0);
+        }
     }
 }
