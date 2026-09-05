@@ -362,7 +362,7 @@ public final class ClientHooks {
             return net.minecraft.network.chat.Component.literal("[staff]");
         }
         if ((stream.setting("ft") || stream.setting("funtime"))
-                && (raw.contains("Фортуны") || raw.contains("Начислена фортуна"))) {
+                && (raw.contains("Фортуны") || raw.contains("Начислена фортуна") || raw.contains("ВНИМАНИЕ!"))) {
             return null;
         }
         return message;

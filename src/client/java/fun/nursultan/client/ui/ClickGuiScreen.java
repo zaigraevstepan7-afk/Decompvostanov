@@ -451,7 +451,11 @@ public final class ClickGuiScreen extends Screen {
                             || m.id.toLowerCase(Locale.ROOT).contains(q)
                             || m.dumpClass.toLowerCase(Locale.ROOT).contains(q)
                             || m.dumpHint().toLowerCase(Locale.ROOT).contains(q)
-                            || subLabel(m.subcategory).toLowerCase(Locale.ROOT).contains(q))
+                            || subLabel(m.subcategory).toLowerCase(Locale.ROOT).contains(q)
+                            || m.settings.stream().anyMatch(s -> s.id.toLowerCase(Locale.ROOT).contains(q)
+                                    || s.label.toLowerCase(Locale.ROOT).contains(q))
+                            || m.numbers.stream().anyMatch(s -> s.id.toLowerCase(Locale.ROOT).contains(q)
+                                    || s.label.toLowerCase(Locale.ROOT).contains(q)))
                     .toList();
         } else {
             src = ModuleManager.INSTANCE.byCategory(categoryOf(section));
