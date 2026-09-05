@@ -8,6 +8,7 @@ import net.minecraft.client.Minecraft;
 public final class ItemRelease extends Module {
     public ItemRelease() {
         super("itemrelease", "ItemRelease", Category.COMBAT, "base", "KDFzREm.WU", 26);
+        bool("items", true);
         bool("trident", true);
         bool("crossbow", true);
         bool("hit-only", true);
@@ -15,7 +16,7 @@ public final class ItemRelease extends Module {
 
     @Override
     public void onTick(Minecraft mc) {
-        if (mc.player == null || !mc.player.isUsingItem()) {
+        if (!setting("items") || mc.player == null || !mc.player.isUsingItem()) {
             return;
         }
         var used = mc.player.getUseItem();

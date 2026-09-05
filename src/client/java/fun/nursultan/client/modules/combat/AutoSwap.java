@@ -23,6 +23,7 @@ public final class AutoSwap extends Module {
         bool("shield", false);
         bool("totem", false);
         bool("fireworks", false);
+        bool("sphere", false);
         bool("multi", false);
     }
 
@@ -50,6 +51,15 @@ public final class AutoSwap extends Module {
         }
         if (setting("fireworks") && a < 0) {
             a = Inventories.findHotbar(mc.player.getInventory(), Items.FIREWORK_ROCKET);
+        }
+        if (setting("sphere")) {
+            for (int i = 0; i < 9; i++) {
+                String id = mc.player.getInventory().getItem(i).getItem().getDescriptionId();
+                if (id.contains("sphere") || id.contains("ender_eye") || id.contains("chorus")) {
+                    a = i;
+                    break;
+                }
+            }
         }
         if (setting("any-food")) {
             for (int i = 0; i < 9; i++) {

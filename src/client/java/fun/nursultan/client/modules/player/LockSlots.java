@@ -7,6 +7,7 @@ import fun.nursultan.client.module.Module;
 public final class LockSlots extends Module {
     public LockSlots() {
         super("lockslots", "LockSlots", Category.PLAYER, "base", "KDFzREm.Pr", 32);
+        bool("slots", true);
         bool("from-inventory", true);
         bool("_1", true);
         bool("_2", true);
@@ -18,7 +19,7 @@ public final class LockSlots extends Module {
     }
 
     public boolean locked(int hotbarSlot) {
-        if (!enabled || hotbarSlot < 0 || hotbarSlot > 8) {
+        if (!enabled || !setting("slots") || hotbarSlot < 0 || hotbarSlot > 8) {
             return false;
         }
         String key = "_" + (hotbarSlot + 1);

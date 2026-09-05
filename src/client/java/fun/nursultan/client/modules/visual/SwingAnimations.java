@@ -8,6 +8,7 @@ import net.minecraft.client.Minecraft;
 public final class SwingAnimations extends Module {
     public SwingAnimations() {
         super("swinganimations", "SwingAnimations", Category.VISUAL, "world", "KDFzREm.jG", 35);
+        bool("swing", true);
         bool("swing-1", true);
         bool("swing-2", false);
         bool("swing-3", false);
@@ -20,7 +21,7 @@ public final class SwingAnimations extends Module {
 
     @Override
     public void onTick(Minecraft mc) {
-        if (mc.player == null) {
+        if (!setting("swing") || mc.player == null) {
             return;
         }
         if (setting("only-while-have-target") && fun.nursultan.client.modules.combat.Targeting.nearest(mc, 6) == null) {

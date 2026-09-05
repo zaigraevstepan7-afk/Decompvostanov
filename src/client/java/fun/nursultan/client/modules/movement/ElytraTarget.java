@@ -20,6 +20,8 @@ public final class ElytraTarget extends Module {
         number("chase-distance", 40, 8, 80, 2);
         number("overtake-distance", 6, 1, 20, 1);
         bool("overtake", true);
+        bool("firework-use", true);
+        bool("none-firework-use", false);
         bool("auto-firework-use", true);
         bool("timing-firework-use", true);
         bool("bind-firework-use", false);
@@ -40,6 +42,12 @@ public final class ElytraTarget extends Module {
         Vec3 look = mc.player.getLookAngle().scale(1.15);
         mc.player.setDeltaMovement(look);
         if (setting("overtake") && mc.player.distanceTo(target) < numberValue("overtake-distance", 6)) {
+            return;
+        }
+        if (setting("none-firework-use") || !setting("firework-use")) {
+            return;
+        }
+        if (setting("bind-firework-use") && !mc.options.keyUse.isDown()) {
             return;
         }
         if (setting("auto-firework-use") && ++delay >= numberValue("delay-ticks", 10)) {

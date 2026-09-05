@@ -9,6 +9,8 @@ public final class ClientSettings {
     public static boolean autoSavePreset = true;
     public static boolean loading;
     public static String language = "ru";
+    /** Set with `.auth set <pass>` — dump stores this in AutoAuth.json, never shipped as a default. */
+    public static String autoAuthPassword = "";
 
     public static void cycleMenuScale() {
         if (menuScale < 1.25F) {

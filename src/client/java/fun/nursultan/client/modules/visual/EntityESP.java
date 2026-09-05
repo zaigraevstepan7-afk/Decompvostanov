@@ -25,7 +25,10 @@ public final class EntityESP extends Module {
         bool("bot", false);
         bool("self", false);
         bool("through-walls", true);
+        bool("entities", true);
         bool("health-bar", true);
+        bool("health-bar-color", true);
+        bool("health-bar-color-bottom", true);
         bool("health", true);
         bool("box-color", true);
         bool("box", true);
@@ -41,6 +44,7 @@ public final class EntityESP extends Module {
         bool("shader", false);
         bool("hold-in-hands", false);
         bool("item-name", false);
+        bool("item-name-mode", false);
         bool("health-bar-mode", true);
         bool("details", true);
         bool("_1x", true);
@@ -55,7 +59,7 @@ public final class EntityESP extends Module {
 
     @Override
     public void onTick(Minecraft mc) {
-        if (mc.player == null || mc.level == null) {
+        if (!setting("entities") || mc.player == null || mc.level == null) {
             return;
         }
         for (LivingEntity entity : mc.level.getEntitiesOfClass(
@@ -110,6 +114,45 @@ public final class EntityESP extends Module {
         for (LivingEntity entity : mc.level.getEntitiesOfClass(
                 LivingEntity.class, mc.player.getBoundingBox().inflate(80), e -> true)) {
             entity.setGlowingTag(false);
+        }
+    }
+
+    @Override
+    public void onHud(net.minecraft.client.gui.GuiGraphics g, int width, int height) {
+        if (!setting("entities") || !setting("health-bar") && !setting("name")) {
+            return;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) {
+            return;
+        }
+        int y = 72;
+        int accent = fun.nursultan.client.ClientSettings.accent;
+        for (LivingEntity entity : mc.level.getEntitiesOfClass(
+                LivingEntity.class, mc.player.getBoundingBox().inflate(48), e -> accept(mc.player, e))) {
+            String label = entity.getName().getString();
+            if ((setting("item-name") || setting("item-name-mode")) && !entity.getMainHandItem().isEmpty()) {
+                label += " · " + entity.getMainHandItem().getHoverName().getString();
+            }
+            float max = Math.max(1.0F, entity.getMaxHealth());
+            float pct = Math.max(0, Math.min(1, entity.getHealth() / max));
+            int color = setting("health-bar-color") ? 0xFF4CAF50 : accent;
+            if (setting("health-bar-color-bottom") && pct < 0.35F) {
+                color = 0xFFE53935;
+            } else if (setting("health-bar-color-bottom") && pct < 0.65F) {
+                color = 0xFFFFC107;
+            }
+            int x = width - 118;
+            g.fill(x, y, x + 110, y + 11, 0x66000000);
+            g.fill(x, y, x + (int) (110 * pct), y + 11, color);
+            if (setting("name") || setting("health")) {
+                String text = setting("health") ? label + " " + (int) entity.getHealth() : label;
+                g.drawString(mc.font, text, x + 2, y + 2, 0xFFFFFFFF, false);
+            }
+            y += 13;
+            if (y > height - 48) {
+                break;
+            }
         }
     }
 }

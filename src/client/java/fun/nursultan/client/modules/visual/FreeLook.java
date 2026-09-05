@@ -16,6 +16,7 @@ public final class FreeLook extends Module {
         bool("pov", true);
         bool("back", true);
         bool("front", false);
+        bool("nothing", false);
     }
 
     public static void add(float dx, float dy) {
@@ -31,7 +32,7 @@ public final class FreeLook extends Module {
             pitch = mc.player.getXRot();
             camYaw = yaw;
             camPitch = pitch;
-            if (setting("pov")) {
+            if (setting("pov") && !setting("nothing")) {
                 mc.options.setCameraType(setting("front")
                         ? net.minecraft.client.CameraType.THIRD_PERSON_FRONT
                         : net.minecraft.client.CameraType.THIRD_PERSON_BACK);

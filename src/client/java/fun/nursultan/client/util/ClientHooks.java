@@ -1,5 +1,6 @@
 package fun.nursultan.client.util;
 
+import fun.nursultan.client.ClientSettings;
 import fun.nursultan.client.config.ConfigStore;
 import fun.nursultan.client.module.Module;
 import fun.nursultan.client.module.ModuleManager;
@@ -123,6 +124,9 @@ public final class ClientHooks {
             return true;
         }
         if (module.setting("bed") && state.is(net.minecraft.tags.BlockTags.BEDS)) {
+            return true;
+        }
+        if (module.setting("signs") && (state.is(net.minecraft.tags.BlockTags.ALL_SIGNS) || state.is(net.minecraft.tags.BlockTags.SIGNS))) {
             return true;
         }
         if (module.setting("door") && state.is(net.minecraft.tags.BlockTags.DOORS)) {
@@ -250,6 +254,16 @@ public final class ClientHooks {
         }
         if (t.startsWith(".friend del ")) {
             Friends.remove(t.substring(".friend del ".length()).trim());
+            ConfigStore.save();
+            return true;
+        }
+        if (t.equals(".auth clear")) {
+            ClientSettings.autoAuthPassword = "";
+            ConfigStore.save();
+            return true;
+        }
+        if (t.startsWith(".auth set ")) {
+            ClientSettings.autoAuthPassword = t.substring(".auth set ".length()).trim();
             ConfigStore.save();
             return true;
         }

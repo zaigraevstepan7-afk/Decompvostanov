@@ -16,6 +16,8 @@ public final class ElytraHelper extends Module {
         bool("firework-key", true);
         bool("only-space", true);
         bool("auto-launch", true);
+        bool("disabled", false);
+        bool("always", false);
     }
 
     @Override
@@ -27,7 +29,10 @@ public final class ElytraHelper extends Module {
                 && mc.player.getItemBySlot(EquipmentSlot.CHEST).is(Items.ELYTRA)) {
             mc.player.jumpFromGround();
         }
-        if (setting("firework-key") && mc.player.isFallFlying() && (!setting("only-space") || mc.options.keyJump.isDown())) {
+        if (setting("disabled")) {
+            return;
+        }
+        if (setting("firework-key") && mc.player.isFallFlying() && (setting("always") || !setting("only-space") || mc.options.keyJump.isDown())) {
             int slot = Inventories.findHotbar(mc.player.getInventory(), Items.FIREWORK_ROCKET);
             if (slot >= 0) {
                 int prev = mc.player.getInventory().getSelectedSlot();

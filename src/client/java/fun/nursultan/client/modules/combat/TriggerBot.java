@@ -30,11 +30,17 @@ public final class TriggerBot extends Module {
         bool("villagers", false);
         bool("invisible", false);
         bool("naked", false);
+        bool("targets", true);
+        bool("target-condition", true);
+        bool("disable", false);
     }
 
     @Override
     public void onTick(Minecraft mc) {
-        if (setting("do-not-attack") || mc.player == null || mc.gameMode == null) {
+        if (setting("disable") || setting("do-not-attack") || mc.player == null || mc.gameMode == null) {
+            return;
+        }
+        if (!setting("targets")) {
             return;
         }
         if (!(mc.hitResult instanceof EntityHitResult hit) || mc.hitResult.getType() != HitResult.Type.ENTITY) {

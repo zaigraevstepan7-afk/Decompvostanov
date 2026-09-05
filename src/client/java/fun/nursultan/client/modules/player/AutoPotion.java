@@ -28,11 +28,13 @@ public final class AutoPotion extends Module {
         bool("only-in-pvp", false);
         bool("disable-after-throw", false);
         bool("exclude-donate-potions", true);
+        bool("potions", true);
+        bool("addons", true);
     }
 
     @Override
     public void onTick(Minecraft mc) {
-        if (mc.player == null || mc.gameMode == null || ++delay < 8) {
+        if (!setting("potions") || mc.player == null || mc.gameMode == null || ++delay < 8) {
             return;
         }
         delay = 0;
