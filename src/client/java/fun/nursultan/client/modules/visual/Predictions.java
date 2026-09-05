@@ -27,10 +27,26 @@ public final class Predictions extends Module {
             return;
         }
         for (var entity : mc.level.entitiesForRendering()) {
-            if (entity instanceof ThrowableItemProjectile proj) {
+            if (entity instanceof ThrowableItemProjectile proj && accept(proj.getItem())) {
                 Vec3 p = proj.position().add(proj.getDeltaMovement().scale(8));
                 mc.level.addParticle(ParticleTypes.CRIT, p.x, p.y, p.z, 0, 0, 0);
             }
         }
+    }
+
+    private boolean accept(net.minecraft.world.item.ItemStack stack) {
+        if (setting("pearl") && stack.is(net.minecraft.world.item.Items.ENDER_PEARL)) {
+            return true;
+        }
+        if (setting("snowball") && stack.is(net.minecraft.world.item.Items.SNOWBALL)) {
+            return true;
+        }
+        if (setting("potions") && (stack.is(net.minecraft.world.item.Items.SPLASH_POTION) || stack.is(net.minecraft.world.item.Items.LINGERING_POTION))) {
+            return true;
+        }
+        if (setting("windcharge") && stack.is(net.minecraft.world.item.Items.WIND_CHARGE)) {
+            return true;
+        }
+        return setting("arrow") || setting("trident");
     }
 }

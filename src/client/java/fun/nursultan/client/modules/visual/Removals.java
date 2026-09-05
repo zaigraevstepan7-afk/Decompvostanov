@@ -45,5 +45,10 @@ public final class Removals extends Module {
             mc.level.setRainLevel(0);
             mc.level.setThunderLevel(0);
         }
+        if (setting("holograms") && mc.level != null) {
+            for (var stand : mc.level.getEntitiesOfClass(net.minecraft.world.entity.decoration.ArmorStand.class, mc.player.getBoundingBox().inflate(48), e -> true)) {
+                stand.setCustomNameVisible(false);
+            }
+        }
     }
 }

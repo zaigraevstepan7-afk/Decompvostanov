@@ -30,7 +30,7 @@ Dump: `Build: 1.21.11`. Вход оригинала — `KDFzREm.NNNNGY`. Дер
 | `src/client/java/fun/nursultan/client/modules/movement/` | Speed (`Pg`), Sprint (`PB`), Flight (`Pv`), NoSlow (`Pl`), NoWeb (`PY`), Timer (`Pz`), AutoJump (`mh`), EdgeJump (`mr`), AirStuck (`mD`), NoPush (`Py`), ScreenWalk (`Pi`), WallClimb (`Po`), SuperFirework (`PZ`) |
 | `src/client/java/fun/nursultan/client/modules/player/` | AutoTotem (`sJ`), AutoEat (`PH`), AutoArmor (`PK`), AutoTool (`PS`), AutoFish (`Pc`), Scaffold (`TM`), ChestStealer (`sp`), FastExp (`Ph`), NoDelay (`sD`), AutoPearl (`PX`), AutoRespawn (`PC`), AntiAFK (`su`) |
 | `src/client/java/fun/nursultan/client/modules/visual/` | EntityESP (`Ta`), Gamma (`TT`), SeeInvisible (`TG`), TargetEsp (`jY`), TimeChanger (`Tw`) |
-| `src/client/java/fun/nursultan/client/mixin/` | Blink, NoServerRotation, NoEntityTrace, NoInteract, LockSlots, NoDelay, Fog, Removals overlays, AspectRatio, FreeLook, NoSlow, NoPush |
+| `src/client/java/fun/nursultan/client/mixin/` | Blink, NoServerRotation, NoEntityTrace, NoInteract, LockSlots, NoDelay, Fog, Removals overlays/Gui, AspectRatio, FreeLook, NoSlow, NoPush |
 | `src/client/java/fun/nursultan/client/config/ConfigStore.java` | `zf` auto-save-preset (`nursultan-preset.json`) |
 | `src/client/java/fun/nursultan/client/modules/GeneratedModules.java` | все 109 UM-модулей, без заглушек |
 | `decompiled/modules/KDFzREm/` | полный декомпил 109 модулей + `UM` |
@@ -38,7 +38,7 @@ Dump: `Build: 1.21.11`. Вход оригинала — `KDFzREm.NNNNGY`. Дер
 | `decompiled/KDFzREm/{y,Gs,td,NNNNGY}.java` | ядро / меню / HUD / entry |
 | `runtime/*.jar` | восстановленный байткод обоих архивов |
 
-Оригинальный `Gs` рисует через MC RenderPipeline — без игры не встанет. Здесь меню, HUD (`td`) и все **109** UM-тиков завязаны на Mojang mappings 1.21.11. Пресет `zf` пишется в `nursultan-preset.json`. Mixin-слой: Blink, NoServerRotation, NoEntityTrace, NoInteract, NoFriendDamage, AntiBot, LockSlots, NoDelay, Fog, Removals, AspectRatio, FreeLook, NoSlow, NoPush.
+Оригинальный `Gs` рисует через MC RenderPipeline — без игры не встанет. Здесь меню, HUD (`td`) и все **109** UM-тиков завязаны на Mojang mappings 1.21.11. Пресет `zf` пишется в `nursultan-preset.json`. Mixin-слой: Blink, NoServerRotation, NoEntityTrace, NoInteract, NoFriendDamage, AntiBot, LockSlots, NoDelay, Fog, Removals (включая Gui scoreboard/vignette/effects), AspectRatio, FreeLook, NoSlow, NoPush.
 
 ## Дамп
 
