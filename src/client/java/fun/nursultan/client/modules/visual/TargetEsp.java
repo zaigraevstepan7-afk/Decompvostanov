@@ -12,6 +12,7 @@ public final class TargetEsp extends Module {
 
     public TargetEsp() {
         super("targetesp", "TargetEsp", Category.VISUAL, "world", "KDFzREm.jY", 36);
+        bool("mode", true);
         bool("square", true);
         bool("jello", false);
         bool("scan", false);
@@ -23,6 +24,9 @@ public final class TargetEsp extends Module {
         if (last != null) {
             last.setGlowingTag(false);
             last = null;
+        }
+        if (!setting("mode")) {
+            return;
         }
         if (mc.player == null || mc.level == null) {
             return;
