@@ -18,6 +18,7 @@ public final class NursultanClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        long started = System.currentTimeMillis();
         ModuleManager.INSTANCE.getClass();
         ConfigStore.load();
         KeyMapping.Category category = KeyMapping.Category.register(Identifier.fromNamespaceAndPath("nursultan", "menu"));
@@ -39,6 +40,8 @@ public final class NursultanClient implements ClientModInitializer {
             ModuleManager.INSTANCE.tick(mc);
         });
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("nursultan", "hud"), (graphics, tickCounter) -> HudOverlay.render(graphics));
-        System.out.println("Nursultan initialized · " + ModuleManager.INSTANCE.modules.size() + " modules · menu Right Shift");
+        // dump KDFzREm.y: "Nursultan initialized in {} ms"
+        System.out.println("Nursultan initialized in " + (System.currentTimeMillis() - started) + " ms · "
+                + ModuleManager.INSTANCE.modules.size() + " modules · menu Right Shift");
     }
 }
