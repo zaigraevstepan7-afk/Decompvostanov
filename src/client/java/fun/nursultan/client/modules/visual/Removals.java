@@ -45,9 +45,23 @@ public final class Removals extends Module {
             mc.level.setRainLevel(0);
             mc.level.setThunderLevel(0);
         }
+        if (setting("blindness")) {
+            mc.player.removeEffect(net.minecraft.world.effect.MobEffects.BLINDNESS);
+            mc.player.removeEffect(net.minecraft.world.effect.MobEffects.DARKNESS);
+        }
+        if (setting("nausea")) {
+            mc.player.removeEffect(net.minecraft.world.effect.MobEffects.NAUSEA);
+        }
         if (setting("holograms") && mc.level != null) {
             for (var stand : mc.level.getEntitiesOfClass(net.minecraft.world.entity.decoration.ArmorStand.class, mc.player.getBoundingBox().inflate(48), e -> true)) {
                 stand.setCustomNameVisible(false);
+            }
+        }
+        if (setting("fishing-bobber") && mc.level != null) {
+            for (var hook : mc.level.getEntitiesOfClass(
+                    net.minecraft.world.entity.projectile.FishingHook.class,
+                    mc.player.getBoundingBox().inflate(64))) {
+                hook.setInvisible(true);
             }
         }
     }

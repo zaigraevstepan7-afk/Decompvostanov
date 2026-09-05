@@ -46,6 +46,13 @@ public final class AutoExplosion extends Module {
                 break;
             }
         }
+        for (var placed : mc.level.getEntitiesOfClass(
+                net.minecraft.world.entity.boss.enderdragon.EndCrystal.class,
+                mc.player.getBoundingBox().inflate(4.5))) {
+            mc.gameMode.attack(mc.player, placed);
+            mc.player.swing(InteractionHand.MAIN_HAND);
+            break;
+        }
         if (setting("reset-slot")) {
             mc.player.getInventory().setSelectedSlot(prev);
         }
