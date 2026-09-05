@@ -21,6 +21,8 @@ public final class ElytraTarget extends Module {
         number("overtake-distance", 6, 1, 20, 1);
         bool("auto-firework-use", true);
         bool("timing-firework-use", true);
+        bool("bind-firework-use", false);
+        bool("manual-hotkey", false);
         number("delay-ticks", 10, 1, 40, 1);
     }
 

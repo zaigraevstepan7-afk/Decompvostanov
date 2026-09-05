@@ -26,6 +26,9 @@ public final class Removals extends Module {
         bool("end-portal-open", true);
         bool("anarchy-events", true);
         bool("exp-bottle", false);
+        bool("scoreboard", false);
+        bool("holograms", false);
+        bool("trident", false);
         number("sound-multiplier", 1, 0, 2, 0.1F);
     }
 

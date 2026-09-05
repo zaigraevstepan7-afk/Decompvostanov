@@ -14,6 +14,8 @@ public final class StreamerMode extends Module {
         bool("name", true);
         bool("links", true);
         bool("ft", false);
+        bool("funtime", false);
+        bool("staff", false);
         bool("hide-entries", true);
         bool("custom-name", true);
     }
@@ -24,7 +26,7 @@ public final class StreamerMode extends Module {
             return;
         }
         if (setting("custom-name")) {
-            mc.player.setCustomName(Component.literal("Nursultan"));
+            mc.player.setCustomName(Component.literal(setting("funtime") ? "FunTime" : "Nursultan"));
             mc.player.setCustomNameVisible(true);
         }
         if (setting("hide-entries")) {

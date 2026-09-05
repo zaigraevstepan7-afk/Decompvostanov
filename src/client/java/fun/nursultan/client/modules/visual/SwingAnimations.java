@@ -14,6 +14,7 @@ public final class SwingAnimations extends Module {
         bool("swing-4", false);
         number("swing-strength", 1, 0.2F, 3, 0.1F);
         number("spin-smoothness", 0.5F, 0.1F, 1, 0.05F);
+        bool("spinning", false);
         bool("only-while-have-target", false);
     }
 
@@ -27,6 +28,9 @@ public final class SwingAnimations extends Module {
         }
         if (mc.player.swingTime > 0) {
             mc.player.yBobO += numberValue("swing-strength", 1);
+            if (setting("spinning")) {
+                mc.player.yHeadRot += 8 * numberValue("spin-smoothness", 0.5F);
+            }
         }
     }
 }

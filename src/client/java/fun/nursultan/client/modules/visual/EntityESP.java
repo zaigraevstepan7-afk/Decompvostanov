@@ -26,8 +26,18 @@ public final class EntityESP extends Module {
         bool("self", false);
         bool("through-walls", true);
         bool("health-bar", true);
+        bool("health", true);
         bool("box-color", true);
+        bool("box", true);
+        bool("chams", false);
+        bool("ft-spheres", false);
+        bool("equipment", false);
         bool("name", true);
+        bool("items", false);
+        bool("chest-minecart", false);
+        bool("dormant", false);
+        number("dormant-display-time", 20, 1, 80, 1);
+        number("equipment-size", 1, 0.5F, 2, 0.1F);
     }
 
     @Override

@@ -19,6 +19,11 @@ public final class AutoSwap extends Module {
         bool("log-swapped-item", false);
         bool("sunrise-runes", false);
         bool("any-food", true);
+        bool("g-apples", true);
+        bool("shield", false);
+        bool("totem", false);
+        bool("fireworks", false);
+        bool("multi", false);
     }
 
     @Override
@@ -34,6 +39,18 @@ public final class AutoSwap extends Module {
         }
         int a = Inventories.findHotbar(mc.player.getInventory(), Items.ENDER_PEARL);
         int b = Inventories.findHotbar(mc.player.getInventory(), Items.GOLDEN_APPLE);
+        if (setting("g-apples") && b < 0) {
+            b = Inventories.findHotbar(mc.player.getInventory(), Items.ENCHANTED_GOLDEN_APPLE);
+        }
+        if (setting("totem") && a < 0) {
+            a = Inventories.findHotbar(mc.player.getInventory(), Items.TOTEM_OF_UNDYING);
+        }
+        if (setting("shield") && b < 0) {
+            b = Inventories.findHotbar(mc.player.getInventory(), Items.SHIELD);
+        }
+        if (setting("fireworks") && a < 0) {
+            a = Inventories.findHotbar(mc.player.getInventory(), Items.FIREWORK_ROCKET);
+        }
         if (setting("any-food")) {
             for (int i = 0; i < 9; i++) {
                 ItemStack stack = mc.player.getInventory().getItem(i);

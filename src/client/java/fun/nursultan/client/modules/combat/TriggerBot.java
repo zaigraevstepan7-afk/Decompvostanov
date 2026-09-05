@@ -15,7 +15,10 @@ public final class TriggerBot extends Module {
     public TriggerBot() {
         super("triggerbot", "TriggerBot", Category.COMBAT, "fighting", "KDFzREm.Uj", 67);
         bool("critical-hit", true);
+        bool("critical-always", false);
+        bool("critical-disabled", false);
         bool("critical-only-space", false);
+        bool("bot", false);
         bool("do-not-attack", false);
         bool("reset-sprint", false);
         bool("shield-break", false);

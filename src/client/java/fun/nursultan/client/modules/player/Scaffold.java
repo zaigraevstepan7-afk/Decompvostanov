@@ -22,6 +22,9 @@ public final class Scaffold extends Module {
         bool("save-y", true);
         bool("telly", false);
         bool("grim", false);
+        bool("basic", true);
+        bool("sneak", false);
+        number("delay", 0, 0, 10, 1);
     }
 
     @Override
@@ -42,7 +45,7 @@ public final class Scaffold extends Module {
         if ((setting("auto-jump") || setting("telly")) && mc.player.onGround() && moving) {
             mc.player.jumpFromGround();
         }
-        if (setting("safe-walk") && !setting("telly")) {
+        if ((setting("safe-walk") || setting("sneak")) && !setting("telly")) {
             mc.player.setShiftKeyDown(true);
         }
         int slot = findBlock(mc);

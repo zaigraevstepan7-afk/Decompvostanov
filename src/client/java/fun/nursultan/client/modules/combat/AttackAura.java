@@ -16,8 +16,17 @@ public final class AttackAura extends Module {
         bool("aim-range", true);
         bool("through-walls", false);
         bool("critical-hit", true);
+        bool("critical-always", false);
+        bool("critical-disabled", false);
         bool("critical-only-space", false);
         bool("increase-crit-accuracy", false);
+        bool("sprint-mode", false);
+        bool("swap-damage", false);
+        bool("sort", false);
+        bool("lite", false);
+        bool("noise", false);
+        bool("hw", false);
+        bool("smart", false);
         bool("target-follow", true);
         bool("do-not-attack", false);
         bool("shield-break", false);
@@ -64,16 +73,21 @@ public final class AttackAura extends Module {
         if (!Targeting.inFov(mc.player, target, numberValue("fov", 180))) {
             return;
         }
-        if (setting("critical-hit")) {
+        if (setting("critical-disabled")) {
+            // dump critical-disabled: skip crit gate
+        } else if (setting("critical-always") || setting("critical-hit")) {
             if (setting("critical-only-space") && !mc.options.keyJump.isDown()) {
                 return;
             }
             if (setting("increase-crit-accuracy") && (mc.player.onGround() || mc.player.fallDistance < 0.08F)) {
                 return;
             }
-            if (mc.player.getAttackStrengthScale(0.5F) < 0.92F) {
+            if (!setting("critical-always") && mc.player.getAttackStrengthScale(0.5F) < 0.92F) {
                 return;
             }
+        }
+        if (setting("sprint-mode")) {
+            mc.player.setSprinting(true);
         }
         if (setting("target-follow") || setting("aim-range")) {
             aim(mc.player, target);

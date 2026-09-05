@@ -15,6 +15,7 @@ public final class Blink extends Module {
         super("blink", "Blink", Category.PLAYER, "base", "KDFzREm.PD", 38);
         bool("release-packets-on-hit", true);
         bool("render-server-position", true);
+        bool("render-color", true);
         bool("auto-release-packets", true);
         number("release-packets-ticks", 40, 5, 200, 5);
     }

@@ -16,6 +16,8 @@ public final class HolyHelper extends Module {
         bool("exp-bottle", true);
         bool("explosive-trap", true);
         bool("snow-ball", true);
+        bool("stun", true);
+        bool("trap", true);
         bool("show-stun-zone", true);
         bool("zone-color", true);
     }

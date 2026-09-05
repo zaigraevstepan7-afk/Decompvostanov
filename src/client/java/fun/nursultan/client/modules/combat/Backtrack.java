@@ -15,11 +15,13 @@ public final class Backtrack extends Module {
         super("backtrack", "Backtrack", Category.COMBAT, "tools", "KDFzREm.UP", 52);
         bool("hold-after-attack", true);
         number("ticks", 4, 1, 20, 1);
+        number("delay", 0, 0, 10, 1);
+        number("distance", 6, 2, 12, 0.5F);
     }
 
     @Override
     public void onTick(Minecraft mc) {
-        LivingEntity target = Targeting.nearest(mc, 6);
+        LivingEntity target = Targeting.nearest(mc, numberValue("distance", 6));
         if (target == null) {
             held = null;
             return;
