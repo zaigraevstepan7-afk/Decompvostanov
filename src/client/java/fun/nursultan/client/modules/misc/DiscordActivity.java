@@ -15,7 +15,8 @@ public final class DiscordActivity extends Module {
     public void onHud(GuiGraphics g, int width, int height) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null) {
-            g.drawString(mc.font, "nursultan.fun", width - 90, 8, 0xFF5865F2, false);
+            g.drawString(mc.font, "Build: 1.21.11", width - 100, 8, 0xFF5865F2, false);
+            g.drawString(mc.font, "nursultan.fun", width - 90, 18, 0xFF8A8A96, false);
         }
     }
 }

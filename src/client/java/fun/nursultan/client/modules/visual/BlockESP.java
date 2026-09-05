@@ -23,7 +23,9 @@ public final class BlockESP extends Module {
         for (BlockPos pos : BlockPos.betweenClosed(feet.offset(-r, -4, -r), feet.offset(r, 4, r))) {
             var state = mc.level.getBlockState(pos);
             if (state.is(Blocks.CHEST) || state.is(Blocks.ENDER_CHEST) || state.is(Blocks.SPAWNER)
-                    || state.is(Blocks.SHULKER_BOX) || state.is(Blocks.ANCIENT_DEBRIS)) {
+                    || state.is(Blocks.SHULKER_BOX) || state.is(Blocks.ANCIENT_DEBRIS)
+                    || state.is(Blocks.BEACON) || state.is(Blocks.DIAMOND_ORE) || state.is(Blocks.DEEPSLATE_DIAMOND_ORE)
+                    || state.is(Blocks.GOLD_BLOCK) || state.is(Blocks.EMERALD_ORE) || state.is(Blocks.DEEPSLATE_EMERALD_ORE)) {
                 // world highlight via nearby entity glow is unavailable; mark via debug particles
                 if (mc.player.tickCount % 20 == 0) {
                     mc.level.addParticle(net.minecraft.core.particles.ParticleTypes.END_ROD,
