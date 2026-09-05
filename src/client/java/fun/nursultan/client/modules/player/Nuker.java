@@ -21,6 +21,15 @@ public final class Nuker extends Module {
         if (mc.player == null || mc.level == null || mc.gameMode == null) {
             return;
         }
+        if (setting("break-only-in-selection") && mc.hitResult instanceof net.minecraft.world.phys.BlockHitResult hit
+                && hit.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK) {
+            var state = mc.level.getBlockState(hit.getBlockPos());
+            if (!state.isAir() && !state.is(Blocks.BEDROCK)) {
+                mc.gameMode.startDestroyBlock(hit.getBlockPos(), hit.getDirection());
+                mc.gameMode.continueDestroyBlock(hit.getBlockPos(), hit.getDirection());
+            }
+            return;
+        }
         int h = (int) numberValue("height-range", 2);
         BlockPos feet = mc.player.blockPosition();
         for (BlockPos pos : BlockPos.betweenClosed(feet.offset(-2, 0, -2), feet.offset(2, h, 2))) {

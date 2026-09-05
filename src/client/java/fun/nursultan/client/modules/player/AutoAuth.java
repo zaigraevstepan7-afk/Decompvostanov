@@ -19,6 +19,13 @@ public final class AutoAuth extends Module {
     @Override
     public void onEnable() {
         sent = false;
+        if (setting("open-path")) {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.player != null) {
+                mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal(
+                        "AutoAuth " + fun.nursultan.client.config.ConfigStore.file()), false);
+            }
+        }
     }
 
     @Override

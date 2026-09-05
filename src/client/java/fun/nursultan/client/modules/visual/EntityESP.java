@@ -75,6 +75,9 @@ public final class EntityESP extends Module {
         if (!entity.isAlive()) {
             return false;
         }
+        if (!setting("through-walls") && self != null && !self.hasLineOfSight(entity)) {
+            return false;
+        }
         if (entity == self) {
             return setting("self");
         }

@@ -76,6 +76,12 @@ public final class AutoPotion extends Module {
                     || setting("speed-potion") && !mc.player.hasEffect(MobEffects.SPEED) && speed
                     || setting("strength-potion") && !mc.player.hasEffect(MobEffects.STRENGTH) && strength
                     || setting("fire-resistance-potion") && !mc.player.hasEffect(MobEffects.FIRE_RESISTANCE) && fire;
+            if (setting("exclude-donate-potions")) {
+                String name = stack.getHoverName().getString().toLowerCase();
+                if (name.contains("донат") || name.contains("donate") || name.contains("титан") || name.contains("элит")) {
+                    continue;
+                }
+            }
             if (!want || i >= 9) {
                 continue;
             }
@@ -89,7 +95,9 @@ public final class AutoPotion extends Module {
             if (setting("disable-after-throw")) {
                 setEnabled(false);
             }
-            return;
+            if (!setting("multi") || setting("single")) {
+                return;
+            }
         }
     }
 }

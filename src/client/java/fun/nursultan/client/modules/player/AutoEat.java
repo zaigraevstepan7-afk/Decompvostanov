@@ -25,11 +25,11 @@ public final class AutoEat extends Module {
         if (!hungry && !low) {
             return;
         }
-        if (!fun.nursultan.client.util.Inventories.isFood(mc.player.getMainHandItem())
-                && !fun.nursultan.client.util.Inventories.isFood(mc.player.getOffhandItem())) {
+        if (!isAllowedFood(mc.player.getMainHandItem())
+                && !isAllowedFood(mc.player.getOffhandItem())) {
             int food = -1;
             for (int i = 0; i < 9; i++) {
-                if (fun.nursultan.client.util.Inventories.isFood(mc.player.getInventory().getItem(i))) {
+                if (isAllowedFood(mc.player.getInventory().getItem(i))) {
                     food = i;
                     break;
                 }
@@ -41,6 +41,17 @@ public final class AutoEat extends Module {
         }
         mc.options.keyUse.setDown(true);
         mc.player.startUsingItem(InteractionHand.MAIN_HAND);
+    }
+
+    private boolean isAllowedFood(net.minecraft.world.item.ItemStack stack) {
+        if (!fun.nursultan.client.util.Inventories.isFood(stack)) {
+            return false;
+        }
+        if (setting("any-food")) {
+            return true;
+        }
+        return stack.is(net.minecraft.world.item.Items.GOLDEN_APPLE)
+                || stack.is(net.minecraft.world.item.Items.ENCHANTED_GOLDEN_APPLE);
     }
 
     @Override

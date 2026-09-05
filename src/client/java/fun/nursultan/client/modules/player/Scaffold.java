@@ -43,7 +43,7 @@ public final class Scaffold extends Module {
         }
         boolean moving = mc.options.keyUp.isDown() || mc.options.keyDown.isDown()
                 || mc.options.keyLeft.isDown() || mc.options.keyRight.isDown();
-        if ((setting("auto-jump") || setting("telly")) && mc.player.onGround() && moving) {
+        if ((setting("auto-jump") || setting("telly")) && !setting("basic") && mc.player.onGround() && moving) {
             mc.player.jumpFromGround();
         }
         if ((setting("safe-walk") || setting("sneak")) && !setting("telly")) {

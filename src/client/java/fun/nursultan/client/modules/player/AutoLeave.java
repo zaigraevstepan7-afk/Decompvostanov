@@ -22,7 +22,7 @@ public final class AutoLeave extends Module {
 
     @Override
     public void onTick(Minecraft mc) {
-        if (mc.player == null || mc.level == null) {
+        if (!setting("action") || mc.player == null || mc.level == null) {
             return;
         }
         boolean low = mc.player.getHealth() <= numberValue("health", 6);
