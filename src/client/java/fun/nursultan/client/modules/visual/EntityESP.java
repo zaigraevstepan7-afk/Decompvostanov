@@ -164,11 +164,13 @@ public final class EntityESP extends Module {
         float ui = numberValue("scale", 1);
         if (setting("_2x")) {
             ui *= 2;
+        } else if (setting("_1x")) {
+            ui *= 1;
         } else if (setting("custom")) {
             ui *= 1.25F;
         }
         int y = 72;
-        int accent = fun.nursultan.client.ClientSettings.accent;
+            int accent = setting("client") ? fun.nursultan.client.ClientSettings.accent : 0xFFF2E9FF;
         int barW = Math.max(40, (int) (110 * ui));
         for (LivingEntity entity : mc.level.getEntitiesOfClass(
                 LivingEntity.class, mc.player.getBoundingBox().inflate(48), e -> accept(mc.player, e))) {

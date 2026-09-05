@@ -3,6 +3,7 @@ package fun.nursultan.client.modules.misc;
 import fun.nursultan.client.module.Category;
 import fun.nursultan.client.module.Module;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.sounds.SoundEvents;
 
 /** Restored from KDFzREm.Wk @UZ ClientSounds */
@@ -18,6 +19,8 @@ public final class ClientSounds extends Module {
         bool("select-enable-sound", true);
         bool("select-disable-sound", true);
         bool("sounds", true);
+        bool("sound-does-not-exist", true);
+        bool("error-please-report", true);
         number("volume", 0.4F, 0, 1, 0.05F);
     }
 
@@ -40,6 +43,26 @@ public final class ClientSounds extends Module {
                                 : SoundEvents.NOTE_BLOCK_HAT.value());
                 mc.player.playSound(sound, vol, setting("custom") ? 0.8F : 1.2F);
             }
+        }
+    }
+
+    @Override
+    public void onHud(GuiGraphics g, int width, int height) {
+        if (!setting("custom") || !setting("sounds")) {
+            return;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.font == null) {
+            return;
+        }
+        java.nio.file.Path home = java.nio.file.Path.of(System.getProperty("user.home", ""), "Downloads");
+        boolean enableMissing = !java.nio.file.Files.isRegularFile(home.resolve("custom-enable-sound.wav"));
+        boolean disableMissing = !java.nio.file.Files.isRegularFile(home.resolve("custom-disable-sound.wav"));
+        if ((enableMissing || disableMissing) && setting("sound-does-not-exist")) {
+            g.drawString(mc.font, "sound-does-not-exist", 8, height - 62, 0xFFFFC107, false);
+        }
+        if ((enableMissing || disableMissing) && setting("error-please-report")) {
+            g.drawString(mc.font, "error-please-report", 8, height - 52, 0xFFE53935, false);
         }
     }
 }

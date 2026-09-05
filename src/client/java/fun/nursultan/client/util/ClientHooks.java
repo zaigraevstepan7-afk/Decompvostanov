@@ -325,7 +325,7 @@ public final class ClientHooks {
         }
         String raw = message.getString();
         String lower = raw.toLowerCase();
-        if (stream.setting("links") && lower.matches("(?s).*(t\\.me/|vk\\.|https?://|discord\\.gg|funtime\\.su|spookytime\\.net).*")) {
+        if (stream.setting("links") && lower.matches("(?s).*(t\\.me/|vk\\.|https?://|discord\\.gg|funtime\\.su|spookytime\\.net|/links).*")) {
             return net.minecraft.network.chat.Component.literal("[hidden]");
         }
         if (stream.setting("staff") && lower.matches("(?s).*(admin|moder|helper|staff|хелпер|модер|админ|князь|титан|элита).*")) {
