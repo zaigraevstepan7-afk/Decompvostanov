@@ -9,7 +9,7 @@ import net.minecraft.world.entity.player.Player;
 /** Restored from KDFzREm.UE @UZ NoFriendDamage */
 public final class NoFriendDamage extends Module {
     public NoFriendDamage() {
-        super("nofrienddamage", "NoFriendDamage", Category.COMBAT, "", "KDFzREm.UE", 18);
+        super("nofrienddamage", "NoFriendDamage", Category.COMBAT, "other", "KDFzREm.UE", 18);
         bool("teams", true);
     }
 

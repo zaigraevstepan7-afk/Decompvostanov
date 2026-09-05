@@ -18,7 +18,7 @@ public final class Notifications extends Module {
     private final List<String> lines = new ArrayList<>();
 
     public Notifications() {
-        super("notifications", "Notifications", Category.VISUAL, "", "KDFzREm.jc", 29);
+        super("notifications", "Notifications", Category.VISUAL, "interface", "KDFzREm.jc", 29);
         bool("module-toggle", true);
         bool("armor-durability", true);
         bool("irc-ping", false);

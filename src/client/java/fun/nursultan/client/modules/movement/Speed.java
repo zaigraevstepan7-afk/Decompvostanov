@@ -8,7 +8,7 @@ import net.minecraft.world.phys.Vec3;
 /** Restored from KDFzREm.Pg. */
 public final class Speed extends Module {
     public Speed() {
-        super("speed", "Speed", Category.MOVEMENT, "", "KDFzREm.Pg", 18);
+        super("speed", "Speed", Category.MOVEMENT, "base", "KDFzREm.Pg", 18);
         bool("speed-xz", true);
         bool("ground-only", false);
         bool("collision", false);

@@ -8,7 +8,7 @@ import net.minecraft.client.gui.GuiGraphics;
 /** Restored from KDFzREm.jo @UZ Cooldowns */
 public final class Cooldowns extends Module {
     public Cooldowns() {
-        super("cooldowns", "Cooldowns", Category.VISUAL, "", "KDFzREm.jo", 28);
+        super("cooldowns", "Cooldowns", Category.VISUAL, "interface", "KDFzREm.jo", 28);
         bool("render-on-items", true);
         bool("inventory-only", false);
         bool("99+", true);

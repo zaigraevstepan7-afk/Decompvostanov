@@ -8,7 +8,7 @@ import net.minecraft.client.gui.GuiGraphics;
 /** Restored from KDFzREm.mu @UZ DiscordActivity — local presence text, no remote RPC */
 public final class DiscordActivity extends Module {
     public DiscordActivity() {
-        super("discordactivity", "DiscordActivity", Category.MISC, "", "KDFzREm.mu", 10);
+        super("discordactivity", "DiscordActivity", Category.MISC, "client", "KDFzREm.mu", 10);
     }
 
     @Override

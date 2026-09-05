@@ -9,7 +9,7 @@ import net.minecraft.client.gui.GuiGraphics;
 /** Restored from KDFzREm.jq @UZ Hotkeys */
 public final class Hotkeys extends Module {
     public Hotkeys() {
-        super("hotkeys", "Hotkeys", Category.VISUAL, "", "KDFzREm.jq", 9);
+        super("hotkeys", "Hotkeys", Category.VISUAL, "interface", "KDFzREm.jq", 9);
     }
 
     @Override

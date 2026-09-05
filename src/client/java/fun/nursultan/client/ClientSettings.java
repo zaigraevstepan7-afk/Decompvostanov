@@ -4,8 +4,8 @@ package fun.nursultan.client;
 public final class ClientSettings {
     public static float menuScale = 1.0F;
     public static float hudScale = 1.0F;
-    public static int accent = 0xFF9FCA2B;
-    public static boolean descriptions = true;
+    public static int accent = 0xFFD48A00;
+    public static boolean descriptions = false;
     public static boolean autoSavePreset = true;
     public static boolean loading;
     public static String language = "ru";

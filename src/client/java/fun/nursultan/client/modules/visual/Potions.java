@@ -9,7 +9,7 @@ import net.minecraft.world.effect.MobEffectInstance;
 /** Restored from KDFzREm.je @UZ Potions */
 public final class Potions extends Module {
     public Potions() {
-        super("potions", "Potions", Category.VISUAL, "", "KDFzREm.je", 10);
+        super("potions", "Potions", Category.VISUAL, "interface", "KDFzREm.je", 10);
     }
 
     @Override

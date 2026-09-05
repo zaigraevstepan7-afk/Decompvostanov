@@ -8,7 +8,7 @@ import net.minecraft.client.gui.GuiGraphics;
 /** Restored from KDFzREm.jK @UZ Inventory */
 public final class InventoryHud extends Module {
     public InventoryHud() {
-        super("inventory", "Inventory", Category.VISUAL, "", "KDFzREm.jK", 9);
+        super("inventory", "Inventory", Category.VISUAL, "interface", "KDFzREm.jK", 9);
     }
 
     @Override

@@ -10,7 +10,7 @@ public final class ClientSounds extends Module {
     private final java.util.Map<String, Boolean> last = new java.util.HashMap<>();
 
     public ClientSounds() {
-        super("clientsounds", "ClientSounds", Category.MISC, "", "KDFzREm.Wk", 54);
+        super("clientsounds", "ClientSounds", Category.MISC, "client", "KDFzREm.Wk", 54);
         bool("toggle-sounds", true);
         bool("custom", false);
         bool("default", true);

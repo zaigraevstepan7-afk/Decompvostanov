@@ -8,7 +8,7 @@ import net.minecraft.client.gui.GuiGraphics;
 /** Restored from KDFzREm.bw @UZ GPS */
 public final class GPS extends Module {
     public GPS() {
-        super("gps", "GPS", Category.VISUAL, "", "KDFzREm.bw", 40);
+        super("gps", "GPS", Category.VISUAL, "interface", "KDFzREm.bw", 40);
         number("target-x", 0, -30000, 30000, 10);
         number("target-z", 0, -30000, 30000, 10);
         bool("clear-target", false);

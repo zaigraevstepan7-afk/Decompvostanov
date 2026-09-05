@@ -8,7 +8,7 @@ import net.minecraft.client.gui.GuiGraphics;
 /** Restored from KDFzREm.Wg @UZ IRC — local overlay only, no remote socket */
 public final class IRC extends Module {
     public IRC() {
-        super("irc", "IRC", Category.MISC, "", "KDFzREm.Wg", 8);
+        super("irc", "IRC", Category.MISC, "client", "KDFzREm.Wg", 8);
     }
 
     @Override

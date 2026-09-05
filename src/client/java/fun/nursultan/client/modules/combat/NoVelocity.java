@@ -8,7 +8,7 @@ import net.minecraft.world.phys.Vec3;
 /** Restored from KDFzREm.WG — jump-reset / vanilla / mode */
 public final class NoVelocity extends Module {
     public NoVelocity() {
-        super("novelocity", "NoVelocity", Category.COMBAT, "", "KDFzREm.WG", 16);
+        super("novelocity", "NoVelocity", Category.COMBAT, "fighting", "KDFzREm.WG", 16);
         bool("vanilla", true);
         bool("jump-reset", false);
     }

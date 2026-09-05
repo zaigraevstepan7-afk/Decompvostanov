@@ -10,7 +10,7 @@ import net.minecraft.world.entity.LivingEntity;
 /** Restored from KDFzREm.jH @UZ TargetInfo */
 public final class TargetInfo extends Module {
     public TargetInfo() {
-        super("targetinfo", "TargetInfo", Category.VISUAL, "", "KDFzREm.jH", 26);
+        super("targetinfo", "TargetInfo", Category.VISUAL, "interface", "KDFzREm.jH", 26);
         bool("show-from-mouse", true);
         bool("show-armor-details", true);
         bool("show-absorption", true);

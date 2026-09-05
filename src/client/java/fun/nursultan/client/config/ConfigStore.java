@@ -92,6 +92,16 @@ public final class ConfigStore {
         }
     }
 
+    public static void saveNow() {
+        boolean prev = ClientSettings.autoSavePreset;
+        ClientSettings.autoSavePreset = true;
+        try {
+            save();
+        } finally {
+            ClientSettings.autoSavePreset = prev;
+        }
+    }
+
     public static void save() {
         if (!ClientSettings.autoSavePreset) {
             return;

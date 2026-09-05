@@ -7,7 +7,6 @@ import net.minecraft.client.gui.GuiGraphics;
 
 /** In-game HUD reconstructed from KDFzREm.td — logo / hotkeys / potions / target / gps. */
 public final class HudOverlay {
-    private static final int ACCENT = 0xFF9FCA2B;
     private static final int TEXT = 0xFFF2E9FF;
 
     public static void render(GuiGraphics g) {

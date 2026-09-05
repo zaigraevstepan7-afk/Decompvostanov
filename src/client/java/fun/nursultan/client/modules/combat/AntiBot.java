@@ -9,7 +9,7 @@ import net.minecraft.world.entity.player.Player;
 /** Restored from KDFzREm.UU @UZ AntiBot */
 public final class AntiBot extends Module {
     public AntiBot() {
-        super("antibot", "AntiBot", Category.COMBAT, "", "KDFzREm.UU", 23);
+        super("antibot", "AntiBot", Category.COMBAT, "other", "KDFzREm.UU", 23);
         bool("no-bot-interaction", true);
     }
 

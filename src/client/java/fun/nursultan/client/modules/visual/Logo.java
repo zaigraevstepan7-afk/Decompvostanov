@@ -9,7 +9,7 @@ import net.minecraft.client.gui.GuiGraphics;
 /** Restored from KDFzREm.jV @UZ Logo — login/fps/ping/time/tps/bps/coordinates */
 public final class Logo extends Module {
     public Logo() {
-        super("logo", "Logo", Category.VISUAL, "", "KDFzREm.jV", 42);
+        super("logo", "Logo", Category.VISUAL, "interface", "KDFzREm.jV", 42);
         bool("login", true);
         bool("fps", true);
         bool("ping", true);

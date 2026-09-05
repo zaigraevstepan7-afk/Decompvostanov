@@ -9,7 +9,7 @@ public final class NoSlotChange extends Module {
     private int locked = -1;
 
     public NoSlotChange() {
-        super("noslotchange", "NoSlotChange", Category.COMBAT, "", "KDFzREm.UW", 13);
+        super("noslotchange", "NoSlotChange", Category.COMBAT, "other", "KDFzREm.UW", 13);
     }
 
     @Override

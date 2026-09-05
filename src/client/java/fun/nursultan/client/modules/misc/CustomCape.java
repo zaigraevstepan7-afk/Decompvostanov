@@ -7,7 +7,7 @@ import net.minecraft.client.Minecraft;
 /** Restored from KDFzREm.WY @UZ CustomCape */
 public final class CustomCape extends Module {
     public CustomCape() {
-        super("customcape", "CustomCape", Category.MISC, "", "KDFzREm.WY", 18);
+        super("customcape", "CustomCape", Category.MISC, "client", "KDFzREm.WY", 18);
     }
 
     @Override
