@@ -55,10 +55,16 @@ public abstract class Module {
     }
 
     protected void bool(String id, boolean def) {
+        if (settings.stream().anyMatch(s -> s.id.equals(id))) {
+            throw new IllegalStateException("Setting with key %s already registered".formatted(id));
+        }
         settings.add(new BoolSetting(id, labelOf(id), def));
     }
 
     protected void number(String id, float def, float min, float max, float step) {
+        if (numbers.stream().anyMatch(s -> s.id.equals(id))) {
+            throw new IllegalStateException("Setting with key %s already registered".formatted(id));
+        }
         numbers.add(new NumberSetting(id, labelOf(id), def, min, max, step));
     }
 

@@ -327,7 +327,7 @@ public final class ClientHooks {
     private static final String[] STREAMER_LINK_LEFTOVERS = {
             "funtime.su", "t.me/funtime", "dd.funtime.su", "play.funtime.su", "vk.com/funtime",
             "shop.Spookytime.net", "vk.com/spookytimenet", "discord.gg/spookytime",
-            "spookytime.net", "SpookyTime", "SpookyTime!", "СпукиТайм!", "СпукиТайм", "Спукитайм",
+            "spookytime.net", "SpookyTime", "SpookyTime!", "СпукиТайм!", "СпукиТайм", "Спукитайм", "спукитайм",
             "nursultan.fun", "фантайм", "анархия", "/links"
     };
 
