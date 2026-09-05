@@ -35,7 +35,9 @@ public final class FreeLook extends Module {
             if (setting("pov") && !setting("nothing")) {
                 mc.options.setCameraType(setting("front")
                         ? net.minecraft.client.CameraType.THIRD_PERSON_FRONT
-                        : net.minecraft.client.CameraType.THIRD_PERSON_BACK);
+                        : setting("back")
+                                ? net.minecraft.client.CameraType.THIRD_PERSON_BACK
+                                : net.minecraft.client.CameraType.FIRST_PERSON);
             }
         }
     }

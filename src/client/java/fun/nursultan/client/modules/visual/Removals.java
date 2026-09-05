@@ -30,6 +30,7 @@ public final class Removals extends Module {
         bool("scoreboard", false);
         bool("holograms", false);
         bool("trident", false);
+        bool("sounds", true);
         number("sound-multiplier", 1, 0, 2, 0.1F);
     }
 

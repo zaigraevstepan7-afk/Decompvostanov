@@ -24,6 +24,7 @@ public final class AutoSwap extends Module {
         bool("totem", false);
         bool("fireworks", false);
         bool("sphere", false);
+        bool("sphereEffect", false);
         bool("multi", false);
     }
 
@@ -56,11 +57,14 @@ public final class AutoSwap extends Module {
         if (setting("fireworks") && a < 0) {
             a = Inventories.findHotbar(mc.player.getInventory(), Items.FIREWORK_ROCKET);
         }
-        if (setting("sphere") || setting("sunrise-runes")) {
+        if (setting("sphere") || setting("sphereEffect") || setting("sunrise-runes")) {
             for (int i = 0; i < 9; i++) {
                 String id = mc.player.getInventory().getItem(i).getItem().getDescriptionId().toLowerCase();
-                if (id.contains("sphere") || id.contains("ender_eye") || id.contains("chorus")
-                        || setting("sunrise-runes") && (id.contains("rune") || id.contains("sunrise"))) {
+                boolean sphere = setting("sphere") && (id.contains("sphere") || id.contains("ender_eye") || id.contains("chorus"));
+                boolean effect = setting("sphereEffect") && (id.contains("dragon_breath") || id.contains("lingering")
+                        || id.contains("splash") || id.contains("effect") || id.contains("potion"));
+                boolean rune = setting("sunrise-runes") && (id.contains("rune") || id.contains("sunrise"));
+                if (sphere || effect || rune) {
                     a = i;
                     if (setting("multi")) {
                         pool.add(i);

@@ -20,6 +20,7 @@ public final class ChestStealer extends Module {
         bool("reverse", false);
         bool("shuffle", false);
         bool("loot-type", true);
+        bool("container.", true);
         number("delay", 1, 0, 10, 1);
     }
 
@@ -32,8 +33,14 @@ public final class ChestStealer extends Module {
             delay = 0;
             return;
         }
-        if (mc.screen instanceof ContainerScreen && setting("ignore-server-menus") && mc.screen.getTitle().getString().isBlank()) {
-            return;
+        if (mc.screen instanceof ContainerScreen) {
+            String title = mc.screen.getTitle().getString();
+            if (setting("ignore-server-menus") && title.isBlank()) {
+                return;
+            }
+            if (setting("container.") && !vanillaContainer(title)) {
+                return;
+            }
         }
         if (!setting("normal") && !setting("reverse") && !setting("shuffle")) {
             return;
@@ -67,6 +74,19 @@ public final class ChestStealer extends Module {
         if (setting("auto-close")) {
             mc.player.closeContainer();
         }
+    }
+
+    private static boolean vanillaContainer(String title) {
+        String lower = title.toLowerCase();
+        return lower.contains("chest")
+                || lower.contains("barrel")
+                || lower.contains("shulker")
+                || lower.contains("hopper")
+                || lower.contains("container")
+                || lower.contains("сундук")
+                || lower.contains("ящик")
+                || lower.contains("шалкер")
+                || title.isBlank();
     }
 
     private boolean lootOk(net.minecraft.world.item.ItemStack stack) {

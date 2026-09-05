@@ -59,7 +59,7 @@ public final class Logo extends Module {
         if (setting("coordinates")) {
             line.append((int) mc.player.getX()).append(' ').append((int) mc.player.getY()).append(' ').append((int) mc.player.getZ());
         }
-        if (!line.isEmpty()) {
+        if (!line.isEmpty() && setting("details")) {
             g.drawString(mc.font, line.toString(), x, y, 0xFFF2E9FF, false);
         }
     }

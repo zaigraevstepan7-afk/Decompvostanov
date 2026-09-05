@@ -219,7 +219,15 @@ public final class ClientHooks {
 
     public static float soundMultiplier() {
         Module module = module("removals");
-        return removalsOn() ? module.numberValue("sound-multiplier", 1) : 1.0F;
+        if (!removalsOn() || !module.setting("sounds")) {
+            return 1.0F;
+        }
+        return module.numberValue("sound-multiplier", 1);
+    }
+
+    public static boolean hideSkins() {
+        Module stream = module("streamermode");
+        return stream != null && stream.enabled && stream.setting("skins");
     }
 
     public static boolean cameraClip() {

@@ -16,7 +16,9 @@
     "EntityMixin",
     "MouseHandlerMixin",
     "GuiMixin",
-    "ChatComponentMixin"
+    "ChatComponentMixin",
+    "PlayerInfoMixin",
+    "SoundEngineMixin"
   ],
   "injectors": {
     "defaultRequire": 1

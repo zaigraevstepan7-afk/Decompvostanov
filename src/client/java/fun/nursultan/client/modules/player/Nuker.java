@@ -3,6 +3,7 @@ package fun.nursultan.client.modules.player;
 import fun.nursultan.client.module.Category;
 import fun.nursultan.client.module.Module;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.Blocks;
@@ -13,6 +14,7 @@ public final class Nuker extends Module {
         super("nuker", "Nuker", Category.PLAYER, "base", "KDFzREm.sL", 40);
         bool("break-only-allowed-blocks", false);
         bool("break-only-in-selection", false);
+        bool("nuker.allowed-blocks-empty", true);
         number("height-range", 2, 1, 5, 1);
     }
 
@@ -44,5 +46,17 @@ public final class Nuker extends Module {
             mc.gameMode.continueDestroyBlock(pos.immutable(), Direction.UP);
             return;
         }
+    }
+
+    @Override
+    public void onHud(GuiGraphics g, int width, int height) {
+        if (!setting("nuker.allowed-blocks-empty") || !setting("break-only-allowed-blocks")) {
+            return;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.font == null) {
+            return;
+        }
+        g.drawString(mc.font, "nuker.allowed-blocks-empty", 8, height - 50, 0xFFFFC107, false);
     }
 }
