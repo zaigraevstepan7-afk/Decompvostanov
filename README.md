@@ -1,55 +1,41 @@
-# Nursultan restored
+# Nursultan Client — restored source (1.21.11)
 
-Два архива из `nursultan.zip`:
+Готовый Fabric-проект. Запуск как оригинал: Minecraft + Fabric Loader, меню по **Right Shift**.
 
-1. `nursultan.jar` — классы уже сведены в `manifest.tsv` (`KDFzREm/*`).
-2. `nursultan-lambdas.jar` — сырые лямбды, раньше не обрабатывались.
+Dump: `Build: 1.21.11`. Вход оригинала — `KDFzREm.NNNNGY`. Дерево модулей — 109 классов `KDFzREm.UM`.
 
-Скрипт `tools/reconstruct.py` собирает оба в пакет `KDFzREm` и пишет runtime-jar.
-
-## Что восстановлено
-
-| слой | число |
-|---|---|
-| классы | 3001 |
-| лямбды | 11267 |
-| методы / функции | 39080 |
-| модули (`UM`) | 109 |
-| вход | `KDFzREm.NNNNGY` (`ClientModInitializer`) |
-| ядро | `KDFzREm.y` |
-| меню | `KDFzREm.Gs` |
-| HUD | `KDFzREm.td` |
-
-Байткод: `runtime/nursultan-classes-restored.jar`, `runtime/nursultan-lambdas-restored.jar`.  
-Индекс методов: `src/main/resources/nursultan/methods.json`.  
-Ядро, декомпил: `decompiled/KDFzREm/{y,Gs,td,NNNNGY}.java`.  
-Все 109 чит-модулей: `decompiled/modules/KDFzREm/` (`Uv` = AttackAura, `Ub` = AimAssist, …).
-
-Оригинальный клиент — Fabric + Minecraft. Полный запуск внутри игры требует игру, loader и нативы. Здесь поднимается живое меню со всеми восстановленными категориями, модулями, HUD, AutoBuy, аккаунтами, реди-курсами (пресеты) и браузером классов/функций.
-
-## Запуск
+## Запуск чита
 
 ```bash
-./gradlew run
+./gradlew runClient
 ```
 
-Проверка без окна:
+Правый Shift открывает clickgui. ЛКМ по карточке — toggle. ПКМ / край карточки — settings.
+
+Собранный мод: `build/libs/nursultan-client-1.21.11-restored.jar`  
+Кинуть в `.minecraft/mods` вместе с Fabric API `0.141.6+1.21.11`.
 
 ```bash
+./gradlew build
 ./gradlew selfTest
 ```
 
-Либо без Gradle:
+## Исходник клиента
 
-```bash
-./run.sh
-./run.sh --self-test
-```
+| путь | что |
+|---|---|
+| `src/client/java/fun/nursultan/client/NursultanClient.java` | Fabric entry (как `NNNNGY`) |
+| `src/client/java/fun/nursultan/client/ui/ClickGuiScreen.java` | игровое меню |
+| `src/client/java/fun/nursultan/client/modules/combat/` | AttackAura (`Uv`), AimAssist (`Ub`), TriggerBot (`Uj`), NoVelocity (`WG`) |
+| `src/client/java/fun/nursultan/client/modules/movement/` | Speed, Sprint |
+| `src/client/java/fun/nursultan/client/modules/visual/` | EntityESP (`Ta`) |
+| `src/client/java/fun/nursultan/client/modules/GeneratedModules.java` | все 109 UM-модулей |
+| `decompiled/modules/KDFzREm/` | полный декомпил 109 модулей + `UM` |
+| `decompiled/KDFzREm/{y,Gs,td,NNNNGY}.java` | ядро / меню / HUD / entry |
+| `runtime/*.jar` | восстановленный байткод обоих архивов |
 
-Меню: Combat / Movement / Player / Visual / Misc, HUD, AutoBuy, аккаунты, реди курсы, классы.
+Оригинальный `Gs` рисует через MC RenderPipeline — без игры не встанет. Здесь меню и тики завязаны на официальные Mojang mappings 1.21.11, модули из дампа, логика combat/movement/visual — рабочая.
 
-Повторная сборка дампов:
+## Дамп
 
-```bash
-python3 tools/reconstruct.py
-```
+`tools/reconstruct.py` собирает обе шипки в `KDFzREm`. 3001 класс, 11267 лямбд, 39080 методов.

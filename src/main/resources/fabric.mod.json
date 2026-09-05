@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "nursultan",
+  "version": "${version}",
+  "name": "Nursultan",
+  "description": "Restored Nursultan client for Minecraft 1.21.11. Module tree from KDFzREm.UM (109 classes).",
+  "authors": ["Nursultan"],
+  "contact": {
+    "homepage": "https://nursultan.fun",
+    "sources": "https://t.me/nursultan_mc"
+  },
+  "license": "All-Rights-Reserved",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "fun.nursultan.client.NursultanClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}

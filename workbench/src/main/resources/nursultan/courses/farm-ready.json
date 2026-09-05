@@ -1,0 +1,14 @@
+{
+  "name": "farm-ready",
+  "enabled": {
+    "autoeat": true,
+    "autotool": true,
+    "autofish": true,
+    "scaffold": true,
+    "nuker": true,
+    "blockesp": true,
+    "coordinates": true,
+    "autobuy": true
+  },
+  "settings": {}
+}

@@ -1,0 +1,22 @@
+{
+  "name": "pvp-ready",
+  "enabled": {
+    "aimassist": true,
+    "attackaura": true,
+    "triggerbot": true,
+    "antibot": true,
+    "novelocity": true,
+    "autototem": true,
+    "sprint": true,
+    "speed": true,
+    "entityesp": true,
+    "targetinfo": true,
+    "targetesp": true,
+    "watermark": true,
+    "hotkeys": true
+  },
+  "settings": {
+    "aimassist": { "aim-range": true, "pvp-only": true },
+    "attackaura": { "critical-hit": true, "through-walls": false }
+  }
+}
