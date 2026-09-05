@@ -19,6 +19,7 @@ public final class ElytraTarget extends Module {
         super("elytratarget", "ElytraTarget", Category.MOVEMENT, "base", "KDFzREm.Ps", 37);
         number("chase-distance", 40, 8, 80, 2);
         number("overtake-distance", 6, 1, 20, 1);
+        bool("overtake", true);
         bool("auto-firework-use", true);
         bool("timing-firework-use", true);
         bool("bind-firework-use", false);
@@ -38,7 +39,7 @@ public final class ElytraTarget extends Module {
         AttackAura.aim(mc.player, target);
         Vec3 look = mc.player.getLookAngle().scale(1.15);
         mc.player.setDeltaMovement(look);
-        if (mc.player.distanceTo(target) < numberValue("overtake-distance", 6)) {
+        if (setting("overtake") && mc.player.distanceTo(target) < numberValue("overtake-distance", 6)) {
             return;
         }
         if (setting("auto-firework-use") && ++delay >= numberValue("delay-ticks", 10)) {

@@ -12,6 +12,7 @@ public final class AutoEat extends Module {
         bool("any-food", true);
         bool("ignore-hunger", false);
         bool("health-trigger", true);
+        number("value", 16, 1, 20, 1);
     }
 
     @Override
@@ -19,7 +20,7 @@ public final class AutoEat extends Module {
         if (mc.player == null || mc.options == null) {
             return;
         }
-        boolean hungry = mc.player.getFoodData().getFoodLevel() <= 16 || setting("ignore-hunger");
+        boolean hungry = mc.player.getFoodData().getFoodLevel() <= numberValue("value", 16) || setting("ignore-hunger");
         boolean low = setting("health-trigger") && mc.player.getHealth() < 14.0F;
         if (!hungry && !low) {
             return;
