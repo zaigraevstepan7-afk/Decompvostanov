@@ -1,0 +1,1312 @@
+{
+  "client": "Nursultan",
+  "site": "https://nursultan.fun",
+  "telegram": "https://t.me/nursultan_mc",
+  "package": "KDFzREm",
+  "initializer": "KDFzREm.NNNNGY",
+  "core": "KDFzREm.y",
+  "menuClass": "KDFzREm.Gs",
+  "hudClass": "KDFzREm.td",
+  "categories": [
+    "combat",
+    "movement",
+    "player",
+    "visual",
+    "misc",
+    "hud",
+    "autobuy",
+    "configs",
+    "accounts"
+  ],
+  "modules": [
+    {
+      "id": "aimassist",
+      "name": "AimAssist",
+      "category": "combat",
+      "description": "Наведение на цель в заданном радиусе",
+      "settings": [
+        {
+          "id": "aim-range",
+          "label": "aim range",
+          "type": "toggle"
+        },
+        {
+          "id": "through-walls",
+          "label": "through walls",
+          "type": "toggle"
+        },
+        {
+          "id": "pvp-only",
+          "label": "pvp only",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "attackaura",
+      "name": "AttackAura",
+      "category": "combat",
+      "description": "Автоатака выбранных сущностей",
+      "settings": [
+        {
+          "id": "aim-range",
+          "label": "aim range",
+          "type": "toggle"
+        },
+        {
+          "id": "aura-only",
+          "label": "aura only",
+          "type": "toggle"
+        },
+        {
+          "id": "critical-hit",
+          "label": "critical hit",
+          "type": "toggle"
+        },
+        {
+          "id": "through-walls",
+          "label": "through walls",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "triggerbot",
+      "name": "TriggerBot",
+      "category": "combat",
+      "description": "Удар при наведении на цель",
+      "settings": [
+        {
+          "id": "pvp-only",
+          "label": "pvp only",
+          "type": "toggle"
+        },
+        {
+          "id": "critical-only-space",
+          "label": "critical only space",
+          "type": "toggle"
+        },
+        {
+          "id": "hit-only",
+          "label": "hit only",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "antibot",
+      "name": "AntiBot",
+      "category": "combat",
+      "description": "Отсев ботов из таргетинга",
+      "settings": [
+        {
+          "id": "no-bot-interaction",
+          "label": "no bot interaction",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "novelocity",
+      "name": "NoVelocity",
+      "category": "combat",
+      "description": "Гашение отдачи и нокбэка",
+      "settings": [
+        {
+          "id": "enabled",
+          "label": "enabled",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "autototem",
+      "name": "AutoTotem",
+      "category": "combat",
+      "description": "Автопостановка тотема",
+      "settings": [
+        {
+          "id": "totem-of-undying",
+          "label": "totem of undying",
+          "type": "toggle"
+        },
+        {
+          "id": "from-inventory",
+          "label": "from inventory",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "autoexplosion",
+      "name": "AutoExplosion",
+      "category": "combat",
+      "description": "Автоподрыв кристаллов / TNT",
+      "settings": [
+        {
+          "id": "crystal-trigger",
+          "label": "crystal trigger",
+          "type": "toggle"
+        },
+        {
+          "id": "tnt-trigger",
+          "label": "tnt trigger",
+          "type": "toggle"
+        },
+        {
+          "id": "distance-to-crystal",
+          "label": "distance to crystal",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "autoswap",
+      "name": "AutoSwap",
+      "category": "combat",
+      "description": "Смена предмета по условию",
+      "settings": [
+        {
+          "id": "swap-key",
+          "label": "swap key",
+          "type": "toggle"
+        },
+        {
+          "id": "swap-item",
+          "label": "swap item",
+          "type": "toggle"
+        },
+        {
+          "id": "from-inventory",
+          "label": "from inventory",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "nofrienddamage",
+      "name": "NoFriendDamage",
+      "category": "combat",
+      "description": "Не бить друзей",
+      "settings": [
+        {
+          "id": "friends",
+          "label": "friends",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "criticals",
+      "name": "Criticals",
+      "category": "combat",
+      "description": "Принудительные криты",
+      "settings": [
+        {
+          "id": "critical-always",
+          "label": "critical always",
+          "type": "toggle"
+        },
+        {
+          "id": "critical-only-space",
+          "label": "critical only space",
+          "type": "toggle"
+        },
+        {
+          "id": "increase-crit-accuracy",
+          "label": "increase crit accuracy",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "shieldbreak",
+      "name": "ShieldBreak",
+      "category": "combat",
+      "description": "Сбитие щита",
+      "settings": [
+        {
+          "id": "shield-break",
+          "label": "shield break",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "noslow",
+      "name": "NoSlow",
+      "category": "combat",
+      "description": "Без замедления при использовании",
+      "settings": [
+        {
+          "id": "using-item",
+          "label": "using item",
+          "type": "toggle"
+        },
+        {
+          "id": "using-shield",
+          "label": "using shield",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "speed",
+      "name": "Speed",
+      "category": "movement",
+      "description": "Ускорение перемещения",
+      "settings": [
+        {
+          "id": "speed-xz",
+          "label": "speed xz",
+          "type": "toggle"
+        },
+        {
+          "id": "speed-y",
+          "label": "speed y",
+          "type": "toggle"
+        },
+        {
+          "id": "ground-only",
+          "label": "ground only",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "sprint",
+      "name": "Sprint",
+      "category": "movement",
+      "description": "Постоянный спринт",
+      "settings": [
+        {
+          "id": "sprint-mode",
+          "label": "sprint mode",
+          "type": "toggle"
+        },
+        {
+          "id": "reset-sprint",
+          "label": "reset sprint",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "sprintreset",
+      "name": "SprintReset",
+      "category": "movement",
+      "description": "Сброс спринта для удара",
+      "settings": [
+        {
+          "id": "reset-sprint",
+          "label": "reset sprint",
+          "type": "toggle"
+        },
+        {
+          "id": "jump-reset",
+          "label": "jump reset",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "scaffold",
+      "name": "Scaffold",
+      "category": "movement",
+      "description": "Автоустановка блоков под ногами",
+      "settings": [
+        {
+          "id": "safe-walk",
+          "label": "safe walk",
+          "type": "toggle"
+        },
+        {
+          "id": "tower",
+          "label": "tower",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "timer",
+      "name": "Timer",
+      "category": "movement",
+      "description": "Искажение клиентского таймера",
+      "settings": [
+        {
+          "id": "speed",
+          "label": "speed",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "blink",
+      "name": "Blink",
+      "category": "movement",
+      "description": "Буфер пакетов движения",
+      "settings": [
+        {
+          "id": "auto-release-packets",
+          "label": "auto release packets",
+          "type": "toggle"
+        },
+        {
+          "id": "release-packets-on-hit",
+          "label": "release packets on hit",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "autojump",
+      "name": "AutoJump",
+      "category": "movement",
+      "description": "Автопрыжок",
+      "settings": [
+        {
+          "id": "auto-jump",
+          "label": "auto jump",
+          "type": "toggle"
+        },
+        {
+          "id": "jump-delay",
+          "label": "jump delay",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "noweb",
+      "name": "NoWeb",
+      "category": "movement",
+      "description": "Игнор паутины",
+      "settings": []
+    },
+    {
+      "id": "nopush",
+      "name": "NoPush",
+      "category": "movement",
+      "description": "Игнор столкновений",
+      "settings": [
+        {
+          "id": "entity-push",
+          "label": "entity push",
+          "type": "toggle"
+        },
+        {
+          "id": "block-push",
+          "label": "block push",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "elytratarget",
+      "name": "ElytraTarget",
+      "category": "movement",
+      "description": "Наведение / полёт на элитрах",
+      "settings": [
+        {
+          "id": "elytra-gliding",
+          "label": "elytra gliding",
+          "type": "toggle"
+        },
+        {
+          "id": "elytra-health-trigger",
+          "label": "elytra health trigger",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "autoarmor",
+      "name": "AutoArmor",
+      "category": "player",
+      "description": "Автоэкипировка брони",
+      "settings": [
+        {
+          "id": "armor-durability",
+          "label": "armor durability",
+          "type": "toggle"
+        },
+        {
+          "id": "min-durability-percentage",
+          "label": "min durability percentage",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "autoeat",
+      "name": "AutoEat",
+      "category": "player",
+      "description": "Автоеда",
+      "settings": [
+        {
+          "id": "any-food",
+          "label": "any food",
+          "type": "toggle"
+        },
+        {
+          "id": "ignore-hunger",
+          "label": "ignore hunger",
+          "type": "toggle"
+        },
+        {
+          "id": "health-trigger",
+          "label": "health trigger",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "autofish",
+      "name": "AutoFish",
+      "category": "player",
+      "description": "Авторыбалка",
+      "settings": [
+        {
+          "id": "fishing-rod",
+          "label": "fishing rod",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "autotool",
+      "name": "AutoTool",
+      "category": "player",
+      "description": "Автовыбор инструмента",
+      "settings": [
+        {
+          "id": "only-while-breaking",
+          "label": "only while breaking",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "autopotion",
+      "name": "AutoPotion",
+      "category": "player",
+      "description": "Автозелья",
+      "settings": [
+        {
+          "id": "heal-health",
+          "label": "heal health",
+          "type": "toggle"
+        },
+        {
+          "id": "speed-potion",
+          "label": "speed potion",
+          "type": "toggle"
+        },
+        {
+          "id": "strength-potion",
+          "label": "strength potion",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "autopearl",
+      "name": "AutoPearl",
+      "category": "player",
+      "description": "Автоэндерперл",
+      "settings": [
+        {
+          "id": "ender-pearl",
+          "label": "ender pearl",
+          "type": "toggle"
+        },
+        {
+          "id": "throw-key",
+          "label": "throw key",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "autototem",
+      "name": "AutoTotem",
+      "category": "player",
+      "description": "Тотем в руку",
+      "settings": [
+        {
+          "id": "totem-of-undying",
+          "label": "totem of undying",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "cheststealer",
+      "name": "ChestStealer",
+      "category": "player",
+      "description": "Сбор лута из контейнеров",
+      "settings": [
+        {
+          "id": "auto-close",
+          "label": "auto close",
+          "type": "toggle"
+        },
+        {
+          "id": "delay-in-ticks",
+          "label": "delay in ticks",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "inventory",
+      "name": "Inventory",
+      "category": "player",
+      "description": "Инвентарь и хотбар",
+      "settings": [
+        {
+          "id": "inventory-only",
+          "label": "inventory only",
+          "type": "toggle"
+        },
+        {
+          "id": "hotbar-only",
+          "label": "hotbar only",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "nodelay",
+      "name": "NoDelay",
+      "category": "player",
+      "description": "Снятие клиентских задержек",
+      "settings": [
+        {
+          "id": "break-delay",
+          "label": "break delay",
+          "type": "toggle"
+        },
+        {
+          "id": "delay-ticks",
+          "label": "delay ticks",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "nointeract",
+      "name": "NoInteract",
+      "category": "player",
+      "description": "Блок взаимодействий",
+      "settings": [
+        {
+          "id": "block-interact",
+          "label": "block interact",
+          "type": "toggle"
+        },
+        {
+          "id": "entity-interact",
+          "label": "entity interact",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "noslotchange",
+      "name": "NoSlotChange",
+      "category": "player",
+      "description": "Запрет смены слота сервером",
+      "settings": [
+        {
+          "id": "reset-slot",
+          "label": "reset slot",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "clickaction",
+      "name": "ClickAction",
+      "category": "player",
+      "description": "Действия по клику",
+      "settings": [
+        {
+          "id": "left-mouse",
+          "label": "left mouse",
+          "type": "toggle"
+        },
+        {
+          "id": "right-click",
+          "label": "right click",
+          "type": "toggle"
+        },
+        {
+          "id": "any-item-click",
+          "label": "any item click",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "expbottle",
+      "name": "ExpBottle",
+      "category": "player",
+      "description": "Автоопыт",
+      "settings": [
+        {
+          "id": "exp-bottle",
+          "label": "exp bottle",
+          "type": "toggle"
+        },
+        {
+          "id": "fast",
+          "label": "fast",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "fastexp",
+      "name": "FastExp",
+      "category": "player",
+      "description": "Быстрые пузырьки опыта",
+      "settings": [
+        {
+          "id": "bottle-of-exp",
+          "label": "bottle of exp",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "autodripstone",
+      "name": "AutoDripstone",
+      "category": "player",
+      "description": "Автодрипстоун",
+      "settings": [
+        {
+          "id": "falling-dripstone-trigger",
+          "label": "falling dripstone trigger",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "entityesp",
+      "name": "EntityESP",
+      "category": "visual",
+      "description": "Подсветка сущностей",
+      "settings": [
+        {
+          "id": "player-color",
+          "label": "player color",
+          "type": "toggle"
+        },
+        {
+          "id": "living-color",
+          "label": "living color",
+          "type": "toggle"
+        },
+        {
+          "id": "through-walls",
+          "label": "through walls",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "blockesp",
+      "name": "BlockESP",
+      "category": "visual",
+      "description": "Подсветка блоков",
+      "settings": [
+        {
+          "id": "box-color",
+          "label": "box color",
+          "type": "toggle"
+        },
+        {
+          "id": "blockesp",
+          "label": "blockesp",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "targetesp",
+      "name": "TargetEsp",
+      "category": "visual",
+      "description": "ESP текущей цели",
+      "settings": [
+        {
+          "id": "target",
+          "label": "target",
+          "type": "toggle"
+        },
+        {
+          "id": "line-color",
+          "label": "line color",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "targetinfo",
+      "name": "TargetInfo",
+      "category": "visual",
+      "description": "Карточка цели",
+      "settings": [
+        {
+          "id": "show-absorption",
+          "label": "show absorption",
+          "type": "toggle"
+        },
+        {
+          "id": "show-armor-details",
+          "label": "show armor details",
+          "type": "toggle"
+        },
+        {
+          "id": "health-bar",
+          "label": "health bar",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "tracers",
+      "name": "Tracers",
+      "category": "visual",
+      "description": "Линии до сущностей",
+      "settings": [
+        {
+          "id": "line-color",
+          "label": "line color",
+          "type": "toggle"
+        },
+        {
+          "id": "player-radius",
+          "label": "player radius",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "freecamera",
+      "name": "FreeCamera",
+      "category": "visual",
+      "description": "Свободная камера",
+      "settings": [
+        {
+          "id": "camera-clip",
+          "label": "camera clip",
+          "type": "toggle"
+        },
+        {
+          "id": "show-camera-position",
+          "label": "show camera position",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "viewmodel",
+      "name": "ViewModel",
+      "category": "visual",
+      "description": "Смещение рук / предмета",
+      "settings": [
+        {
+          "id": "left-hand-x",
+          "label": "left hand x",
+          "type": "toggle"
+        },
+        {
+          "id": "right-hand-x",
+          "label": "right hand x",
+          "type": "toggle"
+        },
+        {
+          "id": "aspect-ratio",
+          "label": "aspect ratio",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "aspectratio",
+      "name": "AspectRatio",
+      "category": "visual",
+      "description": "Соотношение сторон",
+      "settings": [
+        {
+          "id": "custom-ratio",
+          "label": "custom ratio",
+          "type": "toggle"
+        },
+        {
+          "id": "aspect-ratio",
+          "label": "aspect ratio",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "killeffect",
+      "name": "KillEffect",
+      "category": "visual",
+      "description": "Эффект убийства",
+      "settings": [
+        {
+          "id": "heart-effect",
+          "label": "heart effect",
+          "type": "toggle"
+        },
+        {
+          "id": "shader-effect",
+          "label": "shader effect",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "customcape",
+      "name": "CustomCape",
+      "category": "visual",
+      "description": "Кастомный плащ",
+      "settings": []
+    },
+    {
+      "id": "fakeplayer",
+      "name": "FakePlayer",
+      "category": "visual",
+      "description": "Фейковый игрок",
+      "settings": [
+        {
+          "id": "custom-name",
+          "label": "custom name",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "noentitytrace",
+      "name": "NoEntityTrace",
+      "category": "visual",
+      "description": "Клик сквозь сущности",
+      "settings": []
+    },
+    {
+      "id": "noserverrotation",
+      "name": "NoServerRotation",
+      "category": "visual",
+      "description": "Игнор серверного поворота",
+      "settings": []
+    },
+    {
+      "id": "ambience",
+      "name": "Ambience",
+      "category": "visual",
+      "description": "Время и атмосфера",
+      "settings": [
+        {
+          "id": "ambience",
+          "label": "ambience",
+          "type": "toggle"
+        },
+        {
+          "id": "spooky-time",
+          "label": "spooky time",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "nuker",
+      "name": "Nuker",
+      "category": "visual",
+      "description": "Массовая ломка блоков",
+      "settings": [
+        {
+          "id": "break-only-allowed-blocks",
+          "label": "break only allowed blocks",
+          "type": "toggle"
+        },
+        {
+          "id": "break-only-in-selection",
+          "label": "break only in selection",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "autoauth",
+      "name": "AutoAuth",
+      "category": "misc",
+      "description": "Автологин",
+      "settings": []
+    },
+    {
+      "id": "autoaccept",
+      "name": "AutoAccept",
+      "category": "misc",
+      "description": "Автопринятие запросов",
+      "settings": [
+        {
+          "id": "teleport-request",
+          "label": "teleport request",
+          "type": "toggle"
+        },
+        {
+          "id": "clan-invite-request",
+          "label": "clan invite request",
+          "type": "toggle"
+        },
+        {
+          "id": "friends-accept-only",
+          "label": "friends accept only",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "autojoin",
+      "name": "AutoJoin",
+      "category": "misc",
+      "description": "Автовход на сервер",
+      "settings": [
+        {
+          "id": "auto-launch",
+          "label": "auto launch",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "autoleave",
+      "name": "AutoLeave",
+      "category": "misc",
+      "description": "Автовыход",
+      "settings": [
+        {
+          "id": "auto-enable-auto-leave",
+          "label": "auto enable auto leave",
+          "type": "toggle"
+        },
+        {
+          "id": "auto-leave",
+          "label": "auto leave",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "autoreconnect",
+      "name": "AutoReconnect",
+      "category": "misc",
+      "description": "Переподключение",
+      "settings": []
+    },
+    {
+      "id": "autorespawn",
+      "name": "AutoRespawn",
+      "category": "misc",
+      "description": "Автореспавн",
+      "settings": [
+        {
+          "id": "death-waypoint",
+          "label": "death waypoint",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "antiafk",
+      "name": "AntiAFK",
+      "category": "misc",
+      "description": "Анти-афк",
+      "settings": []
+    },
+    {
+      "id": "bypasshealth",
+      "name": "BypassHealth",
+      "category": "misc",
+      "description": "Обход отображения здоровья",
+      "settings": []
+    },
+    {
+      "id": "srpspoofer",
+      "name": "SRPSpoofer",
+      "category": "misc",
+      "description": "Подмена ресурс-пака",
+      "settings": []
+    },
+    {
+      "id": "streamermode",
+      "name": "StreamerMode",
+      "category": "misc",
+      "description": "Скрытие ников / IP",
+      "settings": [
+        {
+          "id": "custom-name",
+          "label": "custom name",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "notifications",
+      "name": "Notifications",
+      "category": "misc",
+      "description": "Уведомления клиента",
+      "settings": [
+        {
+          "id": "event-notification",
+          "label": "event notification",
+          "type": "toggle"
+        },
+        {
+          "id": "toggle-sounds",
+          "label": "toggle sounds",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "irc",
+      "name": "IRC",
+      "category": "misc",
+      "description": "Чат nursultan.fun",
+      "settings": [
+        {
+          "id": "irc-ping",
+          "label": "irc ping",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "deathcoords",
+      "name": "DeathCoords",
+      "category": "misc",
+      "description": "Координаты смерти",
+      "settings": [
+        {
+          "id": "save-waypoint",
+          "label": "save waypoint",
+          "type": "toggle"
+        },
+        {
+          "id": "automatic-add-waypoint",
+          "label": "automatic add waypoint",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "potiontracker",
+      "name": "PotionTracker",
+      "category": "misc",
+      "description": "Трекинг зелий",
+      "settings": [
+        {
+          "id": "food-tracker",
+          "label": "food tracker",
+          "type": "toggle"
+        },
+        {
+          "id": "totem-tracker",
+          "label": "totem tracker",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "noslow",
+      "name": "NoSlow",
+      "category": "misc",
+      "description": "Без слоу",
+      "settings": [
+        {
+          "id": "using-item",
+          "label": "using item",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "watermark",
+      "name": "Watermark",
+      "category": "hud",
+      "description": "Водяной знак Nursultan",
+      "settings": [
+        {
+          "id": "hud-scale",
+          "label": "hud scale",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "coordinates",
+      "name": "Coordinates",
+      "category": "hud",
+      "description": "Координаты",
+      "settings": [
+        {
+          "id": "hud-scale",
+          "label": "hud scale",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "hotkeys",
+      "name": "Hotkeys",
+      "category": "hud",
+      "description": "Список биндов",
+      "settings": [
+        {
+          "id": "hud-hotkeys",
+          "label": "hud hotkeys",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "effects",
+      "name": "Effects",
+      "category": "hud",
+      "description": "Эффекты зелий",
+      "settings": [
+        {
+          "id": "hud-effects",
+          "label": "hud effects",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "inventory",
+      "name": "Inventory",
+      "category": "hud",
+      "description": "Превью инвентаря",
+      "settings": [
+        {
+          "id": "hud-inventory",
+          "label": "hud inventory",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "cooldowns",
+      "name": "Cooldowns",
+      "category": "hud",
+      "description": "Откаты предметов",
+      "settings": [
+        {
+          "id": "hud-cooldowns",
+          "label": "hud cooldowns",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "target",
+      "name": "Target",
+      "category": "hud",
+      "description": "Target HUD",
+      "settings": [
+        {
+          "id": "health-bar",
+          "label": "health bar",
+          "type": "toggle"
+        },
+        {
+          "id": "show-armor-details",
+          "label": "show armor details",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "arrows",
+      "name": "Arrows",
+      "category": "hud",
+      "description": "Счётчик стрел",
+      "settings": []
+    },
+    {
+      "id": "potions",
+      "name": "Potions",
+      "category": "hud",
+      "description": "Счётчик зелий",
+      "settings": [
+        {
+          "id": "Potions",
+          "label": "Potions",
+          "type": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "autobuy",
+      "name": "AutoBuy",
+      "category": "autobuy",
+      "description": "Автозакуп на аукционе",
+      "settings": [
+        {
+          "id": "max-price",
+          "label": "max price",
+          "type": "toggle"
+        },
+        {
+          "id": "min-count",
+          "label": "min count",
+          "type": "toggle"
+        },
+        {
+          "id": "auto-parser",
+          "label": "auto parser",
+          "type": "toggle"
+        },
+        {
+          "id": "decrease-prices",
+          "label": "decrease prices",
+          "type": "toggle"
+        }
+      ]
+    }
+  ],
+  "hudWidgets": [
+    "nursultan",
+    "coordinates",
+    "hotkeys",
+    "effects",
+    "inventory",
+    "cooldowns",
+    "target",
+    "arrows",
+    "potions"
+  ],
+  "menuIcons": [
+    "nursultan",
+    "search",
+    "bind",
+    "client-settings",
+    "plus",
+    "import",
+    "delete",
+    "dots",
+    "expand",
+    "squeeze",
+    "sparkles",
+    "angles",
+    "xmark"
+  ],
+  "stats": {
+    "classes": 3001,
+    "lambdas": 11267
+  }
+}
