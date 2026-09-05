@@ -1,5 +1,6 @@
 package fun.nursultan.client.ui;
 
+import fun.nursultan.client.ClientSettings;
 import fun.nursultan.client.module.BoolSetting;
 import fun.nursultan.client.module.Category;
 import fun.nursultan.client.module.Module;
@@ -23,7 +24,9 @@ public final class ClickGuiScreen extends Screen {
     private static final int OVERLAY = 0x64000000;
     private static final int PANEL = 0xE00E0E12;
     private static final int CARD = 0xE018181F;
-    private static final int ACCENT = 0xFF9FCA2B;
+    private static int accent() {
+        return ClientSettings.accent;
+    }
     private static final int TEXT = 0xFFF2E9FF;
     private static final int MUTED = 0xFF8A8A96;
 
@@ -56,14 +59,15 @@ public final class ClickGuiScreen extends Screen {
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
         g.fill(0, 0, width, height, OVERLAY);
-        int x = width / 2 - 430;
-        int y = height / 2 - 220;
-        int w = 860;
-        int h = 440;
+        float scale = ClientSettings.menuScale;
+        int w = (int) (860 * Math.min(1.15F, scale));
+        int h = (int) (440 * Math.min(1.15F, scale));
+        int x = width / 2 - w / 2;
+        int y = height / 2 - h / 2;
         g.fill(x, y, x + w, y + h, PANEL);
-        g.fill(x, y, x + w, y + 2, ACCENT);
-        g.drawString(font, "NURSULTAN", x + 16, y + 12, ACCENT, false);
-        g.drawString(font, "Gs · menu-scale · " + ModuleManager.INSTANCE.modules.size(), x + 16, y + 24, MUTED, false);
+        g.fill(x, y, x + w, y + 2, accent());
+        g.drawString(font, "NURSULTAN", x + 16, y + 12, accent(), false);
+        g.drawString(font, "Gs · menu-scale " + ClientSettings.menuScale + " · " + ModuleManager.INSTANCE.modules.size(), x + 16, y + 24, MUTED, false);
 
         String search = (typing ? ">" : "") + (query.isBlank() ? "search" : query);
         g.fill(x + w - 220, y + 10, x + w - 14, y + 28, CARD);
@@ -75,7 +79,7 @@ public final class ClickGuiScreen extends Screen {
             boolean on = cat == category && query.isBlank();
             g.fill(x + 10, cy, x + 132, cy + 22, on ? 0xE0222218 : CARD);
             if (on) {
-                g.fill(x + 10, cy, x + 13, cy + 22, ACCENT);
+                g.fill(x + 10, cy, x + 13, cy + 22, accent());
             }
             int count = ModuleManager.INSTANCE.byCategory(cat).size();
             g.drawString(font, cat.name().toLowerCase(Locale.ROOT) + " " + count, x + 20, cy + 7, on ? TEXT : MUTED, false);
@@ -101,14 +105,14 @@ public final class ClickGuiScreen extends Screen {
             int my = listY + row * 26;
             g.fill(listX, my, listX + 420, my + 24, module.enabled ? 0xE0242A14 : CARD);
             if (module.enabled) {
-                g.fill(listX, my + 5, listX + 3, my + 19, ACCENT);
+                g.fill(listX, my + 5, listX + 3, my + 19, accent());
             }
             g.drawString(font, module.name, listX + 10, my + 3, TEXT, false);
             g.drawString(font, module.dumpClass + " · " + module.dumpMethods, listX + 10, my + 13, MUTED, false);
             String bind = module.bind.isBlank() ? "R" : module.bind;
             g.drawString(font, bind, listX + 330, my + 8, MUTED, false);
             g.drawString(font, "...", listX + 358, my + 8, MUTED, false);
-            g.fill(listX + 384, my + 6, listX + 412, my + 18, module.enabled ? ACCENT : 0xFF2E2E3A);
+            g.fill(listX + 384, my + 6, listX + 412, my + 18, module.enabled ? accent() : 0xFF2E2E3A);
             shown++;
             row++;
         }
@@ -120,13 +124,13 @@ public final class ClickGuiScreen extends Screen {
             g.drawString(font, "MMB · bind", sx + 10, y + 70, MUTED, false);
         } else {
             g.drawString(font, open.name, sx + 10, y + 52, TEXT, false);
-            g.drawString(font, open.dumpClass, sx + 10, y + 64, ACCENT, false);
+            g.drawString(font, open.dumpClass, sx + 10, y + 64, accent(), false);
             if (binding) {
-                g.drawString(font, "press key...", sx + 10, y + 78, ACCENT, false);
+                g.drawString(font, "press key...", sx + 10, y + 78, accent(), false);
             }
             int sy = y + 94;
             for (BoolSetting setting : open.settings) {
-                g.fill(sx + 10, sy, sx + 20, sy + 10, setting.value ? ACCENT : 0xFF2E2E3A);
+                g.fill(sx + 10, sy, sx + 20, sy + 10, setting.value ? accent() : 0xFF2E2E3A);
                 g.drawString(font, setting.label, sx + 26, sy + 1, TEXT, false);
                 sy += 13;
                 if (sy > y + h - 20) {
@@ -136,7 +140,7 @@ public final class ClickGuiScreen extends Screen {
             for (NumberSetting setting : open.numbers) {
                 g.fill(sx + 10, sy, sx + 250, sy + 10, 0xFF2E2E3A);
                 float t = (setting.value - setting.min) / Math.max(0.0001F, setting.max - setting.min);
-                g.fill(sx + 10, sy, sx + 10 + (int) (240 * t), sy + 10, ACCENT);
+                g.fill(sx + 10, sy, sx + 10 + (int) (240 * t), sy + 10, accent());
                 g.drawString(font, setting.label + " " + format(setting.value), sx + 14, sy + 1, TEXT, false);
                 sy += 13;
                 if (sy > y + h - 20) {
@@ -152,11 +156,17 @@ public final class ClickGuiScreen extends Screen {
         double mouseX = event.x();
         double mouseY = event.y();
         int button = event.button();
-        int x = width / 2 - 430;
-        int y = height / 2 - 220;
-        int w = 860;
+        float scale = ClientSettings.menuScale;
+        int w = (int) (860 * Math.min(1.15F, scale));
+        int h = (int) (440 * Math.min(1.15F, scale));
+        int x = width / 2 - w / 2;
+        int y = height / 2 - h / 2;
         if (inside(mouseX, mouseY, x + w - 220, y + 10, 206, 18)) {
             typing = true;
+            return true;
+        }
+        if (inside(mouseX, mouseY, x + 16, y + 20, 200, 14)) {
+            ClientSettings.cycleMenuScale();
             return true;
         }
         typing = false;

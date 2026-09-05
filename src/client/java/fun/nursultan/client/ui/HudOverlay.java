@@ -22,9 +22,9 @@ public final class HudOverlay {
                 module.onHud(g, w, h);
             }
         }
-        if (ModuleManager.INSTANCE.byName("logo") != null && ModuleManager.INSTANCE.byName("logo").enabled) {
-            g.drawString(mc.font, "NURSULTAN", 6, 6, ACCENT, false);
-            g.drawString(mc.font, "td · hud-scale · " + ModuleManager.INSTANCE.modules.size(), 6, 16, TEXT, false);
+        Module logo = ModuleManager.INSTANCE.byName("logo");
+        if (logo != null && logo.enabled && logo.setting("details")) {
+            g.drawString(mc.font, "td · hud-scale " + fun.nursultan.client.ClientSettings.hudScale, 6, 28, TEXT, false);
         }
     }
 

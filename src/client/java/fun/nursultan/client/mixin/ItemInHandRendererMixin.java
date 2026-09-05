@@ -1,0 +1,26 @@
+package fun.nursultan.client.mixin;
+
+import com.mojang.blaze3d.vertex.PoseStack;
+import fun.nursultan.client.module.Module;
+import fun.nursultan.client.util.ClientHooks;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.renderer.ItemInHandRenderer;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+@Mixin(ItemInHandRenderer.class)
+public class ItemInHandRendererMixin {
+    @Inject(method = "renderHandsWithItems", at = @At("HEAD"))
+    private void nursultan$viewModel(float tickDelta, PoseStack pose, SubmitNodeCollector collector, LocalPlayer player, int light, CallbackInfo ci) {
+        Module view = ClientHooks.module("viewmodel");
+        if (view == null || !view.enabled) {
+            return;
+        }
+        pose.translate(view.numberValue("right-hand-x", 0), view.numberValue("right-hand-y", 0), view.numberValue("right-hand-z", 0));
+        float scale = view.numberValue("right-scale", 1);
+        pose.scale(scale, scale, scale);
+    }
+}
