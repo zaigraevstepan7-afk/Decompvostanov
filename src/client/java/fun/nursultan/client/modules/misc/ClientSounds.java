@@ -28,8 +28,16 @@ public final class ClientSounds extends Module {
         for (var module : fun.nursultan.client.module.ModuleManager.INSTANCE.modules) {
             Boolean prev = last.put(module.id, module.enabled);
             if (prev != null && prev != module.enabled) {
-                float vol = numberValue("volume", 0.4F);
-                mc.player.playSound(module.enabled ? SoundEvents.NOTE_BLOCK_PLING.value() : SoundEvents.NOTE_BLOCK_BASS.value(), vol, 1.2F);
+                float vol = numberValue("volume", 0.4F) * fun.nursultan.client.util.ClientHooks.soundMultiplier();
+                if (module.enabled && !setting("select-enable-sound") || !module.enabled && !setting("select-disable-sound")) {
+                    continue;
+                }
+                var sound = module.enabled
+                        ? (setting("default") && !setting("custom") ? SoundEvents.NOTE_BLOCK_PLING.value()
+                                : setting("sound-type") ? SoundEvents.NOTE_BLOCK_HARP.value() : SoundEvents.EXPERIENCE_ORB_PICKUP)
+                        : (setting("default") && !setting("custom") ? SoundEvents.NOTE_BLOCK_BASS.value()
+                                : SoundEvents.NOTE_BLOCK_HAT.value());
+                mc.player.playSound(sound, vol, setting("custom") ? 0.8F : 1.2F);
             }
         }
     }

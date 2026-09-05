@@ -47,7 +47,7 @@ public final class AutoPotion extends Module {
         int limit = setting("hotbar-only") ? 9 : 36;
         for (int i = 0; i < limit; i++) {
             ItemStack stack = mc.player.getInventory().getItem(i);
-            if (!stack.is(Items.SPLASH_POTION)) {
+            if (!stack.is(Items.SPLASH_POTION) && !(setting("addons") && stack.is(Items.LINGERING_POTION))) {
                 continue;
             }
             PotionContents contents = stack.get(DataComponents.POTION_CONTENTS);

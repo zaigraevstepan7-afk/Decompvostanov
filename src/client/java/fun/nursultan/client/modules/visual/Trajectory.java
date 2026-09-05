@@ -47,6 +47,15 @@ public final class Trajectory extends Module {
             var type = setting("hit-line-color") && i > 16 ? ParticleTypes.FLAME
                     : setting("line-color") ? ParticleTypes.CRIT : ParticleTypes.SMOKE;
             mc.level.addParticle(type, pos.x, pos.y, pos.z, 0, 0, 0);
+            if (setting("predict-entity")) {
+                for (var living : mc.level.getEntitiesOfClass(
+                        net.minecraft.world.entity.LivingEntity.class,
+                        new net.minecraft.world.phys.AABB(pos, pos).inflate(0.6),
+                        e -> e != mc.player && e.isAlive())) {
+                    mc.level.addParticle(ParticleTypes.FLAME, living.getX(), living.getY() + 1, living.getZ(), 0, 0.05, 0);
+                    break;
+                }
+            }
         }
     }
 }

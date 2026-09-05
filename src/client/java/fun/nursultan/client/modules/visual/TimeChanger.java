@@ -28,6 +28,8 @@ public final class TimeChanger extends Module {
             time = 0;
         } else if (setting("morning")) {
             time = 1000;
+        } else if (setting("day")) {
+            time = 6000;
         } else if (setting("evening")) {
             time = 11000;
         } else if (setting("sunset")) {

@@ -20,7 +20,15 @@ public final class AuctionHelper extends Module {
     @Override
     public void onHud(GuiGraphics g, int width, int height) {
         Minecraft mc = Minecraft.getInstance();
-        if (!(mc.screen instanceof ContainerScreen) || mc.player == null || !setting("show-item-price")) {
+        if (mc.player == null) {
+            return;
+        }
+        if (setting("open-auction-from-item") && !(mc.screen instanceof ContainerScreen)
+                && mc.player.isShiftKeyDown() && mc.options.keyUse.isDown() && !mc.player.getMainHandItem().isEmpty()
+                && mc.player.tickCount % 40 == 0 && mc.player.connection != null) {
+            mc.player.connection.sendCommand("ah " + mc.player.getMainHandItem().getHoverName().getString());
+        }
+        if (!(mc.screen instanceof ContainerScreen) || !setting("show-item-price")) {
             return;
         }
         int shown = 0;
@@ -36,6 +44,7 @@ public final class AuctionHelper extends Module {
                 break;
             }
         }
-        g.drawString(mc.font, "auction " + shown, 8, 30, 0xFF9FCA2B, false);
+        int color = setting("profitable-color") ? fun.nursultan.client.ClientSettings.accent : 0xFF9FCA2B;
+        g.drawString(mc.font, "auction " + shown, 8, 30, color, false);
     }
 }

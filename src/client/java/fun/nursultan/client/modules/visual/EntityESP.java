@@ -65,6 +65,13 @@ public final class EntityESP extends Module {
         if (!setting("entities") || mc.player == null || mc.level == null) {
             return;
         }
+        if (setting("items")) {
+            for (var item : mc.level.getEntitiesOfClass(
+                    net.minecraft.world.entity.item.ItemEntity.class,
+                    mc.player.getBoundingBox().inflate(48))) {
+                item.setGlowingTag(true);
+            }
+        }
         if (setting("chest-minecart")) {
             for (var cart : mc.level.getEntitiesOfClass(
                     net.minecraft.world.entity.vehicle.minecart.MinecartChest.class,
@@ -74,7 +81,9 @@ public final class EntityESP extends Module {
         }
         for (LivingEntity entity : mc.level.getEntitiesOfClass(
                 LivingEntity.class, mc.player.getBoundingBox().inflate(80), e -> accept(mc.player, e))) {
-            entity.setGlowingTag(true);
+            if (setting("box") || setting("box-color") || setting("chams") || setting("shader")) {
+                entity.setGlowingTag(true);
+            }
             if (setting("health-bar") || setting("name")) {
                 entity.setCustomNameVisible(true);
             }

@@ -63,7 +63,11 @@ public final class AnarchyHelper extends Module {
                     || setting("radiation") && name.contains("radia")
                     || setting("rage") && name.contains("rage")
                     || setting("potion-rage") && name.contains("rage")
-                    || setting("potion-holy-water") && name.contains("holy");
+                    || setting("potion-holy-water") && name.contains("holy")
+                    || setting("potion-paladin") && name.contains("paladin")
+                    || setting("potion-assassin") && name.contains("assassin")
+                    || setting("potion-drowsiness") && (name.contains("drowsy") || name.contains("сон"))
+                    || setting("potion-radiation") && (name.contains("radia") || name.contains("ради"));
             if (match) {
                 int prev = mc.player.getInventory().getSelectedSlot();
                 mc.player.getInventory().setSelectedSlot(i);

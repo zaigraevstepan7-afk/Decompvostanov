@@ -44,6 +44,14 @@ public final class Particles extends Module {
                 mc.level.addParticle(ParticleTypes.CRIT, entity.getX(), entity.getY(), entity.getZ(), 0, 0.05, 0);
             }
         }
+        if (setting("emitters") && mc.player.tickCount % 8 == 0) {
+            double spread = setting("color-range") ? 3 * size : size;
+            double ox = setting("pinch") ? 0 : (Math.random() - 0.5) * spread;
+            double oz = setting("pinch") ? 0 : (Math.random() - 0.5) * spread;
+            mc.level.addParticle(
+                    setting("color-selectable") ? ParticleTypes.WITCH : ParticleTypes.END_ROD,
+                    mc.player.getX() + ox, mc.player.getY() + 1, mc.player.getZ() + oz, 0, 0.04, 0);
+        }
         if (setting("totem-popping") && mc.player.hurtTime == 9 && mc.player.getOffhandItem().isEmpty()) {
             for (int i = 0; i < 6; i++) {
                 mc.level.addParticle(ParticleTypes.TOTEM_OF_UNDYING, mc.player.getX(), mc.player.getY() + 1, mc.player.getZ(), 0, 0.2, 0);

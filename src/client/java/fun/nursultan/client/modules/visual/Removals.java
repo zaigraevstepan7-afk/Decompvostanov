@@ -64,6 +64,16 @@ public final class Removals extends Module {
                 orb.setInvisible(true);
             }
         }
+        if (setting("trident") && mc.level != null) {
+            for (var trident : mc.level.getEntitiesOfClass(
+                    net.minecraft.world.entity.projectile.arrow.ThrownTrident.class,
+                    mc.player.getBoundingBox().inflate(64))) {
+                trident.setInvisible(true);
+            }
+        }
+        if ((setting("anarchy-events") || setting("wither-spawn") || setting("end-portal-open")) && mc.gui != null) {
+            mc.gui.setOverlayMessage(net.minecraft.network.chat.Component.empty(), false);
+        }
         if (setting("fishing-bobber") && mc.level != null) {
             for (var hook : mc.level.getEntitiesOfClass(
                     net.minecraft.world.entity.projectile.FishingHook.class,

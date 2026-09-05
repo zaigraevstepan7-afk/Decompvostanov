@@ -25,8 +25,8 @@ public final class SkyCustomization extends Module {
 
     @Override
     public void onTick(Minecraft mc) {
-        if (mc.level != null && setting("aurora-first")) {
-            float scale = 1;
+        if (mc.level != null && (setting("aurora-first") || setting("aurora-second") || setting("borealis") || setting("chroma"))) {
+            float scale = setting("_1x") ? 1 : 1;
             if (setting("downscale")) {
                 if (setting("_8x")) {
                     scale = 0.125F;
@@ -34,9 +34,15 @@ public final class SkyCustomization extends Module {
                     scale = 0.25F;
                 } else if (setting("_2x")) {
                     scale = 0.5F;
+                } else if (setting("_1x")) {
+                    scale = 1;
                 }
             }
-            mc.level.setSkyFlashTime((int) (4 * numberValue("intensity", 1) * scale));
+            float pulse = 4 * numberValue("intensity", 1) * numberValue("coverage", 1) / Math.max(0.2F, numberValue("softness", 0.5F));
+            if (setting("chroma")) {
+                pulse += (mc.player == null ? 0 : mc.player.tickCount % 12);
+            }
+            mc.level.setSkyFlashTime((int) (pulse * scale * numberValue("speed", 1)));
         }
     }
 }

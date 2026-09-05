@@ -29,6 +29,14 @@ public final class PotionTracker extends Module {
             if (setting("ignore-self") && potion.getOwner() == mc.player) {
                 continue;
             }
+            String hover = potion.getItem().getHoverName().getString().toLowerCase();
+            if (setting("ignore-common-splash-potions") && (hover.contains("water") || hover.contains("mundane")
+                    || hover.contains("обычн") || hover.contains("вода") || hover.contains("splash potion"))) {
+                continue;
+            }
+            if (setting("ft-bypass") && (hover.contains("funtime") || hover.contains("ft ") || hover.contains("донат"))) {
+                continue;
+            }
             n++;
         }
         g.drawString(mc.font, "splash " + n, 8, 52, 0xFF9FCA2B, false);

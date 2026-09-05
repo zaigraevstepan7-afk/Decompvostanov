@@ -212,6 +212,11 @@ public final class ClientHooks {
         return name == null || name.isBlank() || name.contains(" ") || name.length() > 16;
     }
 
+    public static float soundMultiplier() {
+        Module module = module("removals");
+        return module != null && module.enabled ? module.numberValue("sound-multiplier", 1) : 1.0F;
+    }
+
     public static boolean cameraClip() {
         Module module = module("removals");
         return module != null && module.enabled && module.setting("camera-clip");
@@ -242,9 +247,10 @@ public final class ClientHooks {
             int accent = fun.nursultan.client.ClientSettings.accent;
             float alpha = current.w;
             float dist = fog.numberValue("distance", 192);
-            if (dist < 96) {
+            float radius = fog.numberValue("radius", 8);
+            if (dist < 96 || radius < 6) {
                 alpha *= 0.35F;
-            } else if (fog.setting("blur")) {
+            } else if (fog.setting("blur") || radius > 16) {
                 alpha *= 0.7F;
             }
             return new org.joml.Vector4f(
