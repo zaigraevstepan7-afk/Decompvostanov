@@ -15,6 +15,9 @@ public final class Particles extends Module {
         bool("critical-hit", true);
         bool("emitters", false);
         bool("color-selectable", false);
+        bool("color-range", false);
+        bool("pinch", false);
+        bool("hsv", false);
         number("size", 1, 0.2F, 3, 0.1F);
     }
 

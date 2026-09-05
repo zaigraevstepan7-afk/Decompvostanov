@@ -12,6 +12,8 @@ public final class ClientSounds extends Module {
     public ClientSounds() {
         super("clientsounds", "ClientSounds", Category.MISC, "", "KDFzREm.Wk", 54);
         bool("toggle-sounds", true);
+        bool("custom", false);
+        bool("default", true);
         bool("sound-type", true);
         bool("select-enable-sound", true);
         bool("select-disable-sound", true);

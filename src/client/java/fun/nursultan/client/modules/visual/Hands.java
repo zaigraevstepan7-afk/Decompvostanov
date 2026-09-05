@@ -10,5 +10,6 @@ public final class Hands extends Module {
         bool("color-right", true);
         bool("color-left", true);
         bool("texture-mix", false);
+        bool("blur", false);
     }
 }

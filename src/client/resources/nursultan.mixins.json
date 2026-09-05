@@ -14,7 +14,8 @@
     "ScreenEffectRendererMixin",
     "LocalPlayerMixin",
     "EntityMixin",
-    "MouseHandlerMixin"
+    "MouseHandlerMixin",
+    "GuiMixin"
   ],
   "injectors": {
     "defaultRequire": 1
