@@ -332,7 +332,7 @@ public final class ClientHooks {
                 "(?s).*(t\\.me|vk\\.|https?://|discord\\.gg|funtime\\.su|dd\\.funtime\\.su|play\\.funtime\\.su|"
                         + "vk\\.com/funtime|t\\.me/funtime|spookytime\\.net|shop\\.spookytime\\.net|"
                         + "vk\\.com/spookytimenet|discord\\.gg/spookytime|nursultan\\.fun|"
-                        + "фантайм|спукитайм|спокитайм|/links).*");
+                        + "фантайм|спукитайм|спокитайм|анархия|/links).*");
     }
 
     public static boolean streamerStaff(String text) {
@@ -361,7 +361,8 @@ public final class ClientHooks {
         if (stream.setting("staff") && streamerStaff(raw)) {
             return net.minecraft.network.chat.Component.literal("[staff]");
         }
-        if ((stream.setting("ft") || stream.setting("funtime")) && raw.contains("Фортуны")) {
+        if ((stream.setting("ft") || stream.setting("funtime"))
+                && (raw.contains("Фортуны") || raw.contains("Начислена фортуна"))) {
             return null;
         }
         return message;

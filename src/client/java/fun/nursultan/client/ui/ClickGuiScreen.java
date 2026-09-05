@@ -334,7 +334,7 @@ public final class ClickGuiScreen extends Screen {
             hit("autosave", cx + 14, cy + 82, 200, 16, null);
         } else if (section == Section.AUTOBUY) {
             Module buy = ModuleManager.INSTANCE.byName("autobuy");
-            int h = 70 + (buy == null ? 0 : buy.settings.size() * 18);
+            int h = 70 + (buy == null ? 0 : buy.settings.size() * 22);
             round(g, cx, cy, cardW, h, 6, CARD);
             g.drawString(font, ClientSettings.ru() ? "Авто покупка" : "Auto buy", cx + 14, cy + 10, accent(), false);
             if (buy != null) {
@@ -343,10 +343,10 @@ public final class ClickGuiScreen extends Screen {
                 hit("toggle", cx + cardW - 44, cy + 20, 36, ROW_H, buy);
                 int sy = cy + 54;
                 for (BoolSetting setting : buy.settings) {
-                    fill(g, cx + 14, sy, 10, 10, setting.value ? accent() : PILL_OFF);
-                    g.drawString(font, setting.label, cx + 30, sy, TEXT, false);
-                    hit("bool", cx + 14, sy - 2, 220, 14, setting);
-                    sy += 18;
+                    g.drawString(font, setting.label, cx + 14, sy + 2, TEXT, false);
+                    pill(g, cx + cardW - 48, sy, setting.value);
+                    hit("bool", cx + 14, sy - 2, cardW - 28, 18, setting);
+                    sy += 22;
                 }
             }
         } else {
