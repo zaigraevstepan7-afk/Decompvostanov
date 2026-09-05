@@ -6,7 +6,7 @@ import fun.nursultan.client.modules.combat.Targeting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 
-/** Restored from KDFzREm.sv @UZ AutoLeave — custom-command / player-nearby / was-in-pvp */
+/** Restored from KDFzREm.sv @UZ AutoLeave — leftover hub / spawn / custom-command. */
 public final class AutoLeave extends Module {
     public AutoLeave() {
         super("autoleave", "AutoLeave", Category.PLAYER, "auto", "KDFzREm.sv", 31);
@@ -33,7 +33,9 @@ public final class AutoLeave extends Module {
             return;
         }
         if (mc.player.connection != null && (setting("custom-command") || setting("hub") || setting("spawn"))) {
-            mc.player.connection.sendCommand(setting("spawn") ? "spawn" : "hub");
+            // dump leftover command strings from sv u[] — custom-command uses leftover hub
+            mc.player.connection.sendCommand(setting("spawn") && !setting("custom-command") && !setting("hub")
+                    ? "spawn" : "hub");
         } else if (setting("disconnect")) {
             mc.disconnectFromWorld(Component.literal("AutoLeave"));
         }

@@ -350,6 +350,9 @@ public final class ClientHooks {
             "nursultan.fun", "фантайм", "анархия", "/links"
     };
 
+    /** Dump leftover URL regex from KDFzREm.js v[]. */
+    private static final String STREAMER_LINK_REGEX = "vk.\\S+|t.me/\\S+|https?://\\S+";
+
     public static boolean streamerLink(String text) {
         if (text == null || text.isBlank()) {
             return false;
@@ -360,7 +363,7 @@ public final class ClientHooks {
                 return true;
             }
         }
-        return lower.matches("(?s).*(t\\.me|vk\\.|https?://|discord\\.gg).*");
+        return text.matches("(?s).*(" + STREAMER_LINK_REGEX + ").*");
     }
 
     public static boolean streamerStaff(String text) {
@@ -390,7 +393,8 @@ public final class ClientHooks {
             return net.minecraft.network.chat.Component.literal("[staff]");
         }
         if ((stream.setting("ft") || stream.setting("funtime"))
-                && (raw.contains("Фортуны:") || raw.contains("Начислена фортуна:") || raw.contains("ВНИМАНИЕ!"))) {
+                && (raw.contains("Фортуны:") || raw.contains("Начислена фортуна:")
+                        || raw.contains("ВНИМАНИЕ!") || raw.contains("╔") || raw.contains("╠") || raw.contains("╚"))) {
             return null;
         }
         return message;

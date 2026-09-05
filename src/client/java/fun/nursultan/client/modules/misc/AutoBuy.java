@@ -2,6 +2,7 @@ package fun.nursultan.client.modules.misc;
 
 import fun.nursultan.client.module.Category;
 import fun.nursultan.client.module.Module;
+import fun.nursultan.client.util.AuctionPrices;
 import fun.nursultan.client.util.Inventories;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.ContainerScreen;
@@ -47,15 +48,17 @@ public final class AutoBuy extends Module {
             if (slot.index >= 27 || slot.getItem().isEmpty()) {
                 continue;
             }
-            String name = slot.getItem().getHoverName().getString().toLowerCase();
+            String blob = AuctionPrices.blob(slot.getItem());
+            String name = blob.toLowerCase();
             String id = slot.getItem().getItem().getDescriptionId().toLowerCase();
+            int price = AuctionPrices.parse(blob);
             if (setting("buyer") && !inCatalog(id, name)) {
                 continue;
             }
-            if (setting("checker") && !name.matches(".*\\d+.*")) {
+            if (setting("checker") && price < 0) {
                 continue;
             }
-            if (setting("decrease-prices") && name.contains("дорого")) {
+            if (setting("decrease-prices") && price < 0) {
                 continue;
             }
             Inventories.click(mc, slot.index, 0, ClickType.PICKUP);

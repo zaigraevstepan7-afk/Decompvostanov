@@ -26,7 +26,24 @@ public final class Friends {
         if (!(entity instanceof Player player)) {
             return false;
         }
-        return NAMES.contains(player.getGameProfile().name().toLowerCase(Locale.ROOT));
+        return named(player.getGameProfile().name());
+    }
+
+    public static boolean named(String name) {
+        return name != null && NAMES.contains(name.replaceAll("§.", "").toLowerCase(Locale.ROOT));
+    }
+
+    public static boolean namedIn(String line) {
+        if (line == null || line.isBlank()) {
+            return false;
+        }
+        String lower = line.toLowerCase(Locale.ROOT);
+        for (String friend : NAMES) {
+            if (!friend.isBlank() && lower.contains(friend)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static Set<String> all() {

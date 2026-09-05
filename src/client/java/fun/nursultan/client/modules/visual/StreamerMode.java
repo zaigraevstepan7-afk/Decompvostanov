@@ -9,6 +9,10 @@ import net.minecraft.world.entity.player.Player;
 
 /** Restored from KDFzREm.js @UZ StreamerMode */
 public final class StreamerMode extends Module {
+    /** Dump leftover from js B[] — custom-name validator and leftover name. */
+    public static final String CUSTOM_NAME = "^[а-яА-Яa-zA-Z0-9_Ёё]+$";
+    public static final String NAME = "NursultanFree";
+
     public StreamerMode() {
         super("streamermode", "StreamerMode", Category.VISUAL, "screen", "KDFzREm.js", 63);
         bool("skins", false);
@@ -26,8 +30,8 @@ public final class StreamerMode extends Module {
         if (mc.player == null || mc.level == null) {
             return;
         }
-        if (setting("custom-name")) {
-            mc.player.setCustomName(Component.literal(setting("funtime") ? "FunTime" : "NursultanFree"));
+        if (setting("custom-name") && NAME.matches(CUSTOM_NAME)) {
+            mc.player.setCustomName(Component.literal(NAME));
             mc.player.setCustomNameVisible(true);
         }
         if (setting("name")) {

@@ -2,6 +2,7 @@ package fun.nursultan.client.modules.misc;
 
 import fun.nursultan.client.module.Category;
 import fun.nursultan.client.module.Module;
+import fun.nursultan.client.util.AuctionPrices;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.ContainerScreen;
@@ -31,23 +32,30 @@ public final class AuctionHelper extends Module {
         if (!(mc.screen instanceof ContainerScreen) || !setting("show-item-price")) {
             return;
         }
+        boolean titled = AuctionPrices.auctionScreen(mc.screen.getTitle().getString());
         int shown = 0;
+        int first = -1;
         for (Slot slot : mc.player.containerMenu.slots) {
             if (slot.getItem().isEmpty()) {
                 continue;
             }
-            String hover = slot.getItem().getHoverName().getString();
-            if (hover.matches(".*\\d+.*") || hover.contains("Цена") || hover.contains("Ценa")
-                    || hover.contains("Текущая цена") || hover.contains("За штуку") || hover.contains("¤")
-                    || hover.contains("аукцион") || hover.contains("аукционы") || hover.contains("поиск:")
-                    || hover.contains(" п: ")) {
-                shown++;
+            int price = AuctionPrices.parse(AuctionPrices.blob(slot.getItem()));
+            if (price < 0) {
+                continue;
             }
+            if (first < 0) {
+                first = price;
+            }
+            shown++;
             if (shown >= numberValue("profitable-items-count", 6)) {
                 break;
             }
         }
+        if (shown == 0 && !titled) {
+            return;
+        }
         int color = setting("profitable-color") ? fun.nursultan.client.ClientSettings.accent : 0xFFF2E9FF;
-        g.drawString(mc.font, "auction " + shown, 8, 30, color, false);
+        String line = AuctionPrices.format(first).replace("§a", "").replace("§f", "");
+        g.drawString(mc.font, line + " " + shown, 8, 30, color, false);
     }
 }
