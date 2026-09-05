@@ -14,7 +14,10 @@ public final class Targeting {
         AABB box = self.getBoundingBox().inflate(range);
         LivingEntity best = null;
         double bestD = range * range;
-        for (LivingEntity entity : mc.level.getEntitiesOfClass(LivingEntity.class, box, e -> e != self && e.isAlive() && !e.isInvisible())) {
+        for (LivingEntity entity : mc.level.getEntitiesOfClass(LivingEntity.class, box, e ->
+                e != self && e.isAlive() && !e.isInvisible()
+                        && !fun.nursultan.client.util.Friends.isFriend(e)
+                        && !fun.nursultan.client.util.ClientHooks.skipBot(e))) {
             double d = self.distanceToSqr(entity);
             if (d < bestD) {
                 bestD = d;

@@ -77,7 +77,8 @@ public final class ClickGuiScreen extends Screen {
             if (on) {
                 g.fill(x + 10, cy, x + 13, cy + 22, ACCENT);
             }
-            g.drawString(font, cat.name().toLowerCase(Locale.ROOT), x + 20, cy + 7, on ? TEXT : MUTED, false);
+            int count = ModuleManager.INSTANCE.byCategory(cat).size();
+            g.drawString(font, cat.name().toLowerCase(Locale.ROOT) + " " + count, x + 20, cy + 7, on ? TEXT : MUTED, false);
             i++;
         }
 

@@ -3,6 +3,7 @@ package fun.nursultan.client.module;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 
 public abstract class Module {
     public final String id;
@@ -74,4 +75,6 @@ public abstract class Module {
     public void onTick(Minecraft mc) {}
 
     public void onRenderWorld(Minecraft mc, float tickDelta) {}
+
+    public void onHud(GuiGraphics g, int width, int height) {}
 }
