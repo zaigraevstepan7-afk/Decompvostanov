@@ -1,0 +1,78 @@
+package fun.nursultan.client.modules.misc;
+
+import fun.nursultan.client.module.Category;
+import fun.nursultan.client.module.Module;
+import fun.nursultan.client.modules.combat.Targeting;
+import fun.nursultan.client.util.Inventories;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.Items;
+
+/** Restored from KDFzREm.mO @UZ HolyHelper */
+public final class HolyHelper extends Module {
+    public HolyHelper() {
+        super("holyhelper", "HolyHelper", Category.MISC, "helper", "KDFzREm.mO", 38);
+        bool("explosive-stuff", true);
+        bool("exp-bottle", true);
+        bool("explosive-trap", true);
+        bool("snow-ball", true);
+        bool("stun", true);
+        bool("trap", true);
+        bool("show-stun-zone", true);
+        bool("zone-color", true);
+    }
+
+    @Override
+    public void onTick(Minecraft mc) {
+        if (mc.player == null || mc.gameMode == null || Targeting.nearest(mc, 5) == null) {
+            return;
+        }
+        if (setting("snow-ball")) {
+            int slot = Inventories.findHotbar(mc.player.getInventory(), Items.SNOWBALL);
+            if (slot >= 0 && mc.options.keyUse.isDown()) {
+                int prev = mc.player.getInventory().getSelectedSlot();
+                mc.player.getInventory().setSelectedSlot(slot);
+                mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+                mc.player.getInventory().setSelectedSlot(prev);
+            }
+        }
+        if (setting("exp-bottle") && mc.player.getMainHandItem().is(Items.EXPERIENCE_BOTTLE) && mc.options.keyUse.isDown()) {
+            mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+        }
+        if (setting("explosive-stuff") || setting("explosive-trap") || setting("stun") || setting("trap")) {
+            for (int i = 0; i < 9; i++) {
+                String name = mc.player.getInventory().getItem(i).getHoverName().getString().toLowerCase();
+                if ((setting("stun") && name.contains("стан"))
+                        || (setting("trap") && name.contains("трап"))
+                        || (setting("explosive-trap") && (name.contains("взрыв") || name.contains("trap")))
+                        || (setting("explosive-stuff") && name.contains("динамит"))) {
+                    int prev = mc.player.getInventory().getSelectedSlot();
+                    mc.player.getInventory().setSelectedSlot(i);
+                    if (mc.options.keyUse.isDown()) {
+                        mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
+                    }
+                    mc.player.getInventory().setSelectedSlot(prev);
+                    break;
+                }
+            }
+        }
+    }
+
+    @Override
+    public void onHud(net.minecraft.client.gui.GuiGraphics g, int width, int height) {
+        if (!setting("show-stun-zone")) {
+            return;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || Targeting.nearest(mc, 5) == null) {
+            return;
+        }
+        int color = setting("zone-color") ? 0x66E53935 : (fun.nursultan.client.ClientSettings.accent & 0x00FFFFFF) | 0x66000000;
+        int cx = width / 2;
+        int cy = height / 2;
+        g.fill(cx - 40, cy - 40, cx - 38, cy + 40, color);
+        g.fill(cx + 38, cy - 40, cx + 40, cy + 40, color);
+        g.fill(cx - 40, cy - 40, cx + 40, cy - 38, color);
+        g.fill(cx - 40, cy + 38, cx + 40, cy + 40, color);
+    }
+}
