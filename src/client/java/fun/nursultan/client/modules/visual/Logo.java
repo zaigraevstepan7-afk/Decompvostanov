@@ -33,6 +33,9 @@ public final class Logo extends Module {
         int y = (int) (6 * ClientSettings.hudScale);
         int x = setting("position") && setting("right") && !setting("left") ? width - 160 : 6;
         g.drawString(mc.font, "NURSULTAN", x, y, ClientSettings.accent, false);
+        if (setting("details")) {
+            g.drawString(mc.font, "hud", x + mc.font.width("NURSULTAN") + 6, y, 0xFF8A8A96, false);
+        }
         y += 10;
         StringBuilder line = new StringBuilder();
         if (setting("login") && mc.player.getGameProfile().name() != null) {
