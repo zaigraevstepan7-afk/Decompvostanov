@@ -27,7 +27,10 @@ public final class AuctionHelper extends Module {
         if (setting("open-auction-from-item") && !(mc.screen instanceof ContainerScreen)
                 && mc.player.isShiftKeyDown() && mc.options.keyUse.isDown() && !mc.player.getMainHandItem().isEmpty()
                 && mc.player.tickCount % 40 == 0 && mc.player.connection != null) {
-            mc.player.connection.sendCommand("ah " + mc.player.getMainHandItem().getHoverName().getString());
+            String query = AuctionPrices.sanitizeName(mc.player.getMainHandItem().getHoverName().getString());
+            if (!query.isBlank()) {
+                mc.player.connection.sendCommand("ah " + query);
+            }
         }
         if (!(mc.screen instanceof ContainerScreen) || !setting("show-item-price")) {
             return;

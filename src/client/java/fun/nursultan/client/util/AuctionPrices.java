@@ -20,6 +20,11 @@ public final class AuctionPrices {
     public static final String AUCTION = "аукцион";
     public static final String PRICE_TAG = " п: ";
     public static final String HAN = "漢:";
+    /** Dump leftover name sanitizers from KDFzREm.mc Z[] / z[]. */
+    public static final String STRIP_NON_LETTER = "[^\\p{L} \\-]";
+    public static final String XXX_MID = " (?i)xxx (?i)";
+    public static final String XXX_END = " (?i)xxx$";
+    public static final String XXX_START = "^xxx (?i)";
 
     private static final Pattern DOLLAR_P = Pattern.compile(DOLLAR);
     private static final Pattern CURRENT_P = Pattern.compile(CURRENT);
@@ -36,6 +41,17 @@ public final class AuctionPrices {
             }
         }
         return text.toString();
+    }
+
+    public static String sanitizeName(String name) {
+        if (name == null || name.isBlank()) {
+            return "";
+        }
+        String q = name.replaceAll(STRIP_NON_LETTER, "");
+        q = q.replaceAll(XXX_MID, "");
+        q = q.replaceAll(XXX_END, "");
+        q = q.replaceAll(XXX_START, "");
+        return q.replaceAll("[,\\s]+", " ").trim();
     }
 
     public static boolean auctionScreen(String title) {
