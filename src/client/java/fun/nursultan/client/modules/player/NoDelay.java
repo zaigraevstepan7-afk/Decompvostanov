@@ -11,6 +11,7 @@ public final class NoDelay extends Module {
         bool("block-breaking", true);
         bool("right-click", true);
         bool("jump-delay", true);
+        bool("delays", true);
     }
 
     @Override

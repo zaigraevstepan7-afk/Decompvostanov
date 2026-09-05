@@ -16,11 +16,12 @@ public final class AutoAccept extends Module {
         bool("command-duel-request", true);
         bool("clan-invite-request", true);
         bool("friends-accept-only", false);
+        bool("accept", true);
     }
 
     @Override
     public void onTick(Minecraft mc) {
-        if (mc.player == null || mc.player.connection == null || --cool > 0) {
+        if (!setting("accept") || mc.player == null || mc.player.connection == null || --cool > 0) {
             return;
         }
         if (setting("teleport-request") && friendOk("телепорт", "teleport", "tpaccept")) {

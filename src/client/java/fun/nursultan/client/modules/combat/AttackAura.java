@@ -27,6 +27,9 @@ public final class AttackAura extends Module {
         bool("noise", false);
         bool("hw", false);
         bool("smart", false);
+        bool("fast", false);
+        bool("strong", false);
+        number("distance", 4.8F, 2, 8, 0.1F);
         bool("target-follow", true);
         bool("do-not-attack", false);
         bool("shield-break", false);
@@ -58,7 +61,13 @@ public final class AttackAura extends Module {
         if (setting("spooky-time")) {
             extra += 0.05;
         }
-        double range = 4.8 + extra;
+        double range = numberValue("distance", 4.8F) + extra;
+        if (setting("fast")) {
+            range += 0.1;
+        }
+        if (setting("strong") && mc.player.getAttackStrengthScale(0) < 1) {
+            return;
+        }
         LivingEntity target = Targeting.nearest(mc, range, this);
         if (target == null) {
             return;

@@ -19,6 +19,7 @@ public final class TriggerBot extends Module {
         bool("critical-disabled", false);
         bool("critical-only-space", false);
         bool("bot", false);
+        bool("fast", false);
         bool("do-not-attack", false);
         bool("reset-sprint", false);
         bool("shield-break", false);

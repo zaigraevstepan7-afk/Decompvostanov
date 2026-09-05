@@ -108,7 +108,11 @@ public final class ClickGuiScreen extends Screen {
                 g.fill(listX, my + 5, listX + 3, my + 19, accent());
             }
             g.drawString(font, module.name, listX + 10, my + 3, TEXT, false);
-            g.drawString(font, module.dumpClass + " · " + module.dumpMethods, listX + 10, my + 13, MUTED, false);
+            if (ClientSettings.descriptions) {
+                g.drawString(font, module.dumpClass + " · " + module.dumpMethods, listX + 10, my + 13, MUTED, false);
+            } else {
+                g.drawString(font, module.subcategory, listX + 10, my + 13, MUTED, false);
+            }
             String bind = module.bind.isBlank() ? "R" : module.bind;
             g.drawString(font, bind, listX + 330, my + 8, MUTED, false);
             g.drawString(font, "...", listX + 358, my + 8, MUTED, false);

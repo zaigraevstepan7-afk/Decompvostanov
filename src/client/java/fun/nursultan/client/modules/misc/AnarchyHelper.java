@@ -25,6 +25,14 @@ public final class AnarchyHelper extends Module {
         bool("potion-assassin", false);
         bool("potion-drowsiness", false);
         bool("potion-radiation", false);
+        bool("godsaura", true);
+        bool("sheerdust", true);
+        bool("freezeball", true);
+        bool("assassin", false);
+        bool("paladin", false);
+        bool("drowsiness", false);
+        bool("radiation", false);
+        bool("rage", true);
     }
 
     @Override
@@ -41,7 +49,15 @@ public final class AnarchyHelper extends Module {
                 || setting("trap") && name.contains("трап")
                 || setting("stratum") && (name.contains("пласт") || name.contains("stratum"))
                 || setting("fierytornado") && (name.contains("смерч") || name.contains("tornado"))
-                || setting("snowball") && name.contains("снеж");
+                || setting("snowball") && name.contains("снеж")
+                || setting("godsaura") && name.contains("god")
+                || setting("sheerdust") && name.contains("sheer")
+                || setting("freezeball") && name.contains("freeze")
+                || setting("assassin") && name.contains("assassin")
+                || setting("paladin") && name.contains("paladin")
+                || setting("drowsiness") && name.contains("drowsy")
+                || setting("radiation") && name.contains("radia")
+                || setting("rage") && name.contains("rage");
         if (match && mc.options.keyUse.isDown()) {
             mc.gameMode.useItem(mc.player, InteractionHand.MAIN_HAND);
         }

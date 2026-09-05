@@ -19,6 +19,7 @@ public final class ChestStealer extends Module {
         bool("normal", true);
         bool("reverse", false);
         bool("shuffle", false);
+        bool("loot-type", true);
         number("delay", 1, 0, 10, 1);
     }
 

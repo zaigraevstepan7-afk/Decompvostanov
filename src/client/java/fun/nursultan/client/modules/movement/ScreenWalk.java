@@ -15,6 +15,7 @@ public final class ScreenWalk extends Module {
         bool("ft", false);
         bool("matrix", false);
         bool("spooky", false);
+        bool("hw", false);
     }
 
     @Override
@@ -23,7 +24,7 @@ public final class ScreenWalk extends Module {
             return;
         }
         double yaw = Math.toRadians(mc.player.getYRot());
-        double speed = setting("vanilla") ? 0.22 : 0.16;
+        double speed = setting("hw") ? 0.18 : setting("vanilla") ? 0.22 : 0.16;
         double x = 0;
         double z = 0;
         if (mc.options.keyUp.isDown()) {

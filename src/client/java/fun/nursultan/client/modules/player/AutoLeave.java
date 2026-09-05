@@ -10,6 +10,7 @@ import net.minecraft.network.chat.Component;
 public final class AutoLeave extends Module {
     public AutoLeave() {
         super("autoleave", "AutoLeave", Category.PLAYER, "auto", "KDFzREm.sv", 31);
+        bool("action", true);
         bool("hub", true);
         bool("spawn", false);
         bool("custom-command", false);

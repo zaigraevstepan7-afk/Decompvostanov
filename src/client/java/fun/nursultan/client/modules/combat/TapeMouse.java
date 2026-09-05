@@ -15,11 +15,12 @@ public final class TapeMouse extends Module {
         bool("right-mouse", false);
         number("left-mouse-delay-sec", 0.05F, 0.0F, 2.0F, 0.05F);
         number("right-mouse-delay-sec", 0.10F, 0.0F, 2.0F, 0.05F);
+        bool("mouse-buttons", true);
     }
 
     @Override
     public void onTick(Minecraft mc) {
-        if (mc.player == null) {
+        if (mc.player == null || !setting("mouse-buttons")) {
             return;
         }
         if (setting("left-mouse")) {

@@ -15,5 +15,22 @@ public final class ViewModel extends Module {
         number("left-hand-y", 0, -2, 2, 0.05F);
         number("left-hand-z", 0, -2, 2, 0.05F);
         number("left-scale", 1, 0.2F, 2, 0.05F);
+        bool("reset", false);
+    }
+
+    @Override
+    public void onTick(net.minecraft.client.Minecraft mc) {
+        if (!setting("reset")) {
+            return;
+        }
+        for (var n : numbers) {
+            if (n.id.contains("scale")) {
+                n.value = 1;
+            } else {
+                n.value = 0;
+            }
+        }
+        settings.stream().filter(s -> s.id.equals("reset")).findFirst().ifPresent(s -> s.value = false);
+        fun.nursultan.client.config.ConfigStore.save();
     }
 }
