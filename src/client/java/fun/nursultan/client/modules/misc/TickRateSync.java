@@ -9,6 +9,7 @@ import net.minecraft.client.gui.GuiGraphics;
 public final class TickRateSync extends Module {
     public TickRateSync() {
         super("tickratesync", "TickRateSync", Category.MISC, "base", "KDFzREm.WK", 11);
+        number("tick-rate", 20, 1, 20, 1);
     }
 
     @Override
@@ -16,7 +17,8 @@ public final class TickRateSync extends Module {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null) {
             float rate = mc.level.tickRateManager().tickrate();
-            g.drawString(mc.font, String.format("tps %.1f", rate), 8, 64, 0xFFF2E9FF, false);
+            float want = numberValue("tick-rate", 20);
+            g.drawString(mc.font, String.format("tps %.1f / %.0f", rate, want), 8, 64, 0xFFF2E9FF, false);
         }
     }
 }

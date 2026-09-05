@@ -19,6 +19,7 @@ public final class AutoBuy extends Module {
         bool("decrease-prices", true);
         bool("auto-parser", true);
         bool("auto-parser.complete", true);
+        number("delay", 4, 0, 90, 1);
     }
 
     @Override
@@ -26,7 +27,7 @@ public final class AutoBuy extends Module {
         if (!(mc.screen instanceof ContainerScreen) || mc.player == null || mc.gameMode == null) {
             return;
         }
-        if (++delay < 4) {
+        if (++delay < Math.max(1, (int) numberValue("delay", 4))) {
             return;
         }
         delay = 0;

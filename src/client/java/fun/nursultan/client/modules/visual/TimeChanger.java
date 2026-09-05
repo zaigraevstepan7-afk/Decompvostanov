@@ -16,6 +16,7 @@ public final class TimeChanger extends Module {
         bool("evening", false);
         bool("sunset", false);
         bool("night", false);
+        number("time-value", 120, 0, 240, 1);
     }
 
     @Override
@@ -23,7 +24,7 @@ public final class TimeChanger extends Module {
         if (mc.level == null || !setting("select") && !setting("time")) {
             return;
         }
-        long time = 6000;
+        long time = (long) (numberValue("time-value", 120) / 240.0F * 24000.0F);
         if (setting("dawn")) {
             time = 0;
         } else if (setting("morning")) {
