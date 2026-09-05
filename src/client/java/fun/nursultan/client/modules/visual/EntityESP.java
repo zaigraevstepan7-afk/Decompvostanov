@@ -38,6 +38,11 @@ public final class EntityESP extends Module {
         bool("dormant", false);
         number("dormant-display-time", 20, 1, 80, 1);
         number("equipment-size", 1, 0.5F, 2, 0.1F);
+        bool("shader", false);
+        bool("hold-in-hands", false);
+        bool("item-name", false);
+        bool("health-bar-mode", true);
+        number("scale", 1, 0.5F, 2, 0.1F);
     }
 
     @Override

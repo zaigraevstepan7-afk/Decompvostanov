@@ -34,6 +34,13 @@ public final class ClientSettings {
         return !"en".equals(language);
     }
 
+    public static void toggleDescriptions() {
+        descriptions = !descriptions;
+        if (autoSavePreset && !loading) {
+            fun.nursultan.client.config.ConfigStore.save();
+        }
+    }
+
     public static void cycleHudScale() {
         if (hudScale < 1.25F) {
             hudScale = 1.5F;

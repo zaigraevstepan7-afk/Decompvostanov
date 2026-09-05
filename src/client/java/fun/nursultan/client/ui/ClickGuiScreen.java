@@ -170,7 +170,11 @@ public final class ClickGuiScreen extends Screen {
             return true;
         }
         if (inside(mouseX, mouseY, x + 16, y + 10, 140, 12)) {
-            ClientSettings.cycleLanguage();
+            if (button == 1) {
+                ClientSettings.toggleDescriptions();
+            } else {
+                ClientSettings.cycleLanguage();
+            }
             return true;
         }
         if (inside(mouseX, mouseY, x + 16, y + 20, 200, 14)) {

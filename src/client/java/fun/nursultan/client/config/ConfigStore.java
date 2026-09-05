@@ -44,6 +44,9 @@ public final class ConfigStore {
             if (root.has("autoSavePreset")) {
                 ClientSettings.autoSavePreset = root.get("autoSavePreset").getAsBoolean();
             }
+            if (root.has("descriptions")) {
+                ClientSettings.descriptions = root.get("descriptions").getAsBoolean();
+            }
             if (root.has("friends") && root.get("friends").isJsonArray()) {
                 root.getAsJsonArray("friends").forEach(e -> Friends.add(e.getAsString()));
             }
@@ -97,6 +100,7 @@ public final class ConfigStore {
             root.addProperty("accent", ClientSettings.accent);
             root.addProperty("language", ClientSettings.language);
             root.addProperty("autoSavePreset", ClientSettings.autoSavePreset);
+            root.addProperty("descriptions", ClientSettings.descriptions);
             var friends = new com.google.gson.JsonArray();
             Friends.all().forEach(friends::add);
             root.add("friends", friends);
