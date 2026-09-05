@@ -310,7 +310,12 @@ public final class ClickGuiScreen extends Screen {
             int dotsX = x + Math.max(w / 2, w - 110);
             g.drawString(font, "···", dotsX, ry + (rh - 8) / 2, MUTED, false);
             if (!module.bind.isBlank()) {
-                g.drawString(font, module.bind, dotsX - 36, ry + (rh - 8) / 2, MUTED, false);
+                int bw = Math.max(18, font.width(module.bind) + 8);
+                int bx = dotsX - bw - 8;
+                int by = ry + (rh - 14) / 2;
+                fill(g, bx, by, bw, 14, 0xFF2A2A30);
+                stroke(g, bx, by, bw, 14, (accent() & 0x00FFFFFF) | 0x66000000);
+                g.drawString(font, module.bind, bx + 4, by + 3, MUTED, false);
             }
             pill(g, x + w - 40, ry + (rh - 14) / 2, module.enabled);
             hit("dots", dotsX - 8, ry, 28, rh, module);
