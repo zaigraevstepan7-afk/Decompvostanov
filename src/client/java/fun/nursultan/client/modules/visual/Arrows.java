@@ -56,7 +56,7 @@ public final class Arrows extends Module {
             if (fun.nursultan.client.util.Friends.isFriend(player)) {
                 return setting("friends") || setting("party") ? 0xFF64B5F6 : 0;
             }
-            return setting("players") ? 0xFF9FCA2B : 0;
+            return setting("players") ? fun.nursultan.client.ClientSettings.accent : 0;
         }
         if (entity instanceof Villager) {
             return setting("villagers") ? 0xFFFFB74D : 0;

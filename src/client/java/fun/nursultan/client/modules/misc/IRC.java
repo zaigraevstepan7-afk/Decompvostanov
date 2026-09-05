@@ -14,6 +14,6 @@ public final class IRC extends Module {
     @Override
     public void onHud(GuiGraphics g, int width, int height) {
         Minecraft mc = Minecraft.getInstance();
-        g.drawString(mc.font, "irc local", 8, height - 80, 0xFF9FCA2B, false);
+        g.drawString(mc.font, "irc local", 8, height - 80, fun.nursultan.client.ClientSettings.accent, false);
     }
 }

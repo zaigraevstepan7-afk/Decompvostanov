@@ -46,7 +46,7 @@ public final class Tracers extends Module {
             double ang = Math.atan2(rx, rz);
             int x = cx + (int) (Math.sin(ang) * 55);
             int y = cy - (int) (Math.cos(ang) * 55);
-            int color = entity instanceof Player && Friends.isFriend(entity) ? 0xFF64B5F6 : 0xFF9FCA2B;
+            int color = entity instanceof Player && Friends.isFriend(entity) ? 0xFF64B5F6 : fun.nursultan.client.ClientSettings.accent;
             g.fill(cx - 1, cy - 1, x + 1, y + 1, color & 0x44FFFFFF);
             g.fill(x - 1, y - 1, x + 1, y + 1, color);
         }

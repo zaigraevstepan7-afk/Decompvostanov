@@ -80,6 +80,6 @@ public final class FreeCamera extends Module {
         if (mc.player == null) {
             return;
         }
-        g.drawString(mc.font, String.format("cam %.1f %.1f %.1f", mc.player.getX(), mc.player.getY(), mc.player.getZ()), 8, height - 20, 0xFF9FCA2B, false);
+        g.drawString(mc.font, String.format("cam %.1f %.1f %.1f", mc.player.getX(), mc.player.getY(), mc.player.getZ()), 8, height - 20, fun.nursultan.client.ClientSettings.accent, false);
     }
 }

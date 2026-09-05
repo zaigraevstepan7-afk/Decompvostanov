@@ -59,7 +59,7 @@ public final class Backtrack extends Module {
             return;
         }
         Minecraft mc = Minecraft.getInstance();
-        int color = setting("color") ? 0xFF9FCA2B : 0xFFFFFFFF;
+        int color = setting("color") ? fun.nursultan.client.ClientSettings.accent : 0xFFFFFFFF;
         g.drawString(mc.font, "bt " + ticks, width / 2 - 10, height / 2 + 16, color, false);
     }
 }

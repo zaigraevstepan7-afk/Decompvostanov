@@ -39,6 +39,6 @@ public final class PotionTracker extends Module {
             }
             n++;
         }
-        g.drawString(mc.font, "splash " + n, 8, 52, 0xFF9FCA2B, false);
+        g.drawString(mc.font, "splash " + n, 8, 52, fun.nursultan.client.ClientSettings.accent, false);
     }
 }

@@ -21,7 +21,7 @@ public final class Cooldowns extends Module {
             return;
         }
         float str = mc.player.getAttackStrengthScale(0.0F);
-        g.drawString(mc.font, "cd " + (int) (str * 100) + "%", width - 70, height - 40, str >= 1 ? 0xFF9FCA2B : 0xFFF2E9FF, false);
+        g.drawString(mc.font, "cd " + (int) (str * 100) + "%", width - 70, height - 40, str >= 1 ? fun.nursultan.client.ClientSettings.accent : 0xFFF2E9FF, false);
         if (!setting("render-on-items")) {
             return;
         }

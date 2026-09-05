@@ -48,7 +48,7 @@ public final class ShulkerPreview extends Module {
             }
         }
         if (setting("show-in-world")) {
-            g.drawString(mc.font, "shulker " + i, x, y - 10, 0xFF9FCA2B, false);
+            g.drawString(mc.font, "shulker " + i, x, y - 10, fun.nursultan.client.ClientSettings.accent, false);
         }
     }
 }

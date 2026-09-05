@@ -44,7 +44,7 @@ public final class AuctionHelper extends Module {
                 break;
             }
         }
-        int color = setting("profitable-color") ? fun.nursultan.client.ClientSettings.accent : 0xFF9FCA2B;
+        int color = setting("profitable-color") ? fun.nursultan.client.ClientSettings.accent : 0xFFF2E9FF;
         g.drawString(mc.font, "auction " + shown, 8, 30, color, false);
     }
 }

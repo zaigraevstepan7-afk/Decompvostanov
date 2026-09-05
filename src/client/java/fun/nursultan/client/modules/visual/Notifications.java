@@ -67,7 +67,7 @@ public final class Notifications extends Module {
         int y = 60;
         if (setting("module-toggle")) {
             long on = ModuleManager.INSTANCE.modules.stream().filter(m -> m.enabled).count();
-            g.drawString(mc.font, "on " + on, width - 50, y, 0xFF9FCA2B, false);
+            g.drawString(mc.font, "on " + on, width - 50, y, fun.nursultan.client.ClientSettings.accent, false);
             y += 12;
         }
         if (setting("armor-durability")) {

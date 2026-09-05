@@ -48,7 +48,7 @@ public final class Blink extends Module {
     public void onHud(net.minecraft.client.gui.GuiGraphics g, int width, int height) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.font != null) {
-            int color = setting("render-color") ? 0xFF9FCA2B : 0xFFF2E9FF;
+            int color = setting("render-color") ? fun.nursultan.client.ClientSettings.accent : 0xFFF2E9FF;
             String text = "blink " + ClientHooks.blinkSize();
             if (setting("render-server-position") && start != null) {
                 text += String.format(" @ %.0f %.0f %.0f", start.x, start.y, start.z);
