@@ -15,7 +15,8 @@
     "LocalPlayerMixin",
     "EntityMixin",
     "MouseHandlerMixin",
-    "GuiMixin"
+    "GuiMixin",
+    "ChatComponentMixin"
   ],
   "injectors": {
     "defaultRequire": 1

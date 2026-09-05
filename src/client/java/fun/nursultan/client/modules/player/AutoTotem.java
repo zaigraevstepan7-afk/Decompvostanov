@@ -24,11 +24,12 @@ public final class AutoTotem extends Module {
         bool("falling-trigger", true);
         bool("trident-trigger", true);
         bool("mace-smash-trigger", true);
+        bool("triggers", true);
     }
 
     @Override
     public void onTick(Minecraft mc) {
-        if (mc.player == null || mc.level == null) {
+        if (!setting("triggers") || mc.player == null || mc.level == null) {
             return;
         }
         if (mc.player.getOffhandItem().is(Items.TOTEM_OF_UNDYING)) {

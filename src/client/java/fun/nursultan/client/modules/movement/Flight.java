@@ -27,17 +27,29 @@ public final class Flight extends Module {
             y = -0.42;
         }
         double yaw = Math.toRadians(mc.player.getYRot());
+        double speed = setting("motion") ? 0.85 : 0.55;
         double x = 0;
         double z = 0;
         if (mc.options.keyUp.isDown()) {
-            x -= Math.sin(yaw) * 0.55;
-            z += Math.cos(yaw) * 0.55;
+            x -= Math.sin(yaw) * speed;
+            z += Math.cos(yaw) * speed;
         }
         if (mc.options.keyDown.isDown()) {
-            x += Math.sin(yaw) * 0.55;
-            z -= Math.cos(yaw) * 0.55;
+            x += Math.sin(yaw) * speed;
+            z -= Math.cos(yaw) * speed;
+        }
+        if (setting("vanilla")) {
+            mc.player.getAbilities().flying = true;
         }
         mc.player.setDeltaMovement(x, y == 0 ? v.y * 0.6 : y, z);
         mc.player.fallDistance = 0;
+    }
+
+    @Override
+    public void onDisable() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null) {
+            mc.player.getAbilities().flying = mc.player.getAbilities().mayfly && mc.player.isCreative();
+        }
     }
 }

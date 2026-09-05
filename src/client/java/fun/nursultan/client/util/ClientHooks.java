@@ -242,6 +242,25 @@ public final class ClientHooks {
         return enabled("freelook");
     }
 
+    public static net.minecraft.network.chat.Component filterChat(net.minecraft.network.chat.Component message) {
+        Module stream = module("streamermode");
+        if (stream == null || !stream.enabled || message == null) {
+            return message;
+        }
+        String raw = message.getString();
+        String lower = raw.toLowerCase();
+        if (stream.setting("links") && lower.matches("(?s).*(t\\.me/|vk\\.|https?://|discord\\.gg|funtime\\.su|spookytime\\.net).*")) {
+            return net.minecraft.network.chat.Component.literal("[hidden]");
+        }
+        if (stream.setting("staff") && lower.matches("(?s).*(admin|moder|helper|staff|хелпер|модер|админ|князь|титан|элита).*")) {
+            return net.minecraft.network.chat.Component.literal("[staff]");
+        }
+        if ((stream.setting("ft") || stream.setting("funtime")) && raw.contains("Фортуны")) {
+            return null;
+        }
+        return message;
+    }
+
     public static boolean handleClientChat(String message) {
         if (message == null) {
             return false;

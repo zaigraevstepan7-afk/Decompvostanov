@@ -19,8 +19,11 @@ public class ItemInHandRendererMixin {
         if (view == null || !view.enabled) {
             return;
         }
-        pose.translate(view.numberValue("right-hand-x", 0), view.numberValue("right-hand-y", 0), view.numberValue("right-hand-z", 0));
-        float scale = view.numberValue("right-scale", 1);
+        pose.translate(
+                view.numberValue("right-hand-x", 0) + view.numberValue("left-hand-x", 0),
+                view.numberValue("right-hand-y", 0) + view.numberValue("left-hand-y", 0),
+                view.numberValue("right-hand-z", 0) + view.numberValue("left-hand-z", 0));
+        float scale = view.numberValue("right-scale", 1) * view.numberValue("left-scale", 1);
         Module hands = ClientHooks.module("hands");
         if (hands != null && hands.enabled) {
             if (hands.setting("texture-mix")) {

@@ -26,7 +26,7 @@ public final class StreamerMode extends Module {
             return;
         }
         if (setting("custom-name")) {
-            mc.player.setCustomName(Component.literal(setting("funtime") ? "FunTime" : "Nursultan"));
+            mc.player.setCustomName(Component.literal(setting("funtime") ? "FunTime" : "NursultanFree"));
             mc.player.setCustomNameVisible(true);
         }
         if (setting("hide-entries") || setting("links") || setting("staff")) {
@@ -35,7 +35,8 @@ public final class StreamerMode extends Module {
                     continue;
                 }
                 String shown = player.getGameProfile().name() + " " + player.getName().getString();
-                boolean staff = setting("staff") && shown.toLowerCase().matches(".*(admin|moder|helper|staff|хелпер|модер|админ).*");
+                boolean staff = setting("staff") && shown.toLowerCase().matches(
+                        ".*(admin|moder|helper|staff|хелпер|модер|админ|князь|титан|элита|герой|барон|принц|страж|аспид|герцог|глава).*");
                 boolean link = setting("links") && shown.toLowerCase().matches(".*(t\\.me|vk\\.|https?://|discord\\.gg).*");
                 if (setting("hide-entries") || staff || link) {
                     player.setCustomName(Component.literal("hidden"));
