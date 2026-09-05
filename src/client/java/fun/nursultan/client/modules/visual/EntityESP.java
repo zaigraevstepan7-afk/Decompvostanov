@@ -65,6 +65,16 @@ public final class EntityESP extends Module {
         if (!setting("entities") || mc.player == null || mc.level == null) {
             return;
         }
+        if (setting("ft-spheres")) {
+            for (var item : mc.level.getEntitiesOfClass(
+                    net.minecraft.world.entity.item.ItemEntity.class,
+                    mc.player.getBoundingBox().inflate(48))) {
+                String id = item.getItem().getItem().getDescriptionId().toLowerCase();
+                if (id.contains("sphere") || id.contains("ender_eye") || id.contains("ender_pearl")) {
+                    item.setGlowingTag(true);
+                }
+            }
+        }
         if (setting("items")) {
             for (var item : mc.level.getEntitiesOfClass(
                     net.minecraft.world.entity.item.ItemEntity.class,
@@ -144,7 +154,7 @@ public final class EntityESP extends Module {
 
     @Override
     public void onHud(net.minecraft.client.gui.GuiGraphics g, int width, int height) {
-        if (!setting("entities") || !setting("health-bar") && !setting("name")) {
+        if (!setting("entities") || !setting("health-bar") && !setting("name") && !setting("details")) {
             return;
         }
         Minecraft mc = Minecraft.getInstance();
@@ -175,7 +185,13 @@ public final class EntityESP extends Module {
                     idle.put(entity.getId(), 0);
                 }
             }
-            String label = entity.getName().getString();
+            String label = setting("formatted") ? entity.getName().getString() : entity.getType().getDescriptionId();
+            if (label == null || label.isBlank()) {
+                label = entity.getName().getString();
+            }
+            if (setting("details")) {
+                label += String.format(" %.0f", mc.player.distanceTo(entity));
+            }
             if ((setting("item-name") || setting("item-name-mode")) && !entity.getMainHandItem().isEmpty()) {
                 label += " · " + entity.getMainHandItem().getHoverName().getString();
             }
@@ -191,11 +207,17 @@ public final class EntityESP extends Module {
                 color = 0xFF666666;
             }
             int x = width - barW - 8;
-            g.fill(x, y, x + barW, y + 11, 0x66000000);
-            g.fill(x, y, x + (int) (barW * pct), y + 11, color);
-            if (setting("name") || setting("health")) {
-                String text = setting("health") ? label + " " + (int) entity.getHealth() : label;
-                g.drawString(mc.font, text, x + 2, y + 2, 0xFFFFFFFF, false);
+            int barH = setting("health-bar-mode") ? 11 : 6;
+            if (setting("health-bar")) {
+                g.fill(x, y, x + barW, y + barH, 0x66000000);
+                g.fill(x, y, x + (int) (barW * pct), y + barH, color);
+            }
+            if (setting("name") || setting("health") || setting("both") || setting("details")) {
+                String text = setting("health") || setting("both") ? label + " " + (int) entity.getHealth() : label;
+                g.drawString(mc.font, text, x + 2, y + (setting("health-bar-mode") ? 2 : barH + 1), 0xFFFFFFFF, false);
+            }
+            if (setting("hold-in-hands") && !entity.getMainHandItem().isEmpty()) {
+                g.renderItem(entity.getMainHandItem(), x + barW - 16, y);
             }
             if (setting("equipment") && entity instanceof Player) {
                 int slotX = x;
