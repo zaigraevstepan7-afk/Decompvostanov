@@ -20,7 +20,7 @@ public class EntityMixin {
 
     @Inject(method = "isPushedByFluid", at = @At("HEAD"), cancellable = true)
     private void nursultan$noFluidPush(CallbackInfoReturnable<Boolean> cir) {
-        if ((Object) this == Minecraft.getInstance().player && ClientHooks.enabled("nopush")) {
+        if ((Object) this == Minecraft.getInstance().player && ClientHooks.noBlockPush()) {
             cir.setReturnValue(false);
         }
     }

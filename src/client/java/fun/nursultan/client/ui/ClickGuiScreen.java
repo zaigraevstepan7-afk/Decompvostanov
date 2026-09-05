@@ -85,6 +85,23 @@ public final class ClickGuiScreen extends Screen {
         return ClientSettings.accent;
     }
 
+    /** Dump leftover zf menu-scale — scale_100 / scale_150 / scale_200. */
+    private float menuS() {
+        return ClientSettings.menuScale < 1.25F ? 1.0F : ClientSettings.menuScale < 1.75F ? 1.5F : 2.0F;
+    }
+
+    private float localX(double screenX) {
+        float s = menuS();
+        float cx = width / 2F;
+        return cx + (float) ((screenX - cx) / s);
+    }
+
+    private float localY(double screenY) {
+        float s = menuS();
+        float cy = height / 2F;
+        return cy + (float) ((screenY - cy) / s);
+    }
+
     private void frame() {
         int margin = Math.max(10, (int) (16 / Math.max(0.85F, ClientSettings.menuScale)));
         winX = margin;
@@ -98,6 +115,24 @@ public final class ClickGuiScreen extends Screen {
         hits.clear();
         frame();
         g.fill(0, 0, width, height, OVERLAY);
+        float scale = menuS();
+        var pose = g.pose();
+        pose.pushMatrix();
+        if (scale != 1.0F) {
+            pose.translate(width / 2F, height / 2F);
+            pose.scale(scale, scale);
+            pose.translate(-width / 2F, -height / 2F);
+        }
+        int lmx = Math.round(localX(mouseX));
+        int lmy = Math.round(localY(mouseY));
+        try {
+            renderMenu(g, lmx, lmy, delta);
+        } finally {
+            pose.popMatrix();
+        }
+    }
+
+    private void renderMenu(GuiGraphics g, int mouseX, int mouseY, float delta) {
         round(g, winX, winY, winW, winH, 7, SHELL);
         fill(g, winX, winY, SIDE_W, winH, SIDEBAR);
         fill(g, winX + SIDE_W, winY, 1, winH, 0x22FFFFFF);
@@ -127,6 +162,10 @@ public final class ClickGuiScreen extends Screen {
         }
         if (burger) {
             drawBurgerMenu(g);
+        }
+        if (ClientSettings.descriptions) {
+            g.drawString(font, "Menu dumped " + ModuleManager.INSTANCE.modules.size(),
+                    winX + SIDE_W + 14, winY + winH - 16, MUTED, false);
         }
         super.render(g, mouseX, mouseY, delta);
     }
@@ -200,6 +239,7 @@ public final class ClickGuiScreen extends Screen {
         int h = 26;
         boolean on = section == s && query.isBlank();
         if (on) {
+            fill(g, x, y, w, h, (accent() & 0x00FFFFFF) | 0x33000000);
             stroke(g, x, y, w, h, accent());
             stroke(g, x + 1, y + 1, w - 2, h - 2, accent());
         } else if (inside(mx, my, x, y, w, h)) {
@@ -332,15 +372,16 @@ public final class ClickGuiScreen extends Screen {
         fill(g, px + 14, py + 24, Math.min(120, font.width(displayName(open.name))), 1, accent());
         g.drawString(font, "×", px + pw - 20, py + 12, MUTED, false);
         hit("close", px + pw - 26, py + 6, 22, 20, null);
+        g.drawString(font, "menu.setting", px + 14, py + 28, MUTED, false);
         if (ClientSettings.descriptions) {
-            g.drawString(font, open.dumpHint(), px + 14, py + 28, MUTED, false);
+            g.drawString(font, open.dumpHint(), px + 14, py + 40, MUTED, false);
         }
-        int bindY = ClientSettings.descriptions ? py + 42 : py + 32;
+        int bindY = ClientSettings.descriptions ? py + 54 : py + 42;
         if (binding) {
             g.drawString(font, ClientSettings.ru() ? "нажмите клавишу" : "press a key", px + 14, bindY, accent(), false);
         } else {
             String bind = open.bind.isBlank() ? (ClientSettings.ru() ? "без бинда" : "no bind") : open.bind;
-            g.drawString(font, (ClientSettings.ru() ? "Бинд  " : "Bind  ") + bind, px + 14, bindY, MUTED, false);
+            g.drawString(font, "bind  " + bind, px + 14, bindY, MUTED, false);
             hit("bind", px + 14, bindY - 4, 200, 16, open);
         }
         int sy = bindY + 22;
@@ -349,10 +390,10 @@ public final class ClickGuiScreen extends Screen {
             if (skip-- > 0) {
                 continue;
             }
-            fill(g, px + 14, sy, 10, 10, setting.value ? accent() : PILL_OFF);
-            g.drawString(font, setting.label, px + 30, sy, TEXT, false);
-            hit("bool", px + 14, sy - 2, 240, 14, setting);
-            sy += 16;
+            g.drawString(font, setting.label, px + 14, sy + 2, TEXT, false);
+            pill(g, px + pw - 48, sy, setting.value);
+            hit("bool", px + 14, sy - 2, pw - 28, 18, setting);
+            sy += 22;
             if (sy > py + ph - 18) {
                 return;
             }
@@ -376,26 +417,29 @@ public final class ClickGuiScreen extends Screen {
     private void drawBurgerMenu(GuiGraphics g) {
         int mx = winX + winW - 168;
         int my = winY + 40;
-        round(g, mx, my, 152, 106, 5, 0xF01C1C20);
+        round(g, mx, my, 152, 124, 5, 0xF01C1C20);
         String lang = ClientSettings.ru() ? "Язык: RU" : "Language: EN";
-        String menu = (ClientSettings.ru() ? "Меню " : "Menu ") + ClientSettings.menuScale;
-        String hud = "HUD " + ClientSettings.hudScale;
+        String menu = "menu-scale " + ClientSettings.scaleKey(ClientSettings.menuScale);
+        String hud = "hud-scale " + ClientSettings.scaleKey(ClientSettings.hudScale);
         String desc = ClientSettings.descriptions
                 ? (ClientSettings.ru() ? "Описания вкл" : "Descriptions on")
                 : (ClientSettings.ru() ? "Описания выкл" : "Descriptions off");
         String snap = ClientSettings.snapGuides
                 ? (ClientSettings.ru() ? "Направляющие вкл" : "Snap guides on")
                 : (ClientSettings.ru() ? "Направляющие выкл" : "Snap guides off");
+        String color = "accent #" + Integer.toHexString(ClientSettings.accent & 0xFFFFFF).toUpperCase(Locale.ROOT);
         g.drawString(font, lang, mx + 10, my + 10, TEXT, false);
         g.drawString(font, menu, mx + 10, my + 28, TEXT, false);
         g.drawString(font, hud, mx + 10, my + 46, TEXT, false);
         g.drawString(font, desc, mx + 10, my + 64, TEXT, false);
         g.drawString(font, snap, mx + 10, my + 82, TEXT, false);
+        g.drawString(font, color, mx + 10, my + 100, accent(), false);
         hit("lang", mx, my + 6, 152, 18, null);
         hit("menu-scale", mx, my + 24, 152, 18, null);
         hit("hud-scale", mx, my + 42, 152, 18, null);
         hit("desc", mx, my + 60, 152, 18, null);
         hit("snap", mx, my + 78, 152, 18, null);
+        hit("accent", mx, my + 96, 152, 18, null);
     }
 
     private Map<String, List<Module>> groups() {
@@ -405,6 +449,8 @@ public final class ClickGuiScreen extends Screen {
             src = ModuleManager.INSTANCE.modules.stream()
                     .filter(m -> m.name.toLowerCase(Locale.ROOT).contains(q)
                             || m.id.toLowerCase(Locale.ROOT).contains(q)
+                            || m.dumpClass.toLowerCase(Locale.ROOT).contains(q)
+                            || m.dumpHint().toLowerCase(Locale.ROOT).contains(q)
                             || subLabel(m.subcategory).toLowerCase(Locale.ROOT).contains(q))
                     .toList();
         } else {
@@ -494,12 +540,12 @@ public final class ClickGuiScreen extends Screen {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubled) {
-        double mx = event.x();
-        double my = event.y();
+        double mx = localX(event.x());
+        double my = localY(event.y());
         int button = event.button();
         frame();
         if (burger) {
-            Hit item = at(mx, my, "lang", "menu-scale", "hud-scale", "desc", "snap", "burger");
+            Hit item = at(mx, my, "lang", "menu-scale", "hud-scale", "desc", "snap", "accent", "burger");
             burger = false;
             if (item != null) {
                 switch (item.kind) {
@@ -508,6 +554,7 @@ public final class ClickGuiScreen extends Screen {
                     case "hud-scale" -> ClientSettings.cycleHudScale();
                     case "desc" -> ClientSettings.toggleDescriptions();
                     case "snap" -> ClientSettings.toggleSnapGuides();
+                    case "accent" -> ClientSettings.cycleAccent();
                     default -> burger = true;
                 }
                 return true;
@@ -631,11 +678,13 @@ public final class ClickGuiScreen extends Screen {
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
         if (sliding != null) {
-            Hit bar = at(event.x(), event.y(), "num");
+            double mx = localX(event.x());
+            double my = localY(event.y());
+            Hit bar = at(mx, my, "num");
             if (bar != null && bar.extra == sliding) {
-                slide(sliding, event.x(), bar.x);
+                slide(sliding, mx, bar.x);
             } else {
-                slide(sliding, event.x(), winX + winW - 280 - 16 + 14);
+                slide(sliding, mx, winX + winW - 280 - 16 + 14);
             }
             return true;
         }
@@ -645,7 +694,7 @@ public final class ClickGuiScreen extends Screen {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         int dir = (int) Math.signum(scrollY);
-        if (open != null && mouseX > winX + winW - 300) {
+        if (open != null && localX(mouseX) > winX + winW - 300) {
             int max = Math.max(0, open.settings.size() + open.numbers.size() - 16);
             settingScroll = Math.max(0, Math.min(max, settingScroll - dir));
             return true;

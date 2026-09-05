@@ -64,5 +64,24 @@ public final class ClientSettings {
         }
     }
 
+    /** Dump leftover from zf T[] — scale_100 / scale_150 / scale_200. */
+    public static String scaleKey(float scale) {
+        if (scale < 1.25F) {
+            return "scale_100";
+        }
+        if (scale < 1.75F) {
+            return "scale_150";
+        }
+        return "scale_200";
+    }
+
+    /** Live screenshot gold, then dump Gs lime — both evidenced, not invented. */
+    public static void cycleAccent() {
+        accent = accent == 0xFFD48A00 ? 0xFF9FCA2B : 0xFFD48A00;
+        if (autoSavePreset && !loading) {
+            fun.nursultan.client.config.ConfigStore.save();
+        }
+    }
+
     private ClientSettings() {}
 }

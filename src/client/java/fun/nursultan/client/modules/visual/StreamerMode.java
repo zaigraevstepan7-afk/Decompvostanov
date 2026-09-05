@@ -2,6 +2,7 @@ package fun.nursultan.client.modules.visual;
 
 import fun.nursultan.client.module.Category;
 import fun.nursultan.client.module.Module;
+import fun.nursultan.client.util.ClientHooks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
@@ -43,10 +44,8 @@ public final class StreamerMode extends Module {
                     continue;
                 }
                 String shown = player.getGameProfile().name() + " " + player.getName().getString();
-                boolean staff = setting("staff") && shown.toLowerCase().matches(
-                        ".*(admin|moder|helper|staff|хелпер|модер|админ|князь|титан|элита|герой|барон|принц|страж|аспид|герцог|глава|сквид).*");
-                boolean link = setting("links") && shown.toLowerCase().matches(
-                        ".*(t\\.me|vk\\.|https?://|discord\\.gg|funtime\\.su|dd\\.funtime\\.su|play\\.funtime\\.su|vk\\.com/funtime|t\\.me/funtime|spookytime\\.net|shop\\.spookytime\\.net|nursultan\\.fun|фантайм).*");
+                boolean staff = setting("staff") && ClientHooks.streamerStaff(shown);
+                boolean link = setting("links") && ClientHooks.streamerLink(shown);
                 if (setting("hide-entries") || staff || link) {
                     player.setCustomName(Component.literal("hidden"));
                     player.setCustomNameVisible(false);

@@ -314,6 +314,36 @@ public final class ClientHooks {
         return module != null && module.enabled && module.setting("entity-push");
     }
 
+    public static boolean noBlockPush() {
+        Module module = module("nopush");
+        return module != null && module.enabled && module.setting("block-push");
+    }
+
+    public static boolean customCape() {
+        return enabled("customcape");
+    }
+
+    /** Dump leftover hosts/ranks from KDFzREm.js — one matcher for chat, tab, nametags. */
+    public static boolean streamerLink(String text) {
+        if (text == null || text.isBlank()) {
+            return false;
+        }
+        return text.toLowerCase().matches(
+                "(?s).*(t\\.me|vk\\.|https?://|discord\\.gg|funtime\\.su|dd\\.funtime\\.su|play\\.funtime\\.su|"
+                        + "vk\\.com/funtime|t\\.me/funtime|spookytime\\.net|shop\\.spookytime\\.net|"
+                        + "vk\\.com/spookytimenet|discord\\.gg/spookytime|nursultan\\.fun|"
+                        + "фантайм|спукитайм|спокитайм|/links).*");
+    }
+
+    public static boolean streamerStaff(String text) {
+        if (text == null || text.isBlank()) {
+            return false;
+        }
+        return text.toLowerCase().matches(
+                "(?s).*(admin|moder|helper|staff|хелпер|модер|админ|князь|титан|элита|"
+                        + "герой|барон|принц|страж|аспид|герцог|глава|сквид).*");
+    }
+
     public static boolean freeLook() {
         return enabled("freelook");
     }
@@ -325,10 +355,10 @@ public final class ClientHooks {
         }
         String raw = message.getString();
         String lower = raw.toLowerCase();
-        if (stream.setting("links") && lower.matches("(?s).*(t\\.me/|vk\\.|https?://|discord\\.gg|funtime\\.su|dd\\.funtime\\.su|play\\.funtime\\.su|vk\\.com/funtime|t\\.me/funtime|spookytime\\.net|shop\\.spookytime\\.net|nursultan\\.fun|фантайм|/links).*")) {
+        if (stream.setting("links") && streamerLink(raw)) {
             return net.minecraft.network.chat.Component.literal("[hidden]");
         }
-        if (stream.setting("staff") && lower.matches("(?s).*(admin|moder|helper|staff|хелпер|модер|админ|князь|титан|элита|герой|барон|принц|страж|аспид|герцог|глава|сквид).*")) {
+        if (stream.setting("staff") && streamerStaff(raw)) {
             return net.minecraft.network.chat.Component.literal("[staff]");
         }
         if ((stream.setting("ft") || stream.setting("funtime")) && raw.contains("Фортуны")) {

@@ -40,10 +40,18 @@ public final class ShulkerPreview extends Module {
         }
         int x = width / 2 + 16;
         int y = height / 2 - 20;
+        var grid = net.minecraft.resources.Identifier.fromNamespaceAndPath("nursultan", "icons/3x9.png");
+        boolean atlas = mc.getResourceManager().getResource(grid).isPresent();
+        for (int slot = 0; slot < 27; slot++) {
+            int sx = x + (slot % 9) * 18;
+            int sy = y + (slot / 9) * 18;
+            g.fill(sx, sy, sx + 16, sy + 16, atlas ? 0xAA1A1A1E : 0x88000000);
+            g.fill(sx, sy, sx + 16, sy + 1, 0x33FFFFFF);
+            g.fill(sx, sy + 15, sx + 16, sy + 16, 0x33000000);
+        }
         int i = 0;
         if (contents != null) {
             for (ItemStack item : contents.nonEmptyItems()) {
-                g.fill(x + (i % 9) * 18, y + (i / 9) * 18, x + (i % 9) * 18 + 16, y + (i / 9) * 18 + 16, 0x88000000);
                 g.renderItem(item, x + (i % 9) * 18, y + (i / 9) * 18);
                 i++;
                 if (i >= 27) {
@@ -52,7 +60,8 @@ public final class ShulkerPreview extends Module {
             }
         }
         if (setting("show-in-world")) {
-            g.drawString(mc.font, "shulker " + i, x, y - 10, fun.nursultan.client.ClientSettings.accent, false);
+            g.drawString(mc.font, atlas ? "icons/3x9.png" : "shulker " + i, x, y - 10,
+                    fun.nursultan.client.ClientSettings.accent, false);
         }
     }
 }
