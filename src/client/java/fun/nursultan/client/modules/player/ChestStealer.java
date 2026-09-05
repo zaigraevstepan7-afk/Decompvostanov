@@ -35,6 +35,9 @@ public final class ChestStealer extends Module {
         if (mc.screen instanceof ContainerScreen && setting("ignore-server-menus") && mc.screen.getTitle().getString().isBlank()) {
             return;
         }
+        if (!setting("normal") && !setting("reverse") && !setting("shuffle")) {
+            return;
+        }
         if (++delay < numberValue("delay", 1)) {
             return;
         }

@@ -129,7 +129,7 @@ public final class AttackAura extends Module {
         }
     }
 
-    private static void swapWeapon(Minecraft mc, boolean preferMace) {
+    public static void swapWeapon(Minecraft mc, boolean preferMace) {
         int best = -1;
         int rank = -1;
         for (int i = 0; i < 9; i++) {

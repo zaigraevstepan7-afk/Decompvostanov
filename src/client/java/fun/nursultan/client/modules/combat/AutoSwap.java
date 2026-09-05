@@ -38,6 +38,10 @@ public final class AutoSwap extends Module {
         if (mc.player.getAttackStrengthScale(0.0F) > 0.15F && !mc.options.keySwapOffhand.isDown()) {
             return;
         }
+        if (!setting("first-item") && !setting("second-item") && !setting("multi")) {
+            return;
+        }
+        java.util.List<Integer> pool = new java.util.ArrayList<>();
         int a = Inventories.findHotbar(mc.player.getInventory(), Items.ENDER_PEARL);
         int b = Inventories.findHotbar(mc.player.getInventory(), Items.GOLDEN_APPLE);
         if (setting("g-apples") && b < 0) {
@@ -52,11 +56,15 @@ public final class AutoSwap extends Module {
         if (setting("fireworks") && a < 0) {
             a = Inventories.findHotbar(mc.player.getInventory(), Items.FIREWORK_ROCKET);
         }
-        if (setting("sphere")) {
+        if (setting("sphere") || setting("sunrise-runes")) {
             for (int i = 0; i < 9; i++) {
-                String id = mc.player.getInventory().getItem(i).getItem().getDescriptionId();
-                if (id.contains("sphere") || id.contains("ender_eye") || id.contains("chorus")) {
+                String id = mc.player.getInventory().getItem(i).getItem().getDescriptionId().toLowerCase();
+                if (id.contains("sphere") || id.contains("ender_eye") || id.contains("chorus")
+                        || setting("sunrise-runes") && (id.contains("rune") || id.contains("sunrise"))) {
                     a = i;
+                    if (setting("multi")) {
+                        pool.add(i);
+                    }
                     break;
                 }
             }
@@ -70,14 +78,21 @@ public final class AutoSwap extends Module {
                 }
             }
         }
-        int slot = first ? a : b;
-        if (slot >= 0) {
-            mc.player.getInventory().setSelectedSlot(slot);
-            if (setting("log-swapped-item")) {
-                mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal(
-                        "swap " + mc.player.getInventory().getItem(slot).getHoverName().getString()), true);
-            }
-            first = !first;
+        if (setting("first-item") && a >= 0) {
+            pool.add(a);
         }
+        if ((setting("second-item") || setting("multi")) && b >= 0 && !pool.contains(b)) {
+            pool.add(b);
+        }
+        if (pool.isEmpty()) {
+            return;
+        }
+        int slot = pool.get(Math.floorMod(first ? 0 : 1, pool.size()));
+        mc.player.getInventory().setSelectedSlot(slot);
+        if (setting("log-swapped-item")) {
+            mc.player.displayClientMessage(net.minecraft.network.chat.Component.literal(
+                    "swap " + mc.player.getInventory().getItem(slot).getHoverName().getString()), true);
+        }
+        first = !first;
     }
 }

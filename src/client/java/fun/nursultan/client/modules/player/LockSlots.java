@@ -16,6 +16,8 @@ public final class LockSlots extends Module {
         bool("_5", false);
         bool("_6", false);
         bool("_7", false);
+        bool("_8", false);
+        bool("_9", false);
     }
 
     public boolean locked(int hotbarSlot) {

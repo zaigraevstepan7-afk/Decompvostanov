@@ -47,10 +47,18 @@ public final class ElytraTarget extends Module {
         if (setting("none-firework-use") || !setting("firework-use")) {
             return;
         }
-        if (setting("bind-firework-use") && !mc.options.keyUse.isDown()) {
+        if ((setting("bind-firework-use") || setting("manual-hotkey")) && !mc.options.keyUse.isDown()) {
             return;
         }
-        if (setting("auto-firework-use") && ++delay >= numberValue("delay-ticks", 10)) {
+        boolean timed = setting("timing-firework-use");
+        if (timed) {
+            double dist = mc.player.distanceTo(target);
+            double speed = mc.player.getDeltaMovement().horizontalDistance();
+            if (dist > 18 && speed > 1.15) {
+                return;
+            }
+        }
+        if ((setting("auto-firework-use") || timed) && ++delay >= numberValue("delay-ticks", 10)) {
             int slot = Inventories.findHotbar(mc.player.getInventory(), Items.FIREWORK_ROCKET);
             if (slot >= 0) {
                 int prev = mc.player.getInventory().getSelectedSlot();

@@ -54,13 +54,24 @@ public final class TriggerBot extends Module {
         if (filtered != living && !(living instanceof Player && setting("players"))) {
             return;
         }
-        if (setting("critical-hit")) {
+        if (setting("target-condition") && living.getHealth() > mc.player.getHealth() + 8) {
+            return;
+        }
+        if (setting("critical-disabled")) {
+            // dump critical-disabled: skip crit gate
+        } else if (setting("critical-always") || setting("critical-hit")) {
             if (setting("critical-only-space") && !mc.options.keyJump.isDown()) {
                 return;
             }
-            if (mc.player.getAttackStrengthScale(0.5F) < 0.92F) {
+            float need = setting("fast") ? 0.72F : 0.92F;
+            if (!setting("critical-always") && mc.player.getAttackStrengthScale(0.5F) < need) {
                 return;
             }
+        } else if (setting("fast") && mc.player.getAttackStrengthScale(0) < 0.65F) {
+            return;
+        }
+        if (setting("auto-mace")) {
+            AttackAura.swapWeapon(mc, true);
         }
         if (setting("reset-sprint")) {
             mc.player.setSprinting(false);

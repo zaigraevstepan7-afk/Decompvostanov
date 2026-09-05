@@ -18,10 +18,14 @@ public final class NoSlow extends Module {
         if (mc.player == null || !mc.player.isUsingItem()) {
             return;
         }
+        if (!setting("vanilla") && !setting("spooky-time-duels")) {
+            return;
+        }
         Vec3 v = mc.player.getDeltaMovement();
+        float speed = fun.nursultan.client.util.ClientHooks.noSlowSpeed();
         if (Math.hypot(v.x, v.z) < 0.2 && (mc.options.keyUp.isDown() || mc.options.keyDown.isDown())) {
             double yaw = Math.toRadians(mc.player.getYRot());
-            mc.player.setDeltaMovement(-Math.sin(yaw) * 0.22, v.y, Math.cos(yaw) * 0.22);
+            mc.player.setDeltaMovement(-Math.sin(yaw) * speed, v.y, Math.cos(yaw) * speed);
         }
     }
 }

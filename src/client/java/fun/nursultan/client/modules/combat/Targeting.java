@@ -47,7 +47,10 @@ public final class Targeting {
         if (entity == self || !entity.isAlive()) {
             return false;
         }
-        if (Friends.isFriend(entity) || ClientHooks.skipBot(entity)) {
+        if (Friends.isFriend(entity)) {
+            return false;
+        }
+        if ((filters == null || !filters.setting("bot")) && ClientHooks.skipBot(entity)) {
             return false;
         }
         if (filters == null) {

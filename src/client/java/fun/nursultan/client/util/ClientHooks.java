@@ -80,6 +80,12 @@ public final class ClientHooks {
         }
         Module module = module("nointeract");
         Minecraft mc = Minecraft.getInstance();
+        if (module != null && module.setting("dont-place-orbs") && mc.player != null) {
+            String id = mc.player.getMainHandItem().getItem().getDescriptionId().toLowerCase();
+            if (id.contains("ender_eye") || id.contains("orb") || id.contains("sphere")) {
+                return true;
+            }
+        }
         if (module != null && module.setting("aura-only") && !enabled("attackaura")) {
             return false;
         }
@@ -154,7 +160,34 @@ public final class ClientHooks {
     }
 
     public static boolean skipEntityInteract() {
-        return enabled("nointeract") && (module("nointeract") == null || module("nointeract").setting("entity-interact") || true);
+        return skipEntityInteract(null);
+    }
+
+    public static boolean skipEntityInteract(net.minecraft.world.entity.Entity entity) {
+        if (!enabled("nointeract")) {
+            return false;
+        }
+        Module module = module("nointeract");
+        if (module == null || !module.setting("entity-interact")) {
+            return false;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        if (module.setting("aura-only") && !enabled("attackaura")) {
+            return false;
+        }
+        if (module.setting("pvp-only") && (mc.player == null || mc.player.getLastHurtByMob() == null)) {
+            return false;
+        }
+        if (entity instanceof net.minecraft.world.entity.decoration.ArmorStand) {
+            return module.setting("armor-stand");
+        }
+        if (entity instanceof net.minecraft.world.entity.vehicle.boat.AbstractBoat) {
+            return module.setting("boat");
+        }
+        if (entity instanceof net.minecraft.world.entity.vehicle.minecart.AbstractMinecart) {
+            return module.setting("minecart");
+        }
+        return entity == null;
     }
 
     public static boolean skipFriendAttack(net.minecraft.world.entity.Entity entity) {
@@ -228,8 +261,10 @@ public final class ClientHooks {
         if (module == null || !module.enabled || !module.setting("aspect-ratio")) {
             return 1.0F;
         }
-        float custom = module.numberValue("custom-ratio", 1.777F);
-        if (module.setting("_16_9")) {
+        float custom;
+        if (module.setting("custom")) {
+            custom = module.numberValue("custom-ratio", 1.777F);
+        } else if (module.setting("_16_9")) {
             custom = 16F / 9F;
         } else if (module.setting("_16_10")) {
             custom = 16F / 10F;
@@ -237,6 +272,8 @@ public final class ClientHooks {
             custom = 21F / 9F;
         } else if (module.setting("_4_3")) {
             custom = 4F / 3F;
+        } else {
+            custom = 16F / 9F;
         }
         return custom <= 0.01F ? 1.0F : (16F / 9F) / custom;
     }
@@ -247,7 +284,10 @@ public final class ClientHooks {
 
     public static float noSlowSpeed() {
         Module module = module("noslow");
-        return module != null && module.setting("spooky-time-duels") ? 0.28F : 0.22F;
+        if (module != null && module.setting("spooky-time-duels")) {
+            return 0.28F;
+        }
+        return 0.22F;
     }
 
     public static boolean noEntityPush() {

@@ -18,13 +18,14 @@ public final class AutoExplosion extends Module {
         super("autoexplosion", "AutoExplosion", Category.COMBAT, "fighting", "KDFzREm.WZ", 39);
         bool("crystals", true);
         bool("anchor", true);
+        bool("triggers", true);
         bool("any-item-click", false);
         bool("reset-slot", true);
     }
 
     @Override
     public void onTick(Minecraft mc) {
-        if (mc.player == null || mc.level == null || mc.gameMode == null) {
+        if (!setting("triggers") || mc.player == null || mc.level == null || mc.gameMode == null) {
             return;
         }
         BlockPos feet = mc.player.blockPosition();

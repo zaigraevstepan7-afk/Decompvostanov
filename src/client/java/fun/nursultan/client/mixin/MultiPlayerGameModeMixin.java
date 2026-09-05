@@ -31,14 +31,14 @@ public class MultiPlayerGameModeMixin {
 
     @Inject(method = "interact", at = @At("HEAD"), cancellable = true)
     private void nursultan$noInteractEntity(Player player, Entity entity, InteractionHand hand, CallbackInfoReturnable<InteractionResult> cir) {
-        if (ClientHooks.skipEntityInteract()) {
+        if (ClientHooks.skipEntityInteract(entity)) {
             cir.setReturnValue(InteractionResult.PASS);
         }
     }
 
     @Inject(method = "interactAt", at = @At("HEAD"), cancellable = true)
     private void nursultan$noInteractAt(Player player, Entity entity, EntityHitResult hit, InteractionHand hand, CallbackInfoReturnable<InteractionResult> cir) {
-        if (ClientHooks.skipEntityInteract()) {
+        if (ClientHooks.skipEntityInteract(entity)) {
             cir.setReturnValue(InteractionResult.PASS);
         }
     }

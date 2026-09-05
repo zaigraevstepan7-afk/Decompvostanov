@@ -37,7 +37,7 @@ public final class Removals extends Module {
         if (mc.player == null) {
             return;
         }
-        if (setting("tilt-view")) {
+        if (setting("tilt-view") || setting("heart-effect")) {
             mc.player.hurtTime = 0;
             mc.player.hurtDuration = 0;
         }
@@ -55,6 +55,13 @@ public final class Removals extends Module {
         if (setting("holograms") && mc.level != null) {
             for (var stand : mc.level.getEntitiesOfClass(net.minecraft.world.entity.decoration.ArmorStand.class, mc.player.getBoundingBox().inflate(48), e -> true)) {
                 stand.setCustomNameVisible(false);
+            }
+        }
+        if (setting("exp-bottle") && mc.level != null) {
+            for (var orb : mc.level.getEntitiesOfClass(
+                    net.minecraft.world.entity.ExperienceOrb.class,
+                    mc.player.getBoundingBox().inflate(48))) {
+                orb.setInvisible(true);
             }
         }
         if (setting("fishing-bobber") && mc.level != null) {

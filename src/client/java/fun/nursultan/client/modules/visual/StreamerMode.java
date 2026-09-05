@@ -29,6 +29,14 @@ public final class StreamerMode extends Module {
             mc.player.setCustomName(Component.literal(setting("funtime") ? "FunTime" : "NursultanFree"));
             mc.player.setCustomNameVisible(true);
         }
+        if (setting("name")) {
+            for (Player player : mc.level.players()) {
+                if (player != mc.player) {
+                    player.setCustomName(Component.literal("Player"));
+                    player.setCustomNameVisible(true);
+                }
+            }
+        }
         if (setting("hide-entries") || setting("links") || setting("staff")) {
             for (Player player : mc.level.players()) {
                 if (player == mc.player) {

@@ -14,6 +14,8 @@ import net.minecraft.world.entity.player.Player;
 
 /** Restored from KDFzREm.Ta — players/friends/villagers/monsters/animals + health-bar. */
 public final class EntityESP extends Module {
+    private final java.util.Map<Integer, net.minecraft.world.phys.Vec3> lastPos = new java.util.HashMap<>();
+    private final java.util.Map<Integer, Integer> idle = new java.util.HashMap<>();
     public EntityESP() {
         super("entityesp", "EntityESP", Category.VISUAL, "screen", "KDFzREm.Ta", 72);
         bool("players", true);
@@ -140,10 +142,30 @@ public final class EntityESP extends Module {
         if (mc.player == null || mc.level == null) {
             return;
         }
+        float ui = numberValue("scale", 1);
+        if (setting("_2x")) {
+            ui *= 2;
+        } else if (setting("custom")) {
+            ui *= 1.25F;
+        }
         int y = 72;
         int accent = fun.nursultan.client.ClientSettings.accent;
+        int barW = Math.max(40, (int) (110 * ui));
         for (LivingEntity entity : mc.level.getEntitiesOfClass(
                 LivingEntity.class, mc.player.getBoundingBox().inflate(48), e -> accept(mc.player, e))) {
+            boolean dim = false;
+            if (setting("dormant")) {
+                var now = entity.position();
+                var prev = lastPos.put(entity.getId(), now);
+                if (prev != null && prev.distanceToSqr(now) < 0.0004) {
+                    int n = idle.merge(entity.getId(), 1, Integer::sum);
+                    if (n > numberValue("dormant-display-time", 20)) {
+                        dim = true;
+                    }
+                } else {
+                    idle.put(entity.getId(), 0);
+                }
+            }
             String label = entity.getName().getString();
             if ((setting("item-name") || setting("item-name-mode")) && !entity.getMainHandItem().isEmpty()) {
                 label += " · " + entity.getMainHandItem().getHoverName().getString();
@@ -156,9 +178,12 @@ public final class EntityESP extends Module {
             } else if (setting("health-bar-color-bottom") && pct < 0.65F) {
                 color = 0xFFFFC107;
             }
-            int x = width - 118;
-            g.fill(x, y, x + 110, y + 11, 0x66000000);
-            g.fill(x, y, x + (int) (110 * pct), y + 11, color);
+            if (dim) {
+                color = 0xFF666666;
+            }
+            int x = width - barW - 8;
+            g.fill(x, y, x + barW, y + 11, 0x66000000);
+            g.fill(x, y, x + (int) (barW * pct), y + 11, color);
             if (setting("name") || setting("health")) {
                 String text = setting("health") ? label + " " + (int) entity.getHealth() : label;
                 g.drawString(mc.font, text, x + 2, y + 2, 0xFFFFFFFF, false);

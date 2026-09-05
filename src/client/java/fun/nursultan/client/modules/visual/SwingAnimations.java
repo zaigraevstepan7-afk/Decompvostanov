@@ -28,8 +28,21 @@ public final class SwingAnimations extends Module {
             return;
         }
         if (mc.player.swingTime > 0) {
-            mc.player.yBobO += numberValue("swing-strength", 1);
-            if (setting("spinning")) {
+            float strength = numberValue("swing-strength", 1);
+            boolean spin = setting("spinning");
+            if (setting("swing-1")) {
+                strength *= 0.7F;
+            } else if (setting("swing-2")) {
+                strength *= 1.15F;
+            } else if (setting("swing-3")) {
+                strength *= 1.45F;
+                spin = true;
+            } else if (setting("swing-4")) {
+                strength *= 1.8F;
+                spin = true;
+            }
+            mc.player.yBobO += strength;
+            if (spin) {
                 mc.player.yHeadRot += 8 * numberValue("spin-smoothness", 0.5F);
             }
         }
