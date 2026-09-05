@@ -24,5 +24,13 @@ public final class Targeting {
         return best;
     }
 
+    public static boolean hasOtherPlayer(Minecraft mc, double range) {
+        if (mc.player == null || mc.level == null) {
+            return false;
+        }
+        AABB box = mc.player.getBoundingBox().inflate(range);
+        return !mc.level.getEntitiesOfClass(Player.class, box, e -> e != mc.player && e.isAlive()).isEmpty();
+    }
+
     private Targeting() {}
 }
