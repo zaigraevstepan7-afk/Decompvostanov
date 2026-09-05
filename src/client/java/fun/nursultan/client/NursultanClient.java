@@ -29,9 +29,10 @@ public final class NursultanClient implements ClientModInitializer {
                     mc.setScreen(null);
                 }
             }
-            if (mc.screen == null) {
-                ModuleManager.INSTANCE.tick(mc);
+            if (!(mc.screen instanceof ClickGuiScreen)) {
+                ModuleManager.INSTANCE.pollBinds(mc);
             }
+            ModuleManager.INSTANCE.tick(mc);
         });
         System.out.println("Nursultan initialized · " + ModuleManager.INSTANCE.modules.size() + " modules · menu Right Shift");
     }

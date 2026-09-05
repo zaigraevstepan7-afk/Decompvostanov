@@ -1,0 +1,38 @@
+package fun.nursultan.client.modules.visual;
+
+import fun.nursultan.client.module.Category;
+import fun.nursultan.client.module.Module;
+import net.minecraft.client.Minecraft;
+
+/** Restored from KDFzREm.Tw @UZ TimeChanger — dawn/morning/day/evening/sunset/night */
+public final class TimeChanger extends Module {
+    public TimeChanger() {
+        super("timechanger", "TimeChanger", Category.VISUAL, "world", "KDFzREm.Tw", 41);
+        bool("dawn", false);
+        bool("morning", false);
+        bool("day", true);
+        bool("evening", false);
+        bool("sunset", false);
+        bool("night", false);
+    }
+
+    @Override
+    public void onTick(Minecraft mc) {
+        if (mc.level == null) {
+            return;
+        }
+        long time = 6000;
+        if (setting("dawn")) {
+            time = 0;
+        } else if (setting("morning")) {
+            time = 1000;
+        } else if (setting("evening")) {
+            time = 11000;
+        } else if (setting("sunset")) {
+            time = 12500;
+        } else if (setting("night")) {
+            time = 18000;
+        }
+        mc.level.setTimeFromServer(mc.level.getGameTime(), time, true);
+    }
+}

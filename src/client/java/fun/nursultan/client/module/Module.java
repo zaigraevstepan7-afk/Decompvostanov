@@ -14,6 +14,7 @@ public abstract class Module {
     public boolean enabled;
     public String bind = "";
     public final List<BoolSetting> settings = new ArrayList<>();
+    public final List<NumberSetting> numbers = new ArrayList<>();
 
     protected Module(String id, String name, Category category, String subcategory, String dumpClass, int dumpMethods) {
         this.id = id;
@@ -51,6 +52,19 @@ public abstract class Module {
 
     protected void bool(String id, boolean def) {
         settings.add(new BoolSetting(id, id.replace('-', ' '), def));
+    }
+
+    protected void number(String id, float def, float min, float max, float step) {
+        numbers.add(new NumberSetting(id, id.replace('-', ' '), def, min, max, step));
+    }
+
+    public float numberValue(String id, float fallback) {
+        for (NumberSetting setting : numbers) {
+            if (setting.id.equals(id)) {
+                return setting.value;
+            }
+        }
+        return fallback;
     }
 
     public void onEnable() {}

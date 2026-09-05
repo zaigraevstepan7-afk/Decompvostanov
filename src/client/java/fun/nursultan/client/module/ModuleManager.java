@@ -48,16 +48,52 @@ public final class ModuleManager {
         }
     }
 
-    public void toggleBind(int glfwKey) {
-        String name = org.lwjgl.glfw.GLFW.glfwGetKeyName(glfwKey, 0);
-        if (name == null) {
+    private final java.util.Set<String> heldBinds = new java.util.HashSet<>();
+
+    public void pollBinds(Minecraft mc) {
+        if (mc.getWindow() == null) {
             return;
         }
-        String key = name.toUpperCase();
+        long window = mc.getWindow().handle();
+        java.util.Set<String> down = new java.util.HashSet<>();
         for (Module module : modules) {
-            if (key.equals(module.bind)) {
-                module.toggle();
+            if (module.bind == null || module.bind.isBlank()) {
+                continue;
+            }
+            int key = bindToGlfw(module.bind);
+            if (key == -1) {
+                continue;
+            }
+            boolean pressed = org.lwjgl.glfw.GLFW.glfwGetKey(window, key) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
+            if (pressed) {
+                down.add(module.bind);
+                if (!heldBinds.contains(module.bind)) {
+                    module.toggle();
+                }
             }
         }
+        heldBinds.clear();
+        heldBinds.addAll(down);
+    }
+
+    private static int bindToGlfw(String bind) {
+        String key = bind.toUpperCase();
+        if (key.length() == 1) {
+            char c = key.charAt(0);
+            if (c >= 'A' && c <= 'Z') {
+                return org.lwjgl.glfw.GLFW.GLFW_KEY_A + (c - 'A');
+            }
+            if (c >= '0' && c <= '9') {
+                return org.lwjgl.glfw.GLFW.GLFW_KEY_0 + (c - '0');
+            }
+        }
+        return switch (key) {
+            case "RSHIFT", "RIGHT SHIFT" -> org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_SHIFT;
+            case "LSHIFT", "LEFT SHIFT", "SHIFT" -> org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT;
+            case "SPACE" -> org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE;
+            case "TAB" -> org.lwjgl.glfw.GLFW.GLFW_KEY_TAB;
+            case "CTRL", "LCTRL" -> org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_CONTROL;
+            default -> -1;
+        };
     }
 }

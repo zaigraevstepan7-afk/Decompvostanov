@@ -44,7 +44,7 @@ public final class AttackAura extends Module {
         mc.player.swing(InteractionHand.MAIN_HAND);
     }
 
-    static void aim(Player player, LivingEntity target) {
+    public static void aim(Player player, LivingEntity target) {
         Vec3 eye = player.getEyePosition();
         Vec3 dest = target.getBoundingBox().getCenter();
         Vec3 d = dest.subtract(eye);

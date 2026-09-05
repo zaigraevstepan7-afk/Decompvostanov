@@ -26,11 +26,13 @@ Dump: `Build: 1.21.11`. Вход оригинала — `KDFzREm.NNNNGY`. Дер
 |---|---|
 | `src/client/java/fun/nursultan/client/NursultanClient.java` | Fabric entry (как `NNNNGY`) |
 | `src/client/java/fun/nursultan/client/ui/ClickGuiScreen.java` | игровое меню |
-| `src/client/java/fun/nursultan/client/modules/combat/` | AttackAura (`Uv`), AimAssist (`Ub`), TriggerBot (`Uj`), NoVelocity (`WG`) |
-| `src/client/java/fun/nursultan/client/modules/movement/` | Speed, Sprint |
-| `src/client/java/fun/nursultan/client/modules/visual/` | EntityESP (`Ta`) |
+| `src/client/java/fun/nursultan/client/modules/combat/` | AttackAura (`Uv`), AimAssist (`Ub`), TriggerBot (`Uj`), NoVelocity (`WG`), SprintReset (`WP`), TapeMouse (`Wn`), AutoExplosion (`WZ`), WebTrap (`Um`) |
+| `src/client/java/fun/nursultan/client/modules/movement/` | Speed (`Pg`), Sprint (`PB`), Flight (`Pv`), NoSlow (`Pl`), NoWeb (`PY`), Timer (`Pz`), AutoJump (`mh`), EdgeJump (`mr`), AirStuck (`mD`), NoPush (`Py`), ScreenWalk (`Pi`), WallClimb (`Po`), SuperFirework (`PZ`) |
+| `src/client/java/fun/nursultan/client/modules/player/` | AutoTotem (`sJ`), AutoEat (`PH`), AutoArmor (`PK`), AutoTool (`PS`), AutoFish (`Pc`), Scaffold (`TM`), ChestStealer (`sp`), FastExp (`Ph`), NoDelay (`sD`), AutoPearl (`PX`), AutoRespawn (`PC`), AntiAFK (`su`) |
+| `src/client/java/fun/nursultan/client/modules/visual/` | EntityESP (`Ta`), Gamma (`TT`), SeeInvisible (`TG`), TargetEsp (`jY`), TimeChanger (`Tw`) |
 | `src/client/java/fun/nursultan/client/modules/GeneratedModules.java` | все 109 UM-модулей |
 | `decompiled/modules/KDFzREm/` | полный декомпил 109 модулей + `UM` |
+| `decompiled/all/KDFzREm/` | CFR всех ~3000 классов дампа (локально) |
 | `decompiled/KDFzREm/{y,Gs,td,NNNNGY}.java` | ядро / меню / HUD / entry |
 | `runtime/*.jar` | восстановленный байткод обоих архивов |
 
