@@ -1,4 +1,4 @@
-# Nimbus
+# Bozya VPN
 
 Android-клиент AmneziaWG / WireGuard с тёмным интерфейсом, импортом `.conf` и работой в фоне.
 
@@ -21,7 +21,7 @@ JDK 17+ и Android SDK 35:
 ```
 
 APK: `app/build/outputs/apk/debug/app-debug.apk`  
-Debug applicationId: `com.nimbus.vpn.debug`
+Debug applicationId: `com.nimbus.vpn.debug` (не меняем, чтобы обновление ставилось поверх уже установленной сборки)
 
 ## Установка
 
@@ -30,13 +30,13 @@ Debug applicationId: `com.nimbus.vpn.debug`
 3. Импортируй `.conf` (файл или вставка).
 4. При первом подключении разреши VPN.
 5. В настройках включи автоподключение и root-защиту батареи.
-6. Xiaomi / HyperOS: батарея → без ограничений для Nimbus.
+6. Xiaomi / HyperOS: батарея → без ограничений для Bozya VPN.
 
 ## Батарея и root
 
-Nimbus не отключает Doze на всём устройстве. С root он только добавляет себя в whitelist, чтобы OEM-киллер не резал VPN. Туннель — userspace AmneziaWG: обфускация `I1` не работает на обычном модуле `wireguard.ko`.
+Bozya VPN не отключает Doze на всём устройстве. С root он только добавляет себя в whitelist, чтобы OEM-киллер не резал VPN. Туннель — userspace AmneziaWG: обфускация `I1` не работает на обычном модуле `wireguard.ko`.
 
-Если в конфиге нет `PersistentKeepalive`, Nimbus ставит 25 секунд.
+Если в конфиге нет `PersistentKeepalive`, Bozya VPN ставит 25 секунд.
 
 ## Приватность
 

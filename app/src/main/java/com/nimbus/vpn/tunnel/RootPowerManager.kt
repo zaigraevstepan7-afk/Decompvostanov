@@ -6,7 +6,7 @@ import org.amnezia.awg.util.RootShell
 import java.io.File
 
 /**
- * Uses root to keep Nimbus alive without fighting OEM battery killers,
+ * Uses root to keep Bozya VPN alive without fighting OEM battery killers,
  * while avoiding global "performance mode" that would drain the phone.
  */
 class RootPowerManager(private val shell: RootShell) {
@@ -89,6 +89,6 @@ class RootPowerManager(private val shell: RootShell) {
     }
 
     companion object {
-        private const val TAG = "Nimbus/RootPower"
+        private const val TAG = "Bozya/RootPower"
     }
 }

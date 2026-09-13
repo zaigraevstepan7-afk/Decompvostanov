@@ -21,10 +21,10 @@ private val Scheme = darkColorScheme(
 )
 
 @Composable
-fun NimbusTheme(content: @Composable () -> Unit) {
+fun BozyaTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = Scheme,
-        typography = NimbusTypography,
+        typography = BozyaTypography,
         content = content,
     )
 }

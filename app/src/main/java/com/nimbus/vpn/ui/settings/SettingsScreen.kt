@@ -70,7 +70,7 @@ fun SettingsScreen(
                     Text(root.message, color = InkMuted, fontSize = 13.sp)
                     Text(
                         "Туннель живёт в VpnService. Анимации гаснут, когда экран не смотрит на приложение. " +
-                            "С root Bozya добавляет себя в whitelist Doze — без глобального «производительного режима», который жрёт батарею.",
+                            "С root Bozya VPN добавляет себя в whitelist Doze — без глобального «производительного режима», который жрёт батарею.",
                         color = InkMuted,
                         fontSize = 13.sp,
                     )
@@ -87,7 +87,7 @@ fun SettingsScreen(
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("WARP", color = Ink, fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
                     Text(
-                        "Выбери страну и LTE в приложении. Bozya запросит ключи Cloudflare и соберёт AmneziaWG-конфиг — без сайта и копирования.",
+                        "Выбери страну и LTE в приложении. Bozya VPN запросит ключи Cloudflare и соберёт AmneziaWG-конфиг — без сайта и копирования.",
                         color = InkMuted,
                         fontSize = 13.sp,
                     )

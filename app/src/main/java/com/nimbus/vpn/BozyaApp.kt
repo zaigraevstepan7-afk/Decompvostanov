@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.amnezia.awg.backend.AbstractBackend
 
-class NimbusApp : Application() {
+class BozyaApp : Application() {
     lateinit var container: AppContainer
         private set
 
@@ -33,12 +33,12 @@ class NimbusApp : Application() {
     }
 
     companion object {
-        lateinit var instance: NimbusApp
+        lateinit var instance: BozyaApp
             private set
     }
 }
 
-class AppContainer(app: NimbusApp) {
+class AppContainer(app: BozyaApp) {
     val profiles = ProfileStore(app)
     val settings = SettingsRepository(app)
     val tunnel = TunnelController(app, profiles, settings)

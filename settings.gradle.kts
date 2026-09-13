@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Nimbus"
+rootProject.name = "Bozya VPN"
 include(":app")

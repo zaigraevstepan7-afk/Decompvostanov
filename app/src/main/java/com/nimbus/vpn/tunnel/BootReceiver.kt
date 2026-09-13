@@ -3,7 +3,7 @@ package com.nimbus.vpn.tunnel
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.nimbus.vpn.NimbusApp
+import com.nimbus.vpn.BozyaApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -19,7 +19,7 @@ class BootReceiver : BroadcastReceiver() {
         val pending = goAsync()
         CoroutineScope(Dispatchers.Default).launch {
             try {
-                val app = context.applicationContext as NimbusApp
+                val app = context.applicationContext as BozyaApp
                 val auto = app.container.settings.settings.first().autoConnect
                 if (auto) {
                     app.container.tunnel.connectActive()

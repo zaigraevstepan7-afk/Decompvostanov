@@ -13,18 +13,18 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.nimbus.vpn.MainActivity
-import com.nimbus.vpn.NimbusApp
+import com.nimbus.vpn.BozyaApp
 import com.nimbus.vpn.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-class NimbusKeepAliveService : Service() {
+class BozyaKeepAliveService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
-            val app = applicationContext as? NimbusApp
+            val app = applicationContext as? BozyaApp
             CoroutineScope(Dispatchers.Default).launch {
                 app?.container?.tunnel?.disconnect()
             }
@@ -53,11 +53,11 @@ class NimbusKeepAliveService : Service() {
         val stop = PendingIntent.getService(
             this,
             1,
-            Intent(this, NimbusKeepAliveService::class.java).setAction(ACTION_STOP),
+            Intent(this, BozyaKeepAliveService::class.java).setAction(ACTION_STOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_nimbus)
+            .setSmallIcon(R.drawable.ic_bozya)
             .setLargeIcon(BitmapFactory.decodeResource(resources, R.drawable.ic_stat_large))
             .setContentTitle(getString(R.string.app_name))
             .setContentText(title)
@@ -89,13 +89,13 @@ class NimbusKeepAliveService : Service() {
     }
 
     companion object {
-        private const val CHANNEL_ID = "nimbus.keepalive"
+        private const val CHANNEL_ID = "bozya.keepalive"
         private const val NOTIF_ID = 17
         private const val EXTRA_TITLE = "title"
         const val ACTION_STOP = "com.nimbus.vpn.STOP"
 
         fun start(context: Context, title: String) {
-            val intent = Intent(context, NimbusKeepAliveService::class.java).putExtra(EXTRA_TITLE, title)
+            val intent = Intent(context, BozyaKeepAliveService::class.java).putExtra(EXTRA_TITLE, title)
             if (Build.VERSION.SDK_INT >= 26) {
                 context.startForegroundService(intent)
             } else {
@@ -104,7 +104,7 @@ class NimbusKeepAliveService : Service() {
         }
 
         fun stop(context: Context) {
-            context.stopService(Intent(context, NimbusKeepAliveService::class.java))
+            context.stopService(Intent(context, BozyaKeepAliveService::class.java))
         }
     }
 }

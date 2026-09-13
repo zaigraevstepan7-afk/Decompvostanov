@@ -34,7 +34,7 @@ import com.nimbus.vpn.ui.home.HomeScreen
 import com.nimbus.vpn.ui.importcfg.ImportScreen
 import com.nimbus.vpn.ui.profiles.ProfilesScreen
 import com.nimbus.vpn.ui.settings.SettingsScreen
-import com.nimbus.vpn.ui.theme.NimbusTheme
+import com.nimbus.vpn.ui.theme.BozyaTheme
 import com.nimbus.vpn.ui.warp.WarpCreateScreen
 
 class MainActivity : ComponentActivity() {
@@ -51,7 +51,7 @@ class MainActivity : ComponentActivity() {
             ),
         )
         setContent {
-            NimbusTheme {
+            BozyaTheme {
                 val nav = rememberNavController()
                 val tunnel by viewModel.tunnel.collectAsStateWithLifecycle()
                 val root by viewModel.root.collectAsStateWithLifecycle()

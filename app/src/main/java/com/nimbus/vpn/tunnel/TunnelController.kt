@@ -69,7 +69,7 @@ class TunnelController(
     private var appSettings = com.nimbus.vpn.data.AppSettings()
     private var uiVisible = false
 
-    private val tunnel = NimbusTunnel { state ->
+    private val tunnel = BozyaTunnel { state ->
         scope.launch { onNativeState(state) }
     }
 
@@ -131,7 +131,7 @@ class TunnelController(
                 profile = profile,
             )
         }
-        NimbusKeepAliveService.start(context, "Подключение…")
+        BozyaKeepAliveService.start(context, "Подключение…")
 
         if (appSettings.rootBatteryGuard) {
             runCatching {
@@ -169,7 +169,7 @@ class TunnelController(
                     backendLabel = _rootStatus.value.message,
                 )
             }
-            NimbusKeepAliveService.start(context, profile.name)
+            BozyaKeepAliveService.start(context, profile.name)
             startStatsLoop()
         }.onFailure { err ->
             Log.e(TAG, "Connect failed", err)
@@ -180,7 +180,7 @@ class TunnelController(
                     error = humanError(err),
                 )
             }
-            NimbusKeepAliveService.stop(context)
+            BozyaKeepAliveService.stop(context)
             scheduleReconnect()
         }
     }
@@ -206,13 +206,13 @@ class TunnelController(
                 connectedSince = null,
             )
         }
-        NimbusKeepAliveService.stop(context)
+        BozyaKeepAliveService.stop(context)
     }
 
     private suspend fun onNativeState(state: Tunnel.State) {
         if (state == Tunnel.State.DOWN && _ui.value.status == ConnectionStatus.CONNECTED) {
             _ui.update { it.copy(status = ConnectionStatus.DISCONNECTED, connectedSince = null) }
-            NimbusKeepAliveService.stop(context)
+            BozyaKeepAliveService.stop(context)
             scheduleReconnect()
         }
     }
@@ -289,7 +289,7 @@ class TunnelController(
     }
 
     companion object {
-        private const val TAG = "Nimbus/Tunnel"
+        private const val TAG = "Bozya/Tunnel"
     }
 }
 

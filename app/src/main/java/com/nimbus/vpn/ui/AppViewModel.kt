@@ -5,7 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.nimbus.vpn.NimbusApp
+import com.nimbus.vpn.BozyaApp
 import com.nimbus.vpn.data.AppSettings
 import com.nimbus.vpn.data.ConfigParser
 import com.nimbus.vpn.data.VpnProfile
@@ -37,7 +37,7 @@ data class WarpUiState(
 )
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
-    private val app = application as NimbusApp
+    private val app = application as BozyaApp
     val tunnel = app.container.tunnel.ui
     val root = app.container.tunnel.rootStatus
     val profiles = app.container.profiles.index

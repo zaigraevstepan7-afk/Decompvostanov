@@ -2,8 +2,8 @@ package com.nimbus.vpn.tunnel
 
 import org.amnezia.awg.backend.Tunnel
 
-class NimbusTunnel(
-    private val tunnelName: String = "nimbus",
+class BozyaTunnel(
+    private val tunnelName: String = "bozya",
     private val ipv4Preferred: Boolean = true,
     private val metered: Boolean = false,
     private val listener: (Tunnel.State) -> Unit = {},
