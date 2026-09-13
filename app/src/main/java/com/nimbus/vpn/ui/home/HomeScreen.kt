@@ -25,7 +25,6 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,7 +44,6 @@ import com.nimbus.vpn.data.ConfigParser
 import com.nimbus.vpn.data.ProfileIndex
 import com.nimbus.vpn.tunnel.ConnectionStatus
 import com.nimbus.vpn.tunnel.TunnelUiState
-import com.nimbus.vpn.ui.WarpUiState
 import com.nimbus.vpn.ui.components.MeshBackground
 import com.nimbus.vpn.ui.components.PowerOrb
 import com.nimbus.vpn.ui.theme.Ink
@@ -59,15 +57,14 @@ import java.util.concurrent.TimeUnit
 fun HomeScreen(
     state: TunnelUiState,
     profiles: ProfileIndex,
-    warp: WarpUiState,
     animate: Boolean,
     onToggle: () -> Unit,
+    onCreateWarp: () -> Unit,
     onImport: () -> Unit,
     onSelect: (String) -> Unit,
     onDelete: (String) -> Unit,
     onSettings: () -> Unit,
     onConfirmAccess: () -> Unit,
-    onGenerateWarp: () -> Unit,
 ) {
     Box(Modifier.fillMaxSize()) {
         MeshBackground(state.status, animate, Modifier.fillMaxSize())
@@ -98,8 +95,8 @@ fun HomeScreen(
                         .padding(horizontal = 12.dp, vertical = 6.dp),
                 )
                 Spacer(Modifier.weight(1f))
-                IconButton(onClick = onImport) {
-                    Icon(Icons.Rounded.Add, contentDescription = "Импорт", tint = Ink)
+                IconButton(onClick = onCreateWarp) {
+                    Icon(Icons.Rounded.Add, contentDescription = "Создать WARP", tint = Ink)
                 }
             }
             Column(
@@ -140,11 +137,10 @@ fun HomeScreen(
             ServerSheet(
                 state = state,
                 profiles = profiles,
-                warp = warp,
+                onCreateWarp = onCreateWarp,
                 onImport = onImport,
                 onSelect = onSelect,
                 onDelete = onDelete,
-                onGenerateWarp = onGenerateWarp,
             )
         }
     }
@@ -154,11 +150,10 @@ fun HomeScreen(
 private fun ServerSheet(
     state: TunnelUiState,
     profiles: ProfileIndex,
-    warp: WarpUiState,
+    onCreateWarp: () -> Unit,
     onImport: () -> Unit,
     onSelect: (String) -> Unit,
     onDelete: (String) -> Unit,
-    onGenerateWarp: () -> Unit,
 ) {
     Column(
         Modifier
@@ -172,7 +167,7 @@ private fun ServerSheet(
         Row(
             Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onImport)
+                .clickable(onClick = onCreateWarp)
                 .padding(horizontal = 18.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -185,15 +180,6 @@ private fun ServerSheet(
                 modifier = Modifier.padding(start = 4.dp).weight(1f),
             )
             Text("${profiles.profiles.size}", color = InkMuted, fontSize = 13.sp)
-            if (warp.generating) {
-                CircularProgressIndicator(
-                    modifier = Modifier
-                        .padding(start = 10.dp)
-                        .size(16.dp),
-                    color = Ink,
-                    strokeWidth = 2.dp,
-                )
-            }
         }
         HorizontalDivider(color = Line)
         if (profiles.profiles.isEmpty()) {
@@ -202,59 +188,33 @@ private fun ServerSheet(
                     .fillMaxWidth()
                     .padding(22.dp),
             ) {
+                Text("Пока пусто", color = Ink, fontWeight = FontWeight.Medium)
                 Text(
-                    if (warp.generating) "Создаю WARP…" else "Пока пусто",
-                    color = Ink,
-                    fontWeight = FontWeight.Medium,
-                )
-                Text(
-                    if (warp.generating) {
-                        "Запрашиваю ключи Cloudflare и собираю AmneziaWG-конфиги. Ничего копировать не нужно."
-                    } else {
-                        "Nimbus сам создаст конфиги с generator-config-warp, либо вставь свой .conf."
-                    },
+                    "Выбери страну и LTE — Nimbus сам запросит ключи и соберёт AmneziaWG-конфиг.",
                     color = InkMuted,
                     fontSize = 13.sp,
                     modifier = Modifier.padding(top = 6.dp),
                 )
-                if (warp.generating) {
-                    CircularProgressIndicator(
-                        modifier = Modifier
-                            .padding(top = 16.dp)
-                            .size(22.dp),
-                        color = Ink,
-                        strokeWidth = 2.dp,
-                    )
-                } else {
-                    if (!warp.error.isNullOrBlank()) {
-                        Text(
-                            warp.error!!,
-                            color = Ink,
-                            fontSize = 13.sp,
-                            modifier = Modifier.padding(top = 10.dp),
-                        )
-                    }
-                    Button(
-                        onClick = onGenerateWarp,
-                        colors = ButtonDefaults.buttonColors(containerColor = Ink, contentColor = Paper),
-                        shape = RoundedCornerShape(18.dp),
-                        modifier = Modifier
-                            .padding(top = 14.dp)
-                            .fillMaxWidth()
-                            .height(46.dp),
-                    ) {
-                        Text(if (warp.error.isNullOrBlank()) "Создать WARP" else "Повторить")
-                    }
-                    Text(
-                        "Или вставить свой конфиг",
-                        color = Ink,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier
-                            .padding(top = 12.dp)
-                            .clickable(onClick = onImport),
-                    )
+                Button(
+                    onClick = onCreateWarp,
+                    colors = ButtonDefaults.buttonColors(containerColor = Ink, contentColor = Paper),
+                    shape = RoundedCornerShape(18.dp),
+                    modifier = Modifier
+                        .padding(top = 14.dp)
+                        .fillMaxWidth()
+                        .height(46.dp),
+                ) {
+                    Text("Создать WARP")
                 }
+                Text(
+                    "Или вставить свой конфиг",
+                    color = Ink,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier
+                        .padding(top = 12.dp)
+                        .clickable(onClick = onImport),
+                )
             }
         } else {
             Text(

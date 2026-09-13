@@ -27,7 +27,6 @@ import androidx.compose.ui.unit.sp
 import com.nimbus.vpn.data.AppSettings
 import com.nimbus.vpn.tunnel.ConnectionStatus
 import com.nimbus.vpn.tunnel.RootPowerManager
-import com.nimbus.vpn.ui.WarpUiState
 import com.nimbus.vpn.ui.components.GlassCard
 import com.nimbus.vpn.ui.components.MeshBackground
 import com.nimbus.vpn.ui.theme.Ink
@@ -42,13 +41,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 fun SettingsScreen(
     settings: AppSettings,
     root: RootPowerManager.Status,
-    warp: WarpUiState,
     onBack: () -> Unit,
     onAutoConnect: (Boolean) -> Unit,
     onKillSwitch: (Boolean) -> Unit,
     onRootBattery: (Boolean) -> Unit,
     onBatteryExemption: () -> Unit,
-    onGenerateWarp: () -> Unit,
+    onCreateWarp: () -> Unit,
 ) {
     Box(Modifier.fillMaxSize()) {
         MeshBackground(ConnectionStatus.DISCONNECTED, animate = true, modifier = Modifier.fillMaxSize())
@@ -89,25 +87,17 @@ fun SettingsScreen(
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("WARP", color = Ink, fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
                     Text(
-                        "Nimbus запрашивает ключи Cloudflare на generator-config-warp.vercel.app и сам собирает AmneziaWG-конфиги для Германии, Польши, Нидерландов, Финляндии, Эстонии, Латвии и России.",
+                        "Выбери страну и LTE в приложении. Nimbus запросит ключи Cloudflare и соберёт AmneziaWG-конфиг — без сайта и копирования.",
                         color = InkMuted,
                         fontSize = 13.sp,
                     )
-                    if (warp.generating) {
-                        Text("Создаю конфиги…", color = Ink, fontSize = 13.sp)
-                    } else if (!warp.error.isNullOrBlank()) {
-                        Text(warp.error!!, color = Ink, fontSize = 13.sp)
-                    } else if (!warp.message.isNullOrBlank()) {
-                        Text(warp.message!!, color = InkMuted, fontSize = 13.sp)
-                    }
                     Button(
-                        onClick = onGenerateWarp,
-                        enabled = !warp.generating,
+                        onClick = onCreateWarp,
                         colors = ButtonDefaults.buttonColors(containerColor = Ink, contentColor = Paper),
                         shape = RoundedCornerShape(18.dp),
                         modifier = Modifier.fillMaxWidth().height(46.dp),
                     ) {
-                        Text(if (warp.generating) "Создаю…" else "Обновить WARP-конфиги")
+                        Text("Создать WARP")
                     }
                 }
             }

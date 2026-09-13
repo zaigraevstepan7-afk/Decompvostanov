@@ -25,6 +25,7 @@ data class WarpUiState(
     val generating: Boolean = false,
     val error: String? = null,
     val message: String? = null,
+    val created: Boolean = false,
 )
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
@@ -41,30 +42,26 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val _warp = MutableStateFlow(WarpUiState())
     val warp: StateFlow<WarpUiState> = _warp.asStateFlow()
 
-    init {
-        viewModelScope.launch {
-            if (app.container.profiles.profiles.isEmpty()) {
-                generateWarp()
-            }
-        }
-    }
-
-    fun generateWarp() {
+    fun createWarp(countryId: String, lte: Boolean) {
         if (_warp.value.generating) return
         _warp.value = WarpUiState(generating = true)
         viewModelScope.launch {
-            val running = tunnel.value.status == ConnectionStatus.CONNECTED ||
-                tunnel.value.status == ConnectionStatus.CONNECTING
-            if (running) {
-                app.container.tunnel.disconnect()
-            }
             val result = withContext(Dispatchers.IO) {
-                runCatching { WarpGenerator.generate() }
+                runCatching { WarpGenerator.generateOne(countryId, lte) }
             }
             result.fold(
-                onSuccess = { list ->
-                    app.container.profiles.upsertAll(list, list.first().id)
-                    _warp.value = WarpUiState(message = "Создано ${list.size} серверов WARP")
+                onSuccess = { profile ->
+                    val running = tunnel.value.status == ConnectionStatus.CONNECTED ||
+                        tunnel.value.status == ConnectionStatus.CONNECTING
+                    app.container.profiles.upsert(profile, makeActive = true)
+                    if (running) {
+                        app.container.tunnel.disconnect()
+                        app.container.tunnel.connectActive()
+                    }
+                    _warp.value = WarpUiState(
+                        message = "Создан ${profile.name}",
+                        created = true,
+                    )
                 },
                 onFailure = { error ->
                     _warp.value = WarpUiState(
@@ -72,6 +69,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     )
                 },
             )
+        }
+    }
+
+    fun consumeWarpCreated() {
+        if (_warp.value.created) {
+            _warp.value = _warp.value.copy(created = false)
         }
     }
 

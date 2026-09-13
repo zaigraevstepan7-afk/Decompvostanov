@@ -5,6 +5,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.net.HttpURLConnection
 import java.net.URL
+import kotlin.random.Random
 
 data class WarpKeys(
     val privateKey: String,
@@ -13,10 +14,22 @@ data class WarpKeys(
     val clientIpv6: String?,
 )
 
-data class WarpServer(
+data class WarpCountry(
+    val id: String,
+    val name: String,
+    val flag: String,
+    val host: String,
+    val lteHost: String? = null,
+    val lteExcludedPorts: Set<Int> = emptySet(),
+) {
+    val hasLte: Boolean get() = !lteHost.isNullOrBlank()
+}
+
+data class WarpEndpoint(
     val id: String,
     val name: String,
     val host: String,
+    val excludedPorts: Set<Int> = emptySet(),
 )
 
 object WarpConfigBuilder {
@@ -26,24 +39,54 @@ object WarpConfigBuilder {
     const val MTU = 1280
     const val KEEPALIVE = 25
 
-    val servers: List<WarpServer> = listOf(
-        WarpServer("de", "Германия", "de.tribukvy.ltd"),
-        WarpServer("pl", "Польша", "pl.tribukvy.ltd"),
-        WarpServer("nl", "Нидерланды", "nl.tribukvy.ltd"),
-        WarpServer("fi", "Финляндия", "fi.tribukvy.ltd"),
-        WarpServer("ee", "Эстония", "ee.tribukvy.ltd"),
-        WarpServer("lv", "Латвия", "lv.tribukvy.ltd"),
-        WarpServer("ru", "Россия", "ru0.tribukvy.ltd"),
+    val ports: List<Int> = listOf(
+        500, 854, 859, 864, 878, 880, 890, 891, 894, 903, 908, 928, 934, 939, 942, 943,
+        945, 946, 955, 968, 987, 988, 1002, 1010, 1014, 1018, 1070, 1074, 1180, 1387,
+        1701, 1843, 2371, 2408, 2506, 3138, 3476, 3581, 3854, 4177, 4198, 4233, 4500,
+        5279, 5956, 7103, 7152, 7156, 7281, 7559, 8319, 8742, 8854, 8886,
     )
 
-    fun profileId(serverId: String): String = "warp:$serverId"
+    val countries: List<WarpCountry> = listOf(
+        WarpCountry("de", "Германия", "🇩🇪", "de.tribukvy.ltd", lteHost = "tel.de.tribukvy.ltd"),
+        WarpCountry("pl", "Польша", "🇵🇱", "pl.tribukvy.ltd", lteHost = "tel.pl.tribukvy.ltd", lteExcludedPorts = setOf(988)),
+        WarpCountry("nl", "Нидерланды", "🇳🇱", "nl.tribukvy.ltd"),
+        WarpCountry("fi", "Финляндия", "🇫🇮", "fi.tribukvy.ltd", lteHost = "tel.fi.tribukvy.ltd", lteExcludedPorts = setOf(1010)),
+        WarpCountry("ee", "Эстония", "🇪🇪", "ee.tribukvy.ltd"),
+        WarpCountry("lv", "Латвия", "🇱🇻", "lv.tribukvy.ltd"),
+        WarpCountry("ru", "Россия", "🇷🇺", "ru0.tribukvy.ltd"),
+    )
 
-    fun isWarpProfile(id: String): Boolean = id.startsWith("warp:")
+    fun country(id: String): WarpCountry? = countries.firstOrNull { it.id == id }
 
-    fun build(keys: WarpKeys, host: String, port: Int = DEFAULT_PORT): String {
-        val ipv6 = keys.clientIpv6?.trim().orEmpty()
-        val address = if (ipv6.isNotEmpty()) {
-            "${keys.clientIpv4.trim()}, $ipv6"
+    fun resolve(countryId: String, lte: Boolean): WarpEndpoint {
+        val country = country(countryId) ?: error("Неизвестная страна: $countryId")
+        val useLte = lte && country.hasLte
+        return WarpEndpoint(
+            id = if (useLte) "lte-${country.id}" else country.id,
+            name = if (useLte) "${country.name} LTE" else country.name,
+            host = if (useLte) country.lteHost!! else country.host,
+            excludedPorts = if (useLte) country.lteExcludedPorts else emptySet(),
+        )
+    }
+
+    fun profileId(endpointId: String): String = "warp:$endpointId"
+
+    fun portsFor(excluded: Set<Int>): List<Int> = ports.filterNot { it in excluded }
+
+    fun randomPort(excluded: Set<Int> = emptySet(), random: Random = Random.Default): Int {
+        val pool = portsFor(excluded)
+        require(pool.isNotEmpty()) { "Нет доступных портов" }
+        return pool.random(random)
+    }
+
+    fun build(
+        keys: WarpKeys,
+        host: String,
+        port: Int = DEFAULT_PORT,
+        ipv6: Boolean = true,
+    ): String {
+        val address = if (ipv6 && !keys.clientIpv6.isNullOrBlank()) {
+            "${keys.clientIpv4.trim()}, ${keys.clientIpv6.trim()}"
         } else {
             keys.clientIpv4.trim()
         }
@@ -73,24 +116,15 @@ object WarpConfigBuilder {
             PersistentKeepalive = $KEEPALIVE
         """.trimIndent() + "\n"
     }
-
-    fun profiles(keys: WarpKeys, port: Int = DEFAULT_PORT): List<VpnProfile> {
-        val createdAt = System.currentTimeMillis()
-        return servers.map { server ->
-            VpnProfile(
-                id = profileId(server.id),
-                name = server.name,
-                rawConfig = build(keys, server.host, port),
-                createdAt = createdAt,
-            )
-        }
-    }
 }
 
 object WarpApi {
     const val DEFAULT_URL = "https://generator-config-warp.vercel.app/api/warp-data"
 
     private val json = Json { ignoreUnknownKeys = true }
+
+    @Volatile
+    private var cached: WarpKeys? = null
 
     fun parse(body: String): WarpKeys {
         val parsed = json.decodeFromString(WarpApiResponse.serializer(), body)
@@ -109,21 +143,22 @@ object WarpApi {
         )
     }
 
-    fun fetch(url: String = DEFAULT_URL): WarpKeys {
+    fun fetch(url: String = DEFAULT_URL, forceRefresh: Boolean = false): WarpKeys {
+        if (!forceRefresh) cached?.let { return it }
         val connection = (URL(url).openConnection() as HttpURLConnection).apply {
             connectTimeout = 15_000
             readTimeout = 20_000
             requestMethod = "GET"
             instanceFollowRedirects = true
             setRequestProperty("Accept", "application/json")
-            setRequestProperty("User-Agent", "NimbusVPN/1.0.3")
+            setRequestProperty("User-Agent", "NimbusVPN/1.0.4")
         }
         try {
             val code = connection.responseCode
             val stream = if (code in 200..299) connection.inputStream else connection.errorStream
             val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
             require(code in 200..299) { "WARP HTTP $code" }
-            return parse(body)
+            return parse(body).also { cached = it }
         } finally {
             connection.disconnect()
         }
@@ -131,16 +166,24 @@ object WarpApi {
 }
 
 object WarpGenerator {
-    fun generate(fetchKeys: () -> WarpKeys = { WarpApi.fetch() }): List<VpnProfile> {
-        val profiles = WarpConfigBuilder.profiles(fetchKeys())
-        require(profiles.isNotEmpty()) { "Список серверов WARP пуст" }
-        profiles.forEach { profile ->
-            val preview = ConfigParser.parse(profile.rawConfig)
-            require(preview.canConnect) {
-                "Собранный WARP-конфиг невалиден: ${preview.issues.joinToString()}"
-            }
+    fun generateOne(
+        countryId: String,
+        lte: Boolean = false,
+        fetchKeys: () -> WarpKeys = { WarpApi.fetch() },
+        port: Int? = null,
+    ): VpnProfile {
+        val endpoint = WarpConfigBuilder.resolve(countryId, lte)
+        val chosenPort = port ?: WarpConfigBuilder.randomPort(endpoint.excludedPorts)
+        val conf = WarpConfigBuilder.build(fetchKeys(), endpoint.host, chosenPort)
+        val preview = ConfigParser.parse(conf)
+        require(preview.canConnect) {
+            "Собранный WARP-конфиг невалиден: ${preview.issues.joinToString()}"
         }
-        return profiles
+        return VpnProfile(
+            id = WarpConfigBuilder.profileId(endpoint.id),
+            name = endpoint.name,
+            rawConfig = conf,
+        )
     }
 }
 

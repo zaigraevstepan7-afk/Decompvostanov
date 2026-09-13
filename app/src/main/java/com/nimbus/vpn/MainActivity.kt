@@ -30,6 +30,7 @@ import com.nimbus.vpn.ui.importcfg.ImportScreen
 import com.nimbus.vpn.ui.profiles.ProfilesScreen
 import com.nimbus.vpn.ui.settings.SettingsScreen
 import com.nimbus.vpn.ui.theme.NimbusTheme
+import com.nimbus.vpn.ui.warp.WarpCreateScreen
 
 class MainActivity : ComponentActivity() {
     private val viewModel: AppViewModel by viewModels()
@@ -104,9 +105,9 @@ class MainActivity : ComponentActivity() {
                         HomeScreen(
                             state = tunnel,
                             profiles = profiles,
-                            warp = warp,
                             animate = animate,
                             onToggle = { requestConnect() },
+                            onCreateWarp = { nav.navigate("warp") },
                             onImport = { nav.navigate("import") },
                             onSelect = viewModel::selectProfile,
                             onDelete = viewModel::deleteProfile,
@@ -119,7 +120,16 @@ class MainActivity : ComponentActivity() {
                                     ),
                                 )
                             },
-                            onGenerateWarp = viewModel::generateWarp,
+                        )
+                    }
+                    composable("warp") {
+                        WarpCreateScreen(
+                            warp = warp,
+                            onBack = { nav.popBackStack() },
+                            onCreate = viewModel::createWarp,
+                            onImport = { nav.navigate("import") },
+                            onCreated = { nav.popBackStack("home", inclusive = false) },
+                            onConsumed = viewModel::consumeWarpCreated,
                         )
                     }
                     composable("import") {
@@ -127,11 +137,6 @@ class MainActivity : ComponentActivity() {
                             onBack = { nav.popBackStack() },
                             onImportText = { name, raw -> viewModel.importText(name, raw) },
                             onImportUri = { uri, name -> viewModel.importUri(uri, name) },
-                            warp = warp,
-                            onGenerateWarp = {
-                                viewModel.generateWarp()
-                                nav.popBackStack()
-                            },
                         )
                     }
                     composable("profiles") {
@@ -150,7 +155,6 @@ class MainActivity : ComponentActivity() {
                         SettingsScreen(
                             settings = settings,
                             root = root,
-                            warp = warp,
                             onBack = { nav.popBackStack() },
                             onAutoConnect = viewModel::setAutoConnect,
                             onKillSwitch = viewModel::setKillSwitch,
@@ -158,7 +162,7 @@ class MainActivity : ComponentActivity() {
                             onBatteryExemption = {
                                 viewModel.batteryIntent()?.let { battery.launch(it) }
                             },
-                            onGenerateWarp = viewModel::generateWarp,
+                            onCreateWarp = { nav.navigate("warp") },
                         )
                     }
                 }
