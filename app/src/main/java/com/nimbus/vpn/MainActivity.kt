@@ -173,6 +173,7 @@ class MainActivity : ComponentActivity() {
                                 viewModel.batteryIntent()?.let { battery.launch(it) }
                             },
                             onCreateWarp = { nav.navigate("warp") },
+                            onAccessLink = viewModel::setAccessLink,
                         )
                     }
                 }

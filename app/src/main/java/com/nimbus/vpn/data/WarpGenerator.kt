@@ -151,7 +151,7 @@ object WarpApi {
             requestMethod = "GET"
             instanceFollowRedirects = true
             setRequestProperty("Accept", "application/json")
-            setRequestProperty("User-Agent", "BozyaVPN/1.0.7")
+            setRequestProperty("User-Agent", "BozyaVPN/1.0.8")
         }
         try {
             val code = connection.responseCode

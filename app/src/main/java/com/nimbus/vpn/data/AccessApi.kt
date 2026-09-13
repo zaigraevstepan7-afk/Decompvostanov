@@ -4,7 +4,10 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 object AccessApi {
-    const val URL = "https://relay.tribukvy.ltd/activate/eda7da9c3c724702"
+    const val URL_1 = "https://relay.tribukvy.ltd/activate/eda7da9c3c724702"
+    const val URL_2 = "https://relay.tribukvy.ltd/activate/047e68e90d19488b"
+
+    fun urlFor(slot: Int): String = if (slot == 2) URL_2 else URL_1
 
     fun isActivated(body: String, code: Int): Boolean {
         if (code !in 200..399) return false
@@ -16,14 +19,14 @@ object AccessApi {
             code in 200..299
     }
 
-    fun activate(url: String = URL): String {
+    fun activate(url: String = URL_1): String {
         val connection = (URL(url).openConnection() as HttpURLConnection).apply {
             connectTimeout = 12_000
             readTimeout = 15_000
             requestMethod = "GET"
             instanceFollowRedirects = true
             setRequestProperty("Accept", "text/html,application/json")
-            setRequestProperty("User-Agent", "BozyaVPN/1.0.7")
+            setRequestProperty("User-Agent", "BozyaVPN/1.0.8")
         }
         try {
             val code = connection.responseCode

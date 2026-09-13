@@ -1,9 +1,13 @@
 package com.nimbus.vpn.ui.settings
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,9 +15,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Switch
@@ -22,6 +29,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nimbus.vpn.data.AppSettings
@@ -29,13 +38,11 @@ import com.nimbus.vpn.tunnel.ConnectionStatus
 import com.nimbus.vpn.tunnel.RootPowerManager
 import com.nimbus.vpn.ui.components.GlassCard
 import com.nimbus.vpn.ui.components.MeshBackground
+import com.nimbus.vpn.ui.theme.Canvas
 import com.nimbus.vpn.ui.theme.Ink
 import com.nimbus.vpn.ui.theme.InkMuted
 import com.nimbus.vpn.ui.theme.Line
 import com.nimbus.vpn.ui.theme.Paper
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.foundation.shape.RoundedCornerShape
 
 @Composable
 fun SettingsScreen(
@@ -47,6 +54,7 @@ fun SettingsScreen(
     onRootBattery: (Boolean) -> Unit,
     onBatteryExemption: () -> Unit,
     onCreateWarp: () -> Unit,
+    onAccessLink: (Int) -> Unit,
 ) {
     Box(Modifier.fillMaxSize()) {
         MeshBackground(ConnectionStatus.DISCONNECTED, animate = true, modifier = Modifier.fillMaxSize())
@@ -66,7 +74,7 @@ fun SettingsScreen(
             Spacer(Modifier.height(16.dp))
             GlassCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Фон и батарея", color = Ink, fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+                    Text("Фон и батарея", color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                     Text(root.message, color = InkMuted, fontSize = 13.sp)
                     Text(
                         "Туннель живёт в VpnService. Анимации гаснут, когда экран не смотрит на приложение. " +
@@ -84,8 +92,34 @@ fun SettingsScreen(
             ToggleRow("Root-защита батареи", "Whitelist, appops, без разгона CPU", settings.rootBatteryGuard, onRootBattery)
             Spacer(Modifier.height(16.dp))
             GlassCard(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Подтверждение доступа", color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                    Text(
+                        "Кнопка «Доступ» дергает выбранную ссылку.",
+                        color = InkMuted,
+                        fontSize = 13.sp,
+                    )
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        AccessLinkChoice(
+                            label = "Ссылка 1",
+                            selected = settings.accessLink != 2,
+                            onClick = { onAccessLink(1) },
+                        )
+                        AccessLinkChoice(
+                            label = "Ссылка 2",
+                            selected = settings.accessLink == 2,
+                            onClick = { onAccessLink(2) },
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            GlassCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("WARP", color = Ink, fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+                    Text("WARP", color = Ink, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                     Text(
                         "Выбери страну и LTE в приложении. Bozya VPN запросит ключи Cloudflare и соберёт AmneziaWG-конфиг — без сайта и копирования.",
                         color = InkMuted,
@@ -148,5 +182,31 @@ private fun ToggleRow(title: String, subtitle: String, checked: Boolean, onChang
                 ),
             )
         }
+    }
+}
+
+@Composable
+private fun RowScope.AccessLinkChoice(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val shape = RoundedCornerShape(18.dp)
+    Box(
+        modifier = Modifier
+            .weight(1f)
+            .height(46.dp)
+            .clip(shape)
+            .background(if (selected) Ink else Paper)
+            .border(1.dp, if (selected) Ink else Line, shape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            label,
+            color = if (selected) Canvas else Ink,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+        )
     }
 }

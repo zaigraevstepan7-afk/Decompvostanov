@@ -3,6 +3,7 @@ package com.nimbus.vpn.data
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -16,6 +17,7 @@ class SettingsRepository(private val context: Context) {
             killSwitch = prefs[KILL_SWITCH] ?: true,
             rootBatteryGuard = prefs[ROOT_BATTERY] ?: true,
             preferRoot = prefs[PREFER_ROOT] ?: true,
+            accessLink = (prefs[ACCESS_LINK] ?: 1).coerceIn(1, 2),
         )
     }
 
@@ -23,6 +25,9 @@ class SettingsRepository(private val context: Context) {
     suspend fun setKillSwitch(value: Boolean) = set(KILL_SWITCH, value)
     suspend fun setRootBatteryGuard(value: Boolean) = set(ROOT_BATTERY, value)
     suspend fun setPreferRoot(value: Boolean) = set(PREFER_ROOT, value)
+    suspend fun setAccessLink(value: Int) {
+        context.settingsStore.edit { it[ACCESS_LINK] = value.coerceIn(1, 2) }
+    }
 
     private suspend fun set(key: androidx.datastore.preferences.core.Preferences.Key<Boolean>, value: Boolean) {
         context.settingsStore.edit { it[key] = value }
@@ -33,6 +38,7 @@ class SettingsRepository(private val context: Context) {
         val KILL_SWITCH = booleanPreferencesKey("kill_switch")
         val ROOT_BATTERY = booleanPreferencesKey("root_battery")
         val PREFER_ROOT = booleanPreferencesKey("prefer_root")
+        val ACCESS_LINK = intPreferencesKey("access_link")
     }
 }
 
@@ -41,4 +47,5 @@ data class AppSettings(
     val killSwitch: Boolean = true,
     val rootBatteryGuard: Boolean = true,
     val preferRoot: Boolean = true,
+    val accessLink: Int = 1,
 )

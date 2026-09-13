@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -57,8 +58,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         if (_access.value.status == AccessStatus.WORKING) return
         _access.value = AccessUiState(AccessStatus.WORKING)
         viewModelScope.launch {
+            val url = AccessApi.urlFor(app.container.settings.settings.first().accessLink)
             val result = withContext(Dispatchers.IO) {
-                runCatching { AccessApi.activate() }
+                runCatching { AccessApi.activate(url) }
             }
             result.fold(
                 onSuccess = {
@@ -173,4 +175,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun setAutoConnect(value: Boolean) = viewModelScope.launch { app.container.settings.setAutoConnect(value) }
     fun setKillSwitch(value: Boolean) = viewModelScope.launch { app.container.settings.setKillSwitch(value) }
     fun setRootBattery(value: Boolean) = viewModelScope.launch { app.container.settings.setRootBatteryGuard(value) }
+    fun setAccessLink(value: Int) = viewModelScope.launch {
+        app.container.settings.setAccessLink(value)
+        _access.value = AccessUiState()
+    }
 }
