@@ -10,6 +10,7 @@ import com.nimbus.vpn.data.AppSettings
 import com.nimbus.vpn.data.ConfigParser
 import com.nimbus.vpn.data.VpnProfile
 import com.nimbus.vpn.data.WarpGenerator
+import com.nimbus.vpn.data.AccessApi
 import com.nimbus.vpn.tunnel.ConnectionStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +21,13 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
+
+enum class AccessStatus { IDLE, WORKING, OK, FAIL }
+
+data class AccessUiState(
+    val status: AccessStatus = AccessStatus.IDLE,
+    val message: String? = null,
+)
 
 data class WarpUiState(
     val generating: Boolean = false,
@@ -41,6 +49,30 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _warp = MutableStateFlow(WarpUiState())
     val warp: StateFlow<WarpUiState> = _warp.asStateFlow()
+
+    private val _access = MutableStateFlow(AccessUiState())
+    val access: StateFlow<AccessUiState> = _access.asStateFlow()
+
+    fun activateAccess() {
+        if (_access.value.status == AccessStatus.WORKING) return
+        _access.value = AccessUiState(AccessStatus.WORKING)
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching { AccessApi.activate() }
+            }
+            result.fold(
+                onSuccess = {
+                    _access.value = AccessUiState(AccessStatus.OK, it)
+                },
+                onFailure = { error ->
+                    _access.value = AccessUiState(
+                        AccessStatus.FAIL,
+                        error.message ?: "Не удалось активировать",
+                    )
+                },
+            )
+        }
+    }
 
     fun createWarp(countryId: String, lte: Boolean) {
         if (_warp.value.generating) return

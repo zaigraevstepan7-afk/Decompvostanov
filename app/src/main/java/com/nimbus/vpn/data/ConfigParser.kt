@@ -139,7 +139,7 @@ object ConfigParser {
         )
     }
 
-    fun suggestName(raw: String, fallback: String = "Nimbus"): String {
+    fun suggestName(raw: String, fallback: String = "Bozya"): String {
         val preview = parse(raw)
         val host = preview.endpoint?.substringBefore(":")?.substringBefore(".")
         return host?.replace(Regex("[^A-Za-z0-9_+.-]"), "")?.take(12)?.ifBlank { fallback } ?: fallback

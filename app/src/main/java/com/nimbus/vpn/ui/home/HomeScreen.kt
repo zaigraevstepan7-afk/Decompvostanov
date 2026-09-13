@@ -1,7 +1,15 @@
 package com.nimbus.vpn.ui.home
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -44,10 +52,14 @@ import com.nimbus.vpn.data.ConfigParser
 import com.nimbus.vpn.data.ProfileIndex
 import com.nimbus.vpn.tunnel.ConnectionStatus
 import com.nimbus.vpn.tunnel.TunnelUiState
+import com.nimbus.vpn.ui.AccessStatus
+import com.nimbus.vpn.ui.AccessUiState
 import com.nimbus.vpn.ui.components.MeshBackground
 import com.nimbus.vpn.ui.components.PowerOrb
+import com.nimbus.vpn.ui.theme.Canvas
 import com.nimbus.vpn.ui.theme.Ink
 import com.nimbus.vpn.ui.theme.InkMuted
+import com.nimbus.vpn.ui.theme.Lift
 import com.nimbus.vpn.ui.theme.Line
 import com.nimbus.vpn.ui.theme.Paper
 import java.util.Locale
@@ -57,6 +69,7 @@ import java.util.concurrent.TimeUnit
 fun HomeScreen(
     state: TunnelUiState,
     profiles: ProfileIndex,
+    access: AccessUiState,
     animate: Boolean,
     onToggle: () -> Unit,
     onCreateWarp: () -> Unit,
@@ -83,17 +96,7 @@ fun HomeScreen(
                     Icon(Icons.Rounded.Settings, contentDescription = "Настройки", tint = Ink)
                 }
                 Spacer(Modifier.weight(1f))
-                Text(
-                    "Доступ",
-                    color = Paper,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(Ink)
-                        .clickable(onClick = onConfirmAccess)
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                )
+                AccessChip(access = access, onClick = onConfirmAccess)
                 Spacer(Modifier.weight(1f))
                 IconButton(onClick = onCreateWarp) {
                     Icon(Icons.Rounded.Add, contentDescription = "Создать WARP", tint = Ink)
@@ -106,32 +109,50 @@ fun HomeScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
+                Text(
+                    "bozya vpn",
+                    color = Ink,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 1.4.sp,
+                )
+                Spacer(Modifier.height(18.dp))
                 PowerOrb(status = state.status, animate = animate, onClick = onToggle)
-                AnimatedVisibility(visible = state.status != ConnectionStatus.DISCONNECTED || !state.error.isNullOrBlank()) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            statusLabel(state.status),
-                            color = Ink,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Medium,
-                        )
-                        if (state.status == ConnectionStatus.CONNECTED) {
-                            Text(
-                                "${formatDuration(state.connectedSince)}  ·  ↓ ${formatRate(state.rxRate)}  ·  ↑ ${formatRate(state.txRate)}",
-                                color = InkMuted,
-                                fontSize = 12.sp,
-                                modifier = Modifier.padding(top = 4.dp),
-                            )
-                        }
-                        if (!state.error.isNullOrBlank()) {
-                            Text(
-                                state.error!!,
-                                color = Ink,
-                                fontSize = 13.sp,
-                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp),
-                            )
-                        }
-                    }
+                Spacer(Modifier.height(10.dp))
+                AnimatedContent(
+                    targetState = statusLabel(state.status),
+                    transitionSpec = {
+                        (fadeIn(tween(280)) + slideInVertically(tween(280)) { it / 3 }) togetherWith
+                            (fadeOut(tween(180)) + slideOutVertically(tween(180)) { -it / 4 })
+                    },
+                    label = "status",
+                ) { label ->
+                    Text(
+                        label,
+                        color = Ink,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+                AnimatedVisibility(
+                    visible = state.status == ConnectionStatus.CONNECTED,
+                    enter = fadeIn(tween(320)) + slideInVertically(tween(320)) { it / 2 },
+                    exit = fadeOut(tween(180)),
+                ) {
+                    Text(
+                        "${formatDuration(state.connectedSince)}  ·  ↓ ${formatRate(state.rxRate)}  ·  ↑ ${formatRate(state.txRate)}",
+                        color = InkMuted,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(top = 6.dp),
+                    )
+                }
+                AnimatedVisibility(visible = !state.error.isNullOrBlank()) {
+                    Text(
+                        state.error ?: "",
+                        color = Ink,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp),
+                    )
                 }
             }
             ServerSheet(
@@ -147,6 +168,31 @@ fun HomeScreen(
 }
 
 @Composable
+private fun AccessChip(access: AccessUiState, onClick: () -> Unit) {
+    val working = access.status == AccessStatus.WORKING
+    val ok = access.status == AccessStatus.OK
+    val label = when (access.status) {
+        AccessStatus.IDLE -> "Доступ"
+        AccessStatus.WORKING -> "Активирую"
+        AccessStatus.OK -> "Активирован"
+        AccessStatus.FAIL -> "Повторить"
+    }
+    val shape = RoundedCornerShape(20.dp)
+    Text(
+        label,
+        color = if (ok) Canvas else Ink,
+        fontSize = 12.sp,
+        fontWeight = FontWeight.Medium,
+        modifier = Modifier
+            .clip(shape)
+            .background(if (ok) Ink else Color.Transparent)
+            .border(1.dp, Ink, shape)
+            .clickable(enabled = !working, onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 7.dp),
+    )
+}
+
+@Composable
 private fun ServerSheet(
     state: TunnelUiState,
     profiles: ProfileIndex,
@@ -158,11 +204,11 @@ private fun ServerSheet(
     Column(
         Modifier
             .fillMaxWidth()
-            .shadow(12.dp, RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp), ambientColor = Color(0x14000000))
-            .clip(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
+            .shadow(18.dp, RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp), ambientColor = Color(0x66000000))
+            .clip(RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp))
             .background(Paper)
             .navigationBarsPadding()
-            .height(340.dp),
+            .height(330.dp),
     ) {
         Row(
             Modifier
@@ -190,14 +236,14 @@ private fun ServerSheet(
             ) {
                 Text("Пока пусто", color = Ink, fontWeight = FontWeight.Medium)
                 Text(
-                    "Выбери страну и LTE — Nimbus сам запросит ключи и соберёт AmneziaWG-конфиг.",
+                    "Выбери страну и LTE — Bozya сам запросит ключи и соберёт AmneziaWG-конфиг.",
                     color = InkMuted,
                     fontSize = 13.sp,
                     modifier = Modifier.padding(top = 6.dp),
                 )
                 Button(
                     onClick = onCreateWarp,
-                    colors = ButtonDefaults.buttonColors(containerColor = Ink, contentColor = Paper),
+                    colors = ButtonDefaults.buttonColors(containerColor = Ink, contentColor = Canvas),
                     shape = RoundedCornerShape(18.dp),
                     modifier = Modifier
                         .padding(top = 14.dp)
@@ -232,7 +278,7 @@ private fun ServerSheet(
                         Modifier
                             .fillMaxWidth()
                             .clickable { onSelect(profile.id) }
-                            .background(if (active) Color(0xFFF6F6F7) else Color.Transparent)
+                            .background(if (active) Lift else Color.Transparent)
                             .padding(horizontal = 18.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {

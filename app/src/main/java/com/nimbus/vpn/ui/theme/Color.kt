@@ -2,14 +2,15 @@ package com.nimbus.vpn.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Canvas = Color(0xFFF3F4F6)
-val Paper = Color(0xFFFFFFFF)
-val Ink = Color(0xFF111111)
-val InkMuted = Color(0xFF6B6B6B)
-val Line = Color(0xFFE6E6E8)
-val Ring = Color(0xFFD4D4D8)
-val Danger = Color(0xFF1A1A1A)
-val Success = Color(0xFF111111)
+val Canvas = Color(0xFF000000)
+val Paper = Color(0xFF141414)
+val Ink = Color(0xFFFFFFFF)
+val InkMuted = Color(0xFFB3B3B3)
+val Line = Color(0xFF2A2A2A)
+val Ring = Color(0xFF3A3A3A)
+val Lift = Color(0xFF1C1C1C)
+val Danger = Color(0xFFFFFFFF)
+val Success = Color(0xFFFFFFFF)
 
 @Deprecated("Use Ink")
 val Night = Ink

@@ -63,7 +63,7 @@ fun ProfilesScreen(
             if (index.profiles.isEmpty()) {
                 GlassCard(Modifier.fillMaxWidth()) {
                     Text(
-                        "Пока пусто. Импортируй .conf — Nimbus подхватит Address, DNS, MTU и Amnezia-поля Jc/I1.",
+                        "Пока пусто. Импортируй .conf — Bozya подхватит Address, DNS, MTU и Amnezia-поля Jc/I1.",
                         color = TextMuted,
                         modifier = Modifier.padding(18.dp),
                     )

@@ -36,7 +36,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,6 +45,7 @@ import com.nimbus.vpn.ui.WarpUiState
 import com.nimbus.vpn.ui.components.MeshBackground
 import com.nimbus.vpn.ui.theme.Ink
 import com.nimbus.vpn.ui.theme.InkMuted
+import com.nimbus.vpn.ui.theme.Lift
 import com.nimbus.vpn.ui.theme.Line
 import com.nimbus.vpn.ui.theme.Paper
 
@@ -111,7 +111,7 @@ fun WarpCreateScreen(
                             .fillMaxWidth()
                             .clip(CardShape)
                             .border(if (selected) 2.dp else 1.dp, if (selected) Ink else Line, CardShape)
-                            .background(if (selected) Color(0xFFF6F6F7) else Paper)
+                            .background(if (selected) Lift else Paper)
                             .clickable(enabled = !warp.generating) { countryId = item.id }
                             .padding(horizontal = 16.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -185,12 +185,12 @@ fun WarpCreateScreen(
                 Button(
                     onClick = { onCreate(countryId, lte && lteAvailable) },
                     enabled = !warp.generating,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Ink,
-                        contentColor = Paper,
-                        disabledContainerColor = Line,
-                        disabledContentColor = Ink,
-                    ),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Ink,
+                            contentColor = com.nimbus.vpn.ui.theme.Canvas,
+                            disabledContainerColor = Line,
+                            disabledContentColor = Ink,
+                        ),
                     shape = CardShape,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -199,7 +199,7 @@ fun WarpCreateScreen(
                     if (warp.generating) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(20.dp),
-                            color = Paper,
+                            color = com.nimbus.vpn.ui.theme.Canvas,
                             strokeWidth = 2.dp,
                         )
                         Spacer(Modifier.size(10.dp))

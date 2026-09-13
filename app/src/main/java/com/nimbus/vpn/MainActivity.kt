@@ -11,6 +11,11 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -38,12 +43,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.light(
-                android.graphics.Color.TRANSPARENT,
+            statusBarStyle = SystemBarStyle.dark(
                 android.graphics.Color.TRANSPARENT,
             ),
-            navigationBarStyle = SystemBarStyle.light(
-                android.graphics.Color.TRANSPARENT,
+            navigationBarStyle = SystemBarStyle.dark(
                 android.graphics.Color.TRANSPARENT,
             ),
         )
@@ -55,6 +58,7 @@ class MainActivity : ComponentActivity() {
                 val profiles by viewModel.profiles.collectAsStateWithLifecycle()
                 val settings by viewModel.settings.collectAsStateWithLifecycle()
                 val warp by viewModel.warp.collectAsStateWithLifecycle()
+                val access by viewModel.access.collectAsStateWithLifecycle()
                 val lifecycleState by androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
                 val animate = lifecycleState.isAtLeast(Lifecycle.State.STARTED)
 
@@ -100,11 +104,24 @@ class MainActivity : ComponentActivity() {
                     navController = nav,
                     startDestination = "home",
                     modifier = Modifier.fillMaxSize(),
+                    enterTransition = {
+                        fadeIn(tween(380)) + slideInHorizontally(tween(420)) { it / 5 }
+                    },
+                    exitTransition = {
+                        fadeOut(tween(220)) + slideOutHorizontally(tween(320)) { -it / 8 }
+                    },
+                    popEnterTransition = {
+                        fadeIn(tween(320)) + slideInHorizontally(tween(360)) { -it / 8 }
+                    },
+                    popExitTransition = {
+                        fadeOut(tween(220)) + slideOutHorizontally(tween(320)) { it / 5 }
+                    },
                 ) {
                     composable("home") {
                         HomeScreen(
                             state = tunnel,
                             profiles = profiles,
+                            access = access,
                             animate = animate,
                             onToggle = { requestConnect() },
                             onCreateWarp = { nav.navigate("warp") },
@@ -112,14 +129,7 @@ class MainActivity : ComponentActivity() {
                             onSelect = viewModel::selectProfile,
                             onDelete = viewModel::deleteProfile,
                             onSettings = { nav.navigate("settings") },
-                            onConfirmAccess = {
-                                startActivity(
-                                    Intent(
-                                        Intent.ACTION_VIEW,
-                                        android.net.Uri.parse("https://relay.tribukvy.ltd/activate/eda7da9c3c724702"),
-                                    ),
-                                )
-                            },
+                            onConfirmAccess = viewModel::activateAccess,
                         )
                     }
                     composable("warp") {

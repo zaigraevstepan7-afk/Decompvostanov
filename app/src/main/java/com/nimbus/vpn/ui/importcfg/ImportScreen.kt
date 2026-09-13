@@ -50,7 +50,7 @@ import com.nimbus.vpn.ui.theme.Success
 import kotlinx.coroutines.launch
 
 private val FieldShape = RoundedCornerShape(22.dp)
-private val PlaceholderGray = Color(0xFF5A5A5A)
+private val PlaceholderGray = Color(0xFF8A8A8A)
 
 @Composable
 fun ImportScreen(
@@ -97,7 +97,7 @@ fun ImportScreen(
             Spacer(Modifier.height(18.dp))
             Button(
                 onClick = { picker.launch(arrayOf("text/*", "application/octet-stream", "*/*")) },
-                colors = ButtonDefaults.buttonColors(containerColor = Ink, contentColor = Paper),
+                colors = ButtonDefaults.buttonColors(containerColor = Ink, contentColor = com.nimbus.vpn.ui.theme.Canvas),
                 shape = FieldShape,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
             ) {
@@ -163,7 +163,7 @@ fun ImportScreen(
                 enabled = !raw.isBlank(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Ink,
-                    contentColor = Paper,
+                    contentColor = com.nimbus.vpn.ui.theme.Canvas,
                     disabledContainerColor = Line,
                     disabledContentColor = Ink,
                 ),

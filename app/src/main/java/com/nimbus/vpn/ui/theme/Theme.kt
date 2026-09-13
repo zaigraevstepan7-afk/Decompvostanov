@@ -1,22 +1,22 @@
 package com.nimbus.vpn.ui.theme
 
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 
-private val Scheme = lightColorScheme(
+private val Scheme = darkColorScheme(
     primary = Ink,
-    onPrimary = Paper,
+    onPrimary = Canvas,
     secondary = InkMuted,
-    onSecondary = Paper,
+    onSecondary = Canvas,
     background = Canvas,
     onBackground = Ink,
     surface = Paper,
     onSurface = Ink,
-    surfaceVariant = Paper,
+    surfaceVariant = Lift,
     onSurfaceVariant = InkMuted,
     error = Ink,
-    onError = Paper,
+    onError = Canvas,
     outline = Line,
 )
 

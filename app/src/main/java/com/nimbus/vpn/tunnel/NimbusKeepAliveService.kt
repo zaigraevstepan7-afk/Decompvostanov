@@ -8,6 +8,7 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
@@ -57,8 +58,10 @@ class NimbusKeepAliveService : Service() {
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_nimbus)
-            .setContentTitle("Nimbus")
+            .setLargeIcon(BitmapFactory.decodeResource(resources, R.drawable.ic_stat_large))
+            .setContentTitle(getString(R.string.app_name))
             .setContentText(title)
+            .setColor(0xFF000000.toInt())
             .setContentIntent(open)
             .setOngoing(true)
             .setSilent(true)
@@ -77,7 +80,7 @@ class NimbusKeepAliveService : Service() {
             getString(R.string.notification_channel),
             NotificationManager.IMPORTANCE_LOW,
         ).apply {
-            description = "Фоновое соединение Nimbus"
+            description = "Фоновое соединение Bozya VPN"
             setShowBadge(false)
             enableVibration(false)
             setSound(null, null)
