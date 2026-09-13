@@ -42,7 +42,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun disconnect() = viewModelScope.launch { app.container.tunnel.disconnect() }
 
     fun selectProfile(id: String) {
+        val running = tunnel.value.status == ConnectionStatus.CONNECTED ||
+            tunnel.value.status == ConnectionStatus.CONNECTING
         app.container.profiles.setActive(id)
+        if (running) {
+            viewModelScope.launch {
+                app.container.tunnel.disconnect()
+                app.container.tunnel.connectActive()
+            }
+        }
     }
 
     fun deleteProfile(id: String) {

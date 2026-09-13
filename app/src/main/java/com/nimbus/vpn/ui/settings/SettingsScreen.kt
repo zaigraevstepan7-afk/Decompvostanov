@@ -29,10 +29,10 @@ import com.nimbus.vpn.tunnel.ConnectionStatus
 import com.nimbus.vpn.tunnel.RootPowerManager
 import com.nimbus.vpn.ui.components.GlassCard
 import com.nimbus.vpn.ui.components.MeshBackground
-import com.nimbus.vpn.ui.theme.Cyan
-import com.nimbus.vpn.ui.theme.Night
-import com.nimbus.vpn.ui.theme.TextMuted
-import com.nimbus.vpn.ui.theme.TextPrimary
+import com.nimbus.vpn.ui.theme.Ink
+import com.nimbus.vpn.ui.theme.InkMuted
+import com.nimbus.vpn.ui.theme.Line
+import com.nimbus.vpn.ui.theme.Paper
 
 @Composable
 fun SettingsScreen(
@@ -55,19 +55,19 @@ fun SettingsScreen(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.Rounded.ArrowBack, contentDescription = "Назад", tint = TextPrimary)
+                    Icon(Icons.Rounded.ArrowBack, contentDescription = "Назад", tint = Ink)
                 }
-                Text("Настройки", color = TextPrimary, fontSize = 22.sp)
+                Text("Настройки", color = Ink, fontSize = 22.sp)
             }
             Spacer(Modifier.height(16.dp))
             GlassCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Фон и батарея", color = Cyan, fontSize = 13.sp)
-                    Text(root.message, color = TextMuted, fontSize = 13.sp)
+                    Text("Фон и батарея", color = Ink, fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+                    Text(root.message, color = InkMuted, fontSize = 13.sp)
                     Text(
                         "Туннель живёт в VpnService. Анимации гаснут, когда экран не смотрит на приложение. " +
                             "С root Nimbus добавляет себя в whitelist Doze — без глобального «производительного режима», который жрёт батарею.",
-                        color = TextMuted,
+                        color = InkMuted,
                         fontSize = 13.sp,
                     )
                 }
@@ -86,20 +86,15 @@ fun SettingsScreen(
                         .padding(18.dp)
                         .padding(bottom = 4.dp),
                 ) {
-                    Text("Игнор оптимизации батареи", color = TextPrimary)
+                    Text("Игнор оптимизации батареи", color = Ink)
                     Text(
                         "Системный диалог Android. Нажми, если OEM всё равно режет фон.",
-                        color = TextMuted,
+                        color = InkMuted,
                         fontSize = 13.sp,
                         modifier = Modifier.padding(top = 6.dp, bottom = 8.dp),
                     )
-                    Text(
-                        "Открыть",
-                        color = Cyan,
-                        modifier = Modifier.padding(top = 4.dp),
-                    )
                     androidx.compose.material3.TextButton(onClick = onBatteryExemption) {
-                        Text("Запросить исключение", color = Cyan)
+                        Text("Запросить исключение", color = Ink)
                     }
                 }
             }
@@ -115,15 +110,18 @@ private fun ToggleRow(title: String, subtitle: String, checked: Boolean, onChang
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
-                Text(title, color = TextPrimary)
-                Text(subtitle, color = TextMuted, fontSize = 13.sp)
+                Text(title, color = Ink)
+                Text(subtitle, color = InkMuted, fontSize = 13.sp)
             }
             Switch(
                 checked = checked,
                 onCheckedChange = onChange,
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = Night,
-                    checkedTrackColor = Cyan,
+                    checkedThumbColor = Paper,
+                    checkedTrackColor = Ink,
+                    uncheckedThumbColor = Paper,
+                    uncheckedTrackColor = Line,
+                    uncheckedBorderColor = Line,
                 ),
             )
         }

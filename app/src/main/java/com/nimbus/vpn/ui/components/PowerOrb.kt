@@ -1,19 +1,19 @@
 package com.nimbus.vpn.ui.components
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material3.Icon
@@ -22,10 +22,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
@@ -33,11 +33,10 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.nimbus.vpn.tunnel.ConnectionStatus
-import com.nimbus.vpn.ui.theme.Cyan
-import com.nimbus.vpn.ui.theme.Danger
-import com.nimbus.vpn.ui.theme.Night
-import com.nimbus.vpn.ui.theme.Success
-import com.nimbus.vpn.ui.theme.Violet
+import com.nimbus.vpn.ui.theme.Ink
+import com.nimbus.vpn.ui.theme.InkMuted
+import com.nimbus.vpn.ui.theme.Paper
+import com.nimbus.vpn.ui.theme.Ring
 
 @Composable
 fun PowerOrb(
@@ -47,42 +46,35 @@ fun PowerOrb(
     modifier: Modifier = Modifier,
 ) {
     val haptic = LocalHapticFeedback.current
-    val accent by animateColorAsState(
+    val iconTint by animateColorAsState(
         when (status) {
-            ConnectionStatus.CONNECTED -> Success
-            ConnectionStatus.CONNECTING -> Violet
-            ConnectionStatus.ERROR -> Danger
-            ConnectionStatus.DISCONNECTED -> Cyan
+            ConnectionStatus.CONNECTED -> Ink
+            ConnectionStatus.CONNECTING -> Ink
+            ConnectionStatus.ERROR -> Ink
+            ConnectionStatus.DISCONNECTED -> InkMuted
         },
-        label = "accent",
+        label = "icon",
     )
-    val pulseTransition = rememberInfiniteTransition(label = "pulse")
-    val pulse by pulseTransition.animateFloat(
-        initialValue = 0.92f,
-        targetValue = 1.08f,
-        animationSpec = infiniteRepeatable(
-            tween(if (status == ConnectionStatus.CONNECTING) 700 else 2200, easing = FastOutSlowInEasing),
-            RepeatMode.Reverse,
-        ),
-        label = "pulseVal",
+    val ringColor by animateColorAsState(
+        when (status) {
+            ConnectionStatus.CONNECTED -> Ink
+            ConnectionStatus.CONNECTING -> InkMuted
+            ConnectionStatus.ERROR -> Ink
+            ConnectionStatus.DISCONNECTED -> Ring
+        },
+        label = "ring",
     )
-    val spin by pulseTransition.animateFloat(
+    val spin by rememberInfiniteTransition(label = "spin").animateFloat(
         initialValue = 0f,
         targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(1400, easing = LinearEasing)),
-        label = "spin",
+        animationSpec = infiniteRepeatable(tween(1600, easing = LinearEasing), RepeatMode.Restart),
+        label = "spinVal",
     )
-    val scale by animateFloatAsState(
-        targetValue = if (status == ConnectionStatus.CONNECTED) 1.04f else 1f,
-        label = "scale",
-    )
-    val livePulse = if (animate) pulse else 1f
-    val liveSpin = if (animate) spin else 0f
+    val liveSpin = if (animate && status == ConnectionStatus.CONNECTING) spin else 0f
 
     Box(
         modifier
-            .size(220.dp)
-            .scale(scale)
+            .size(228.dp)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -93,53 +85,56 @@ fun PowerOrb(
         contentAlignment = Alignment.Center,
     ) {
         Canvas(Modifier.matchParentSize()) {
-            val radius = size.minDimension / 2f
             val center = Offset(size.width / 2f, size.height / 2f)
+            val outer = size.minDimension / 2f
             drawCircle(
-                brush = Brush.radialGradient(
-                    listOf(accent.copy(alpha = 0.28f * livePulse), accent.copy(alpha = 0f)),
-                    center = center,
-                    radius = radius,
-                ),
-            )
-            drawCircle(
-                color = Night.copy(alpha = 0.92f),
-                radius = radius * 0.42f,
+                color = Ring.copy(alpha = 0.55f),
+                radius = outer * 0.92f,
                 center = center,
+                style = Stroke(width = 1.5.dp.toPx()),
             )
-            drawCircle(
-                brush = Brush.linearGradient(listOf(accent, Violet)),
-                radius = radius * 0.42f,
-                center = center,
-                style = Stroke(width = 5.dp.toPx()),
-            )
-            if (status == ConnectionStatus.CONNECTING || status == ConnectionStatus.CONNECTED) {
+            if (status == ConnectionStatus.CONNECTING) {
                 rotate(liveSpin, center) {
                     drawArc(
-                        color = accent,
-                        startAngle = -20f,
-                        sweepAngle = 110f,
+                        color = Ink,
+                        startAngle = -90f,
+                        sweepAngle = 78f,
                         useCenter = false,
-                        topLeft = Offset(center.x - radius * 0.55f, center.y - radius * 0.55f),
-                        size = Size(radius * 1.1f, radius * 1.1f),
-                        style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round),
+                        topLeft = Offset(center.x - outer * 0.92f, center.y - outer * 0.92f),
+                        size = Size(outer * 1.84f, outer * 1.84f),
+                        style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round),
                     )
                 }
             }
-            if (status != ConnectionStatus.DISCONNECTED) {
+            if (status == ConnectionStatus.CONNECTED) {
                 drawCircle(
-                    color = accent.copy(alpha = 0.12f),
-                    radius = radius * 0.62f * livePulse,
+                    color = Ink.copy(alpha = 0.18f),
+                    radius = outer * 0.92f,
                     center = center,
                     style = Stroke(width = 2.dp.toPx()),
                 )
             }
         }
-        Icon(
-            Icons.Rounded.PowerSettingsNew,
-            contentDescription = "Подключить",
-            tint = accent,
-            modifier = Modifier.size(54.dp),
-        )
+        Box(
+            Modifier
+                .size(148.dp)
+                .shadow(18.dp, CircleShape, ambientColor = Color(0x33000000), spotColor = Color(0x28000000))
+                .background(Paper, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Canvas(Modifier.matchParentSize()) {
+                drawCircle(
+                    color = ringColor,
+                    radius = size.minDimension / 2f - 1.5.dp.toPx(),
+                    style = Stroke(width = if (status == ConnectionStatus.CONNECTED) 2.5.dp.toPx() else 1.2.dp.toPx()),
+                )
+            }
+            Icon(
+                Icons.Rounded.PowerSettingsNew,
+                contentDescription = "Подключить",
+                tint = iconTint,
+                modifier = Modifier.size(52.dp),
+            )
+        }
     }
 }

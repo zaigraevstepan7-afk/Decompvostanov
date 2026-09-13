@@ -2,15 +2,30 @@ package com.nimbus.vpn.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Night = Color(0xFF05070F)
-val NightElevated = Color(0xFF0C1220)
-val SurfaceCard = Color(0xCC121A2E)
-val Cyan = Color(0xFF5EEAD4)
-val CyanDim = Color(0xFF2A9B8F)
-val Violet = Color(0xFF8B7CFF)
-val Magenta = Color(0xFFD46BFF)
-val TextPrimary = Color(0xFFF2F6FF)
-val TextMuted = Color(0xFF8B95AB)
-val Danger = Color(0xFFFF6B81)
-val Success = Color(0xFF5CFFB0)
-val RingIdle = Color(0x33FFFFFF)
+val Canvas = Color(0xFFF3F4F6)
+val Paper = Color(0xFFFFFFFF)
+val Ink = Color(0xFF111111)
+val InkMuted = Color(0xFF6B6B6B)
+val Line = Color(0xFFE6E6E8)
+val Ring = Color(0xFFD4D4D8)
+val Danger = Color(0xFF1A1A1A)
+val Success = Color(0xFF111111)
+
+@Deprecated("Use Ink")
+val Night = Ink
+@Deprecated("Use Paper")
+val NightElevated = Paper
+@Deprecated("Use Paper")
+val SurfaceCard = Paper
+@Deprecated("Use Ink")
+val Cyan = Ink
+@Deprecated("Use InkMuted")
+val Violet = InkMuted
+@Deprecated("Use InkMuted")
+val Magenta = InkMuted
+@Deprecated("Use Ink")
+val TextPrimary = Ink
+@Deprecated("Use InkMuted")
+val TextMuted = InkMuted
+val CyanDim = InkMuted
+val RingIdle = Ring

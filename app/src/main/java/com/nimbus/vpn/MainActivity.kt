@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -35,7 +36,16 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.light(
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Color.TRANSPARENT,
+            ),
+            navigationBarStyle = SystemBarStyle.light(
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Color.TRANSPARENT,
+            ),
+        )
         setContent {
             NimbusTheme {
                 val nav = rememberNavController()
@@ -92,11 +102,12 @@ class MainActivity : ComponentActivity() {
                     composable("home") {
                         HomeScreen(
                             state = tunnel,
-                            root = root,
+                            profiles = profiles,
                             animate = animate,
                             onToggle = { requestConnect() },
                             onImport = { nav.navigate("import") },
-                            onProfiles = { nav.navigate("profiles") },
+                            onSelect = viewModel::selectProfile,
+                            onDelete = viewModel::deleteProfile,
                             onSettings = { nav.navigate("settings") },
                         )
                     }

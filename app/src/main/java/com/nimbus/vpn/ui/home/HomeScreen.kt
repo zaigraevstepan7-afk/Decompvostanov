@@ -1,9 +1,8 @@
 package com.nimbus.vpn.ui.home
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,14 +11,19 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.ShieldMoon
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -27,143 +31,214 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nimbus.vpn.data.ConfigParser
+import com.nimbus.vpn.data.ProfileIndex
 import com.nimbus.vpn.tunnel.ConnectionStatus
-import com.nimbus.vpn.tunnel.RootPowerManager
 import com.nimbus.vpn.tunnel.TunnelUiState
-import com.nimbus.vpn.ui.components.GlassCard
 import com.nimbus.vpn.ui.components.MeshBackground
 import com.nimbus.vpn.ui.components.PowerOrb
-import com.nimbus.vpn.ui.theme.Cyan
-import com.nimbus.vpn.ui.theme.Danger
-import com.nimbus.vpn.ui.theme.TextMuted
-import com.nimbus.vpn.ui.theme.TextPrimary
-import com.nimbus.vpn.ui.theme.Violet
+import com.nimbus.vpn.ui.theme.Ink
+import com.nimbus.vpn.ui.theme.InkMuted
+import com.nimbus.vpn.ui.theme.Line
+import com.nimbus.vpn.ui.theme.Paper
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 @Composable
 fun HomeScreen(
     state: TunnelUiState,
-    root: RootPowerManager.Status,
+    profiles: ProfileIndex,
     animate: Boolean,
     onToggle: () -> Unit,
     onImport: () -> Unit,
-    onProfiles: () -> Unit,
+    onSelect: (String) -> Unit,
+    onDelete: (String) -> Unit,
     onSettings: () -> Unit,
 ) {
-    val preview = remember(state.profile?.rawConfig) {
-        state.profile?.let { ConfigParser.parse(it.rawConfig) }
-    }
     Box(Modifier.fillMaxSize()) {
         MeshBackground(state.status, animate, Modifier.fillMaxSize())
         Column(
             Modifier
                 .fillMaxSize()
-                .statusBarsPadding()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 22.dp, vertical = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .statusBarsPadding(),
         ) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("NIMBUS", color = Cyan, letterSpacing = 4.sp, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                    Text("AmneziaWG", color = TextMuted, fontSize = 13.sp)
-                }
-                IconButton(onClick = onProfiles) {
-                    Icon(Icons.Rounded.ShieldMoon, contentDescription = "Профили", tint = TextPrimary)
-                }
-                IconButton(onClick = onSettings) {
-                    Icon(Icons.Rounded.Settings, contentDescription = "Настройки", tint = TextPrimary)
-                }
-            }
-            Spacer(Modifier.height(12.dp))
-            PowerOrb(status = state.status, animate = animate, onClick = onToggle)
-            AnimatedContent(
-                targetState = statusLabel(state.status),
-                transitionSpec = { fadeIn() togetherWith fadeOut() },
-                label = "status",
-            ) { label ->
-                Text(label, color = TextPrimary, fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
-            }
-            Text(
-                state.profile?.name ?: "Нет конфига",
-                color = TextMuted,
-                modifier = Modifier.padding(top = 6.dp),
-            )
-            Spacer(Modifier.height(22.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatChip(Modifier.weight(1f), "↓", formatRate(state.rxRate), formatBytes(state.rxTotal))
-                StatChip(Modifier.weight(1f), "↑", formatRate(state.txRate), formatBytes(state.txTotal))
-            }
-            Spacer(Modifier.height(12.dp))
-            GlassCard(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    InfoRow("Сервер", preview?.endpoint ?: "—")
-                    InfoRow("Адрес", preview?.interfaceAddress ?: "—")
-                    InfoRow("Протокол", if (preview?.isAmnezia == true) "AmneziaWG" else "WireGuard")
-                    InfoRow("Сессия", formatDuration(state.connectedSince))
-                    InfoRow("Root", if (root.rooted) "да · фон без удушения" else "нет · VpnService")
-                    if (!state.error.isNullOrBlank()) {
-                        Text(state.error!!, color = Danger, fontSize = 13.sp)
-                    }
-                }
-            }
-            Spacer(Modifier.height(16.dp))
-            GlassCard(
+            Row(
                 Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 28.dp),
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text("Импорт .conf", color = TextPrimary, fontWeight = FontWeight.Medium)
-                        Text("Файл или вставка AmneziaWG", color = TextMuted, fontSize = 13.sp)
-                    }
-                    IconButton(onClick = onImport) {
-                        Icon(Icons.Rounded.Add, contentDescription = "Импорт", tint = Cyan)
+                IconButton(onClick = onSettings) {
+                    Icon(Icons.Rounded.Settings, contentDescription = "Настройки", tint = Ink)
+                }
+                Spacer(Modifier.weight(1f))
+                IconButton(onClick = onImport) {
+                    Icon(Icons.Rounded.Add, contentDescription = "Импорт", tint = Ink)
+                }
+            }
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                PowerOrb(status = state.status, animate = animate, onClick = onToggle)
+                AnimatedVisibility(visible = state.status != ConnectionStatus.DISCONNECTED || !state.error.isNullOrBlank()) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            statusLabel(state.status),
+                            color = Ink,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium,
+                        )
+                        if (state.status == ConnectionStatus.CONNECTED) {
+                            Text(
+                                "${formatDuration(state.connectedSince)}  ·  ↓ ${formatRate(state.rxRate)}  ·  ↑ ${formatRate(state.txRate)}",
+                                color = InkMuted,
+                                fontSize = 12.sp,
+                                modifier = Modifier.padding(top = 4.dp),
+                            )
+                        }
+                        if (!state.error.isNullOrBlank()) {
+                            Text(
+                                state.error!!,
+                                color = Ink,
+                                fontSize = 13.sp,
+                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp),
+                            )
+                        }
                     }
                 }
             }
+            ServerSheet(
+                state = state,
+                profiles = profiles,
+                onImport = onImport,
+                onSelect = onSelect,
+                onDelete = onDelete,
+            )
         }
     }
 }
 
 @Composable
-private fun StatChip(modifier: Modifier, label: String, rate: String, total: String) {
-    GlassCard(modifier) {
-        Column(Modifier.padding(16.dp)) {
-            Text(label, color = Violet, fontSize = 12.sp)
-            Text(rate, color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Medium)
-            Text(total, color = TextMuted, fontSize = 12.sp)
+private fun ServerSheet(
+    state: TunnelUiState,
+    profiles: ProfileIndex,
+    onImport: () -> Unit,
+    onSelect: (String) -> Unit,
+    onDelete: (String) -> Unit,
+) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .shadow(12.dp, RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp), ambientColor = Color(0x14000000))
+            .clip(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
+            .background(Paper)
+            .navigationBarsPadding()
+            .height(340.dp),
+    ) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onImport)
+                .padding(horizontal = 18.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Rounded.ChevronRight, contentDescription = null, tint = Ink, modifier = Modifier.size(22.dp))
+            Text(
+                "Список серверов",
+                color = Ink,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(start = 4.dp).weight(1f),
+            )
+            Text("${profiles.profiles.size}", color = InkMuted, fontSize = 13.sp)
         }
-    }
-}
-
-@Composable
-private fun InfoRow(label: String, value: String) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, color = TextMuted, fontSize = 13.sp)
-        Text(value, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        HorizontalDivider(color = Line)
+        if (profiles.profiles.isEmpty()) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onImport)
+                    .padding(22.dp),
+            ) {
+                Text("Пока пусто", color = Ink, fontWeight = FontWeight.Medium)
+                Text(
+                    "Нажми +, чтобы импортировать .conf — список будет здесь, как в Happ.",
+                    color = InkMuted,
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(top = 6.dp),
+                )
+            }
+        } else {
+            Text(
+                "Конфиги",
+                color = Ink,
+                fontWeight = FontWeight.Medium,
+                fontSize = 15.sp,
+                modifier = Modifier.padding(start = 20.dp, top = 12.dp, bottom = 4.dp),
+            )
+            LazyColumn(Modifier.fillMaxSize()) {
+                items(profiles.profiles, key = { it.id }) { profile ->
+                    val preview = remember(profile.rawConfig) { ConfigParser.parse(profile.rawConfig) }
+                    val active = profile.id == profiles.activeId
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(profile.id) }
+                            .background(if (active) Color(0xFFF6F6F7) else Color.Transparent)
+                            .padding(horizontal = 18.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(flagForEndpoint(preview.endpoint), fontSize = 22.sp, modifier = Modifier.padding(end = 12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                profile.name,
+                                color = Ink,
+                                fontSize = 16.sp,
+                                fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                subtitleForConfig(profile.rawConfig),
+                                color = InkMuted,
+                                fontSize = 12.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        if (active && state.status == ConnectionStatus.CONNECTED) {
+                            Text("•", color = Ink, fontSize = 22.sp, modifier = Modifier.padding(end = 6.dp))
+                        }
+                        IconButton(onClick = { onDelete(profile.id) }, modifier = Modifier.size(36.dp)) {
+                            Icon(Icons.Rounded.Delete, contentDescription = "Удалить", tint = InkMuted)
+                        }
+                    }
+                    HorizontalDivider(color = Line, modifier = Modifier.padding(start = 52.dp))
+                }
+            }
+        }
     }
 }
 
 private fun statusLabel(status: ConnectionStatus) = when (status) {
     ConnectionStatus.DISCONNECTED -> "Отключён"
-    ConnectionStatus.CONNECTING -> "Подключение"
-    ConnectionStatus.CONNECTED -> "В сети"
+    ConnectionStatus.CONNECTING -> "Подключение…"
+    ConnectionStatus.CONNECTED -> "Подключён"
     ConnectionStatus.ERROR -> "Ошибка"
 }
 
-private fun formatRate(bytesPerSec: Long): String = "${formatBytes(bytesPerSec)}/с"
+private fun formatRate(bytesPerSec: Long): String = formatBytes(bytesPerSec) + "/с"
 
 private fun formatBytes(bytes: Long): String {
     if (bytes < 1024) return "$bytes B"

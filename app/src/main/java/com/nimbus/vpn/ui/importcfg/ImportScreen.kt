@@ -32,7 +32,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -40,12 +39,12 @@ import com.nimbus.vpn.data.ConfigParser
 import com.nimbus.vpn.ui.components.GlassCard
 import com.nimbus.vpn.ui.components.MeshBackground
 import com.nimbus.vpn.tunnel.ConnectionStatus
-import com.nimbus.vpn.ui.theme.Cyan
+import com.nimbus.vpn.ui.theme.Ink
+import com.nimbus.vpn.ui.theme.InkMuted
+import com.nimbus.vpn.ui.theme.Line
+import com.nimbus.vpn.ui.theme.Paper
 import com.nimbus.vpn.ui.theme.Danger
-import com.nimbus.vpn.ui.theme.NightElevated
 import com.nimbus.vpn.ui.theme.Success
-import com.nimbus.vpn.ui.theme.TextMuted
-import com.nimbus.vpn.ui.theme.TextPrimary
 import kotlinx.coroutines.launch
 
 @Composable
@@ -83,17 +82,17 @@ fun ImportScreen(
         ) {
             Row {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.Rounded.ArrowBack, contentDescription = "Назад", tint = TextPrimary)
+                    Icon(Icons.Rounded.ArrowBack, contentDescription = "Назад", tint = Ink)
                 }
                 Column {
-                    Text("Импорт", color = TextPrimary, fontSize = 22.sp)
-                    Text("AmneziaWG · WireGuard .conf", color = TextMuted, fontSize = 13.sp)
+                    Text("Импорт", color = Ink, fontSize = 22.sp)
+                    Text("AmneziaWG · WireGuard .conf", color = InkMuted, fontSize = 13.sp)
                 }
             }
             Spacer(Modifier.height(18.dp))
             Button(
                 onClick = { picker.launch(arrayOf("text/*", "application/octet-stream", "*/*")) },
-                colors = ButtonDefaults.buttonColors(containerColor = Cyan, contentColor = Color(0xFF04120F)),
+                colors = ButtonDefaults.buttonColors(containerColor = Ink, contentColor = Paper),
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth().height(52.dp),
             ) {
@@ -129,10 +128,10 @@ fun ImportScreen(
                             if (preview.canConnect) "Конфиг валиден" else "Нужно исправить",
                             color = if (preview.canConnect) Success else Danger,
                         )
-                        Text("Endpoint: ${preview.endpoint ?: "—"}", color = TextMuted, fontSize = 13.sp)
+                        Text("Endpoint: ${preview.endpoint ?: "—"}", color = InkMuted, fontSize = 13.sp)
                         Text(
                             if (preview.isAmnezia) "Обфускация AmneziaWG: да" else "Обычный WireGuard",
-                            color = TextMuted,
+                            color = InkMuted,
                             fontSize = 13.sp,
                         )
                         preview.issues.forEach { Text("• $it", color = Danger, fontSize = 12.sp) }
@@ -154,7 +153,7 @@ fun ImportScreen(
                     if (result.isSuccess) onBack()
                 },
                 enabled = !raw.isBlank(),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B7CFF), contentColor = TextPrimary),
+                colors = ButtonDefaults.buttonColors(containerColor = Ink, contentColor = Paper),
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth().height(52.dp),
             ) { Text("Сохранить профиль") }
@@ -164,13 +163,13 @@ fun ImportScreen(
 
 @Composable
 private fun fieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedTextColor = TextPrimary,
-    unfocusedTextColor = TextPrimary,
-    focusedContainerColor = NightElevated,
-    unfocusedContainerColor = NightElevated,
-    focusedBorderColor = Cyan,
-    unfocusedBorderColor = Color.White.copy(alpha = 0.12f),
-    cursorColor = Cyan,
-    focusedLabelColor = Cyan,
-    unfocusedLabelColor = TextMuted,
+    focusedTextColor = Ink,
+    unfocusedTextColor = Ink,
+    focusedContainerColor = Paper,
+    unfocusedContainerColor = Paper,
+    focusedBorderColor = Ink,
+    unfocusedBorderColor = Line,
+    cursorColor = Ink,
+    focusedLabelColor = Ink,
+    unfocusedLabelColor = InkMuted,
 )

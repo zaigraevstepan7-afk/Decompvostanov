@@ -1,5 +1,6 @@
 package com.nimbus.vpn
 
+import com.nimbus.vpn.ui.home.flagForEndpoint
 import com.google.common.truth.Truth.assertThat
 import com.nimbus.vpn.data.ConfigParser
 import org.junit.Test
@@ -66,5 +67,11 @@ class ConfigParserTest {
     @Test
     fun suggestNameFromHost() {
         assertThat(ConfigParser.suggestName(sample)).isEqualTo("de")
+    }
+
+    @Test
+    fun flagFromGermanEndpoint() {
+        assertThat(flagForEndpoint("de.example.tld:4500")).isEqualTo("🇩🇪")
+        assertThat(flagForEndpoint("ru.node.example:51820")).isEqualTo("🇷🇺")
     }
 }
