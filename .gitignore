@@ -1,0 +1,22 @@
+*.iml
+.gradle/
+/local.properties
+/.idea/
+.DS_Store
+/build/
+/app/build/
+/captures/
+*.apk
+*.aab
+*.ap_
+*.dex
+.cxx/
+*.hprof
+.kotlin/
+keystore.properties
+*.jks
+*.keystore
+# never commit real VPN configs
+*.conf
+!app/src/test/resources/*.conf
+!app/src/main/res/raw/sample.conf
