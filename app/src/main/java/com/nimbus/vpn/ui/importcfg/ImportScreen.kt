@@ -32,6 +32,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,6 +48,9 @@ import com.nimbus.vpn.ui.theme.Paper
 import com.nimbus.vpn.ui.theme.Danger
 import com.nimbus.vpn.ui.theme.Success
 import kotlinx.coroutines.launch
+
+private val FieldShape = RoundedCornerShape(22.dp)
+private val PlaceholderGray = Color(0xFF5A5A5A)
 
 @Composable
 fun ImportScreen(
@@ -93,7 +98,7 @@ fun ImportScreen(
             Button(
                 onClick = { picker.launch(arrayOf("text/*", "application/octet-stream", "*/*")) },
                 colors = ButtonDefaults.buttonColors(containerColor = Ink, contentColor = Paper),
-                shape = RoundedCornerShape(16.dp),
+                shape = FieldShape,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
             ) {
                 Icon(Icons.Rounded.FolderOpen, contentDescription = null)
@@ -104,8 +109,10 @@ fun ImportScreen(
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Имя профиля") },
-                placeholder = { Text(preview?.endpoint?.substringBefore(":") ?: "Например, Germany") },
+                placeholder = { Text("Имя профиля", color = PlaceholderGray, fontSize = 16.sp) },
+                singleLine = true,
+                shape = FieldShape,
+                textStyle = TextStyle(color = Ink, fontSize = 16.sp),
                 modifier = Modifier.fillMaxWidth(),
                 colors = fieldColors(),
             )
@@ -113,11 +120,12 @@ fun ImportScreen(
             OutlinedTextField(
                 value = raw,
                 onValueChange = { raw = it },
-                label = { Text("Вставь конфиг") },
+                placeholder = { Text("Вставь конфиг", color = PlaceholderGray, fontSize = 16.sp) },
+                shape = FieldShape,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(240.dp),
-                textStyle = androidx.compose.ui.text.TextStyle(fontFamily = FontFamily.Monospace, fontSize = 12.sp),
+                textStyle = TextStyle(color = Ink, fontFamily = FontFamily.Monospace, fontSize = 14.sp),
                 colors = fieldColors(),
             )
             if (preview != null) {
@@ -153,8 +161,13 @@ fun ImportScreen(
                     if (result.isSuccess) onBack()
                 },
                 enabled = !raw.isBlank(),
-                colors = ButtonDefaults.buttonColors(containerColor = Ink, contentColor = Paper),
-                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Ink,
+                    contentColor = Paper,
+                    disabledContainerColor = Line,
+                    disabledContentColor = Ink,
+                ),
+                shape = FieldShape,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
             ) { Text("Сохранить профиль") }
         }
@@ -165,11 +178,13 @@ fun ImportScreen(
 private fun fieldColors() = OutlinedTextFieldDefaults.colors(
     focusedTextColor = Ink,
     unfocusedTextColor = Ink,
+    disabledTextColor = Ink,
     focusedContainerColor = Paper,
     unfocusedContainerColor = Paper,
+    disabledContainerColor = Paper,
     focusedBorderColor = Ink,
     unfocusedBorderColor = Line,
     cursorColor = Ink,
-    focusedLabelColor = Ink,
-    unfocusedLabelColor = InkMuted,
+    focusedPlaceholderColor = PlaceholderGray,
+    unfocusedPlaceholderColor = PlaceholderGray,
 )

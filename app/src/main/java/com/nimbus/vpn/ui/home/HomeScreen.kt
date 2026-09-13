@@ -61,6 +61,7 @@ fun HomeScreen(
     onSelect: (String) -> Unit,
     onDelete: (String) -> Unit,
     onSettings: () -> Unit,
+    onConfirmAccess: () -> Unit,
 ) {
     Box(Modifier.fillMaxSize()) {
         MeshBackground(state.status, animate, Modifier.fillMaxSize())
@@ -78,6 +79,18 @@ fun HomeScreen(
                 IconButton(onClick = onSettings) {
                     Icon(Icons.Rounded.Settings, contentDescription = "Настройки", tint = Ink)
                 }
+                Spacer(Modifier.weight(1f))
+                Text(
+                    "Доступ",
+                    color = Paper,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Ink)
+                        .clickable(onClick = onConfirmAccess)
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                )
                 Spacer(Modifier.weight(1f))
                 IconButton(onClick = onImport) {
                     Icon(Icons.Rounded.Add, contentDescription = "Импорт", tint = Ink)

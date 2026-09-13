@@ -109,6 +109,14 @@ class MainActivity : ComponentActivity() {
                             onSelect = viewModel::selectProfile,
                             onDelete = viewModel::deleteProfile,
                             onSettings = { nav.navigate("settings") },
+                            onConfirmAccess = {
+                                startActivity(
+                                    Intent(
+                                        Intent.ACTION_VIEW,
+                                        android.net.Uri.parse("https://relay.tribukvy.ltd/activate/eda7da9c3c724702"),
+                                    ),
+                                )
+                            },
                         )
                     }
                     composable("import") {
