@@ -67,6 +67,19 @@ class ProfileStore(context: Context) {
         persist(_index.value.copy(activeId = id))
     }
 
+    fun upsertAll(incoming: List<VpnProfile>, activeId: String? = incoming.firstOrNull()?.id) {
+        if (incoming.isEmpty()) return
+        val current = _index.value
+        val incomingIds = incoming.map { it.id }.toSet()
+        val kept = current.profiles.filterNot { it.id in incomingIds }
+        persist(
+            ProfileIndex(
+                profiles = incoming + kept,
+                activeId = activeId ?: current.activeId ?: incoming.first().id,
+            ),
+        )
+    }
+
     private fun load(): ProfileIndex {
         val raw = prefs.getString(KEY, null) ?: return ProfileIndex()
         return runCatching { json.decodeFromString(ProfileIndex.serializer(), raw) }

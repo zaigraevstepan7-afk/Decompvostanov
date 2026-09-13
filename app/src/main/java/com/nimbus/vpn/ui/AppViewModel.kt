@@ -9,14 +9,23 @@ import com.nimbus.vpn.NimbusApp
 import com.nimbus.vpn.data.AppSettings
 import com.nimbus.vpn.data.ConfigParser
 import com.nimbus.vpn.data.VpnProfile
+import com.nimbus.vpn.data.WarpGenerator
 import com.nimbus.vpn.tunnel.ConnectionStatus
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
+
+data class WarpUiState(
+    val generating: Boolean = false,
+    val error: String? = null,
+    val message: String? = null,
+)
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val app = application as NimbusApp
@@ -28,6 +37,43 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         SharingStarted.WhileSubscribed(5_000),
         AppSettings(),
     )
+
+    private val _warp = MutableStateFlow(WarpUiState())
+    val warp: StateFlow<WarpUiState> = _warp.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            if (app.container.profiles.profiles.isEmpty()) {
+                generateWarp()
+            }
+        }
+    }
+
+    fun generateWarp() {
+        if (_warp.value.generating) return
+        _warp.value = WarpUiState(generating = true)
+        viewModelScope.launch {
+            val running = tunnel.value.status == ConnectionStatus.CONNECTED ||
+                tunnel.value.status == ConnectionStatus.CONNECTING
+            if (running) {
+                app.container.tunnel.disconnect()
+            }
+            val result = withContext(Dispatchers.IO) {
+                runCatching { WarpGenerator.generate() }
+            }
+            result.fold(
+                onSuccess = { list ->
+                    app.container.profiles.upsertAll(list, list.first().id)
+                    _warp.value = WarpUiState(message = "Создано ${list.size} серверов WARP")
+                },
+                onFailure = { error ->
+                    _warp.value = WarpUiState(
+                        error = error.message ?: "Не удалось создать WARP-конфиг",
+                    )
+                },
+            )
+        }
+    }
 
     fun setUiVisible(visible: Boolean) = app.container.tunnel.setUiVisible(visible)
 

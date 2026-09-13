@@ -53,6 +53,7 @@ class MainActivity : ComponentActivity() {
                 val root by viewModel.root.collectAsStateWithLifecycle()
                 val profiles by viewModel.profiles.collectAsStateWithLifecycle()
                 val settings by viewModel.settings.collectAsStateWithLifecycle()
+                val warp by viewModel.warp.collectAsStateWithLifecycle()
                 val lifecycleState by androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
                 val animate = lifecycleState.isAtLeast(Lifecycle.State.STARTED)
 
@@ -103,6 +104,7 @@ class MainActivity : ComponentActivity() {
                         HomeScreen(
                             state = tunnel,
                             profiles = profiles,
+                            warp = warp,
                             animate = animate,
                             onToggle = { requestConnect() },
                             onImport = { nav.navigate("import") },
@@ -117,6 +119,7 @@ class MainActivity : ComponentActivity() {
                                     ),
                                 )
                             },
+                            onGenerateWarp = viewModel::generateWarp,
                         )
                     }
                     composable("import") {
@@ -124,6 +127,11 @@ class MainActivity : ComponentActivity() {
                             onBack = { nav.popBackStack() },
                             onImportText = { name, raw -> viewModel.importText(name, raw) },
                             onImportUri = { uri, name -> viewModel.importUri(uri, name) },
+                            warp = warp,
+                            onGenerateWarp = {
+                                viewModel.generateWarp()
+                                nav.popBackStack()
+                            },
                         )
                     }
                     composable("profiles") {
@@ -142,6 +150,7 @@ class MainActivity : ComponentActivity() {
                         SettingsScreen(
                             settings = settings,
                             root = root,
+                            warp = warp,
                             onBack = { nav.popBackStack() },
                             onAutoConnect = viewModel::setAutoConnect,
                             onKillSwitch = viewModel::setKillSwitch,
@@ -149,6 +158,7 @@ class MainActivity : ComponentActivity() {
                             onBatteryExemption = {
                                 viewModel.batteryIntent()?.let { battery.launch(it) }
                             },
+                            onGenerateWarp = viewModel::generateWarp,
                         )
                     }
                 }

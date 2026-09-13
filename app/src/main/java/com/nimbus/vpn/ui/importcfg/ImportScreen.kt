@@ -57,6 +57,8 @@ fun ImportScreen(
     onBack: () -> Unit,
     onImportText: (name: String, raw: String) -> Result<*>,
     onImportUri: suspend (android.net.Uri, String) -> Result<*>,
+    warp: com.nimbus.vpn.ui.WarpUiState? = null,
+    onGenerateWarp: (() -> Unit)? = null,
 ) {
     var name by remember { mutableStateOf("") }
     var raw by remember { mutableStateOf("") }
@@ -95,6 +97,26 @@ fun ImportScreen(
                 }
             }
             Spacer(Modifier.height(18.dp))
+            if (onGenerateWarp != null) {
+                Button(
+                    onClick = onGenerateWarp,
+                    enabled = warp?.generating != true,
+                    colors = ButtonDefaults.buttonColors(containerColor = Ink, contentColor = Paper),
+                    shape = FieldShape,
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                ) {
+                    Text(
+                        if (warp?.generating == true) "Создаю WARP…"
+                        else "Создать WARP автоматически",
+                    )
+                }
+                Text(
+                    "Ключи берутся с generator-config-warp.vercel.app, конфиги собираются как AWG 2.0.",
+                    color = InkMuted,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 16.dp),
+                )
+            }
             Button(
                 onClick = { picker.launch(arrayOf("text/*", "application/octet-stream", "*/*")) },
                 colors = ButtonDefaults.buttonColors(containerColor = Ink, contentColor = Paper),

@@ -73,5 +73,6 @@ class ConfigParserTest {
     fun flagFromGermanEndpoint() {
         assertThat(flagForEndpoint("de.example.tld:4500")).isEqualTo("🇩🇪")
         assertThat(flagForEndpoint("ru.node.example:51820")).isEqualTo("🇷🇺")
+        assertThat(flagForEndpoint("ru0.tribukvy.ltd:4500")).isEqualTo("🇷🇺")
     }
 }

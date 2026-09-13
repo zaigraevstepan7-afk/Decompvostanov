@@ -27,22 +27,28 @@ import androidx.compose.ui.unit.sp
 import com.nimbus.vpn.data.AppSettings
 import com.nimbus.vpn.tunnel.ConnectionStatus
 import com.nimbus.vpn.tunnel.RootPowerManager
+import com.nimbus.vpn.ui.WarpUiState
 import com.nimbus.vpn.ui.components.GlassCard
 import com.nimbus.vpn.ui.components.MeshBackground
 import com.nimbus.vpn.ui.theme.Ink
 import com.nimbus.vpn.ui.theme.InkMuted
 import com.nimbus.vpn.ui.theme.Line
 import com.nimbus.vpn.ui.theme.Paper
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.foundation.shape.RoundedCornerShape
 
 @Composable
 fun SettingsScreen(
     settings: AppSettings,
     root: RootPowerManager.Status,
+    warp: WarpUiState,
     onBack: () -> Unit,
     onAutoConnect: (Boolean) -> Unit,
     onKillSwitch: (Boolean) -> Unit,
     onRootBattery: (Boolean) -> Unit,
     onBatteryExemption: () -> Unit,
+    onGenerateWarp: () -> Unit,
 ) {
     Box(Modifier.fillMaxSize()) {
         MeshBackground(ConnectionStatus.DISCONNECTED, animate = true, modifier = Modifier.fillMaxSize())
@@ -78,6 +84,33 @@ fun SettingsScreen(
             ToggleRow("Kill switch", "Always-on lockdown через root, если доступен", settings.killSwitch, onKillSwitch)
             Spacer(Modifier.height(10.dp))
             ToggleRow("Root-защита батареи", "Whitelist, appops, без разгона CPU", settings.rootBatteryGuard, onRootBattery)
+            Spacer(Modifier.height(16.dp))
+            GlassCard(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("WARP", color = Ink, fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+                    Text(
+                        "Nimbus запрашивает ключи Cloudflare на generator-config-warp.vercel.app и сам собирает AmneziaWG-конфиги для Германии, Польши, Нидерландов, Финляндии, Эстонии, Латвии и России.",
+                        color = InkMuted,
+                        fontSize = 13.sp,
+                    )
+                    if (warp.generating) {
+                        Text("Создаю конфиги…", color = Ink, fontSize = 13.sp)
+                    } else if (!warp.error.isNullOrBlank()) {
+                        Text(warp.error!!, color = Ink, fontSize = 13.sp)
+                    } else if (!warp.message.isNullOrBlank()) {
+                        Text(warp.message!!, color = InkMuted, fontSize = 13.sp)
+                    }
+                    Button(
+                        onClick = onGenerateWarp,
+                        enabled = !warp.generating,
+                        colors = ButtonDefaults.buttonColors(containerColor = Ink, contentColor = Paper),
+                        shape = RoundedCornerShape(18.dp),
+                        modifier = Modifier.fillMaxWidth().height(46.dp),
+                    ) {
+                        Text(if (warp.generating) "Создаю…" else "Обновить WARP-конфиги")
+                    }
+                }
+            }
             Spacer(Modifier.height(16.dp))
             GlassCard(Modifier.fillMaxWidth()) {
                 Column(

@@ -4,9 +4,18 @@ import com.nimbus.vpn.data.ConfigParser
 
 fun flagForEndpoint(endpoint: String?): String {
     val host = endpoint?.substringBefore(":")?.lowercase().orEmpty()
-    val token = host.substringBefore(".")
-    val mapped = COUNTRY_FLAGS[token]
-    if (mapped != null) return mapped
+    val labels = host.split('.').filter { it.isNotBlank() }
+    labels.forEach { label ->
+        COUNTRY_FLAGS[label]?.let { return it }
+    }
+    labels.forEach { label ->
+        COUNTRY_FLAGS.forEach { (code, flag) ->
+            val suffix = label.removePrefix(code)
+            if (suffix != label && suffix.isNotEmpty() && suffix.all { it.isDigit() }) {
+                return flag
+            }
+        }
+    }
     COUNTRY_FLAGS.forEach { (code, flag) ->
         if (host.contains(".$code.") || host.startsWith("$code-") || host.contains("-$code-")) {
             return flag
