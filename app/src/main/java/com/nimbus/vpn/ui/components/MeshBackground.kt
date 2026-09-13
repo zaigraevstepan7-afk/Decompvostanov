@@ -1,24 +1,21 @@
 package com.nimbus.vpn.ui.components
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
+import com.nimbus.vpn.R
 import com.nimbus.vpn.tunnel.ConnectionStatus
-import com.nimbus.vpn.ui.theme.Canvas as CanvasColor
-import com.nimbus.vpn.ui.theme.Ink
-import kotlin.math.cos
-import kotlin.math.sin
+import com.nimbus.vpn.ui.theme.Canvas
 
 @Composable
 fun MeshBackground(
@@ -26,58 +23,23 @@ fun MeshBackground(
     animate: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val infinite = rememberInfiniteTransition(label = "bg")
-    val drift by infinite.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(9000, easing = LinearEasing), RepeatMode.Reverse),
-        label = "drift",
-    )
-    val pulse by infinite.animateFloat(
-        initialValue = 0.55f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(2600, easing = LinearEasing), RepeatMode.Reverse),
-        label = "pulse",
-    )
-    val liveDrift = if (animate) drift else 0.35f
-    val livePulse = if (animate) pulse else 0.7f
-    val connected = status == ConnectionStatus.CONNECTED
-    val connecting = status == ConnectionStatus.CONNECTING
-
-    Canvas(modifier = modifier.background(CanvasColor)) {
-        drawRect(CanvasColor)
-        val cx = size.width * (0.5f + 0.08f * (liveDrift - 0.5f))
-        val cy = size.height * (0.22f + 0.04f * sin(liveDrift * 6.28f).toFloat())
-        val glow = when {
-            connected -> 0.28f * livePulse
-            connecting -> 0.18f * livePulse
-            else -> 0.10f * livePulse
-        }
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(Ink.copy(alpha = glow), Color.Transparent),
-                center = Offset(cx, cy),
-                radius = size.minDimension * 0.72f,
-            ),
+    val mapAlpha = when {
+        !animate -> 0.16f
+        status == ConnectionStatus.CONNECTED -> 0.28f
+        status == ConnectionStatus.CONNECTING -> 0.22f
+        else -> 0.18f
+    }
+    Box(modifier.background(Canvas)) {
+        Image(
+            painter = painterResource(R.drawable.world_map),
+            contentDescription = null,
+            contentScale = ContentScale.FillWidth,
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.Center)
+                .offset(y = (-36).dp)
+                .alpha(mapAlpha),
         )
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(Ink.copy(alpha = glow * 0.45f), Color.Transparent),
-                center = Offset(
-                    size.width * (0.82f + 0.05f * cos(liveDrift * 6.28f).toFloat()),
-                    size.height * 0.12f,
-                ),
-                radius = size.minDimension * 0.38f,
-            ),
-        )
-        if (connected || connecting) {
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(Ink.copy(alpha = glow * 0.35f), Color.Transparent),
-                    center = Offset(size.width * 0.5f, size.height * 0.42f),
-                    radius = size.minDimension * (0.42f + 0.08f * livePulse),
-                ),
-            )
-        }
+        Box(Modifier.fillMaxSize())
     }
 }

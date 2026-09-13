@@ -2,18 +2,19 @@ package com.nimbus.vpn.ui.home
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,21 +29,23 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -65,6 +68,7 @@ import com.nimbus.vpn.ui.theme.Paper
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     state: TunnelUiState,
@@ -79,82 +83,19 @@ fun HomeScreen(
     onSettings: () -> Unit,
     onConfirmAccess: () -> Unit,
 ) {
-    Box(Modifier.fillMaxSize()) {
-        MeshBackground(state.status, animate, Modifier.fillMaxSize())
-        Column(
-            Modifier
-                .fillMaxSize()
-                .statusBarsPadding(),
-        ) {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 6.dp, vertical = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(onClick = onSettings) {
-                    Icon(Icons.Rounded.Settings, contentDescription = "Настройки", tint = Ink)
-                }
-                Spacer(Modifier.weight(1f))
-                AccessChip(access = access, onClick = onConfirmAccess)
-                Spacer(Modifier.weight(1f))
-                IconButton(onClick = onCreateWarp) {
-                    Icon(Icons.Rounded.Add, contentDescription = "Создать WARP", tint = Ink)
-                }
-            }
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Text(
-                    "bozya vpn",
-                    color = Ink,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 1.4.sp,
-                )
-                Spacer(Modifier.height(18.dp))
-                PowerOrb(status = state.status, animate = animate, onClick = onToggle)
-                Spacer(Modifier.height(10.dp))
-                AnimatedContent(
-                    targetState = statusLabel(state.status),
-                    transitionSpec = {
-                        (fadeIn(tween(280)) + slideInVertically(tween(280)) { it / 3 }) togetherWith
-                            (fadeOut(tween(180)) + slideOutVertically(tween(180)) { -it / 4 })
-                    },
-                    label = "status",
-                ) { label ->
-                    Text(
-                        label,
-                        color = Ink,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium,
-                    )
-                }
-                AnimatedVisibility(
-                    visible = state.status == ConnectionStatus.CONNECTED,
-                    enter = fadeIn(tween(320)) + slideInVertically(tween(320)) { it / 2 },
-                    exit = fadeOut(tween(180)),
-                ) {
-                    Text(
-                        "${formatDuration(state.connectedSince)}  ·  ↓ ${formatRate(state.rxRate)}  ·  ↑ ${formatRate(state.txRate)}",
-                        color = InkMuted,
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(top = 6.dp),
-                    )
-                }
-                AnimatedVisibility(visible = !state.error.isNullOrBlank()) {
-                    Text(
-                        state.error ?: "",
-                        color = Ink,
-                        fontSize = 13.sp,
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp),
-                    )
-                }
-            }
+    val sheetState = rememberBottomSheetScaffoldState()
+    BottomSheetScaffold(
+        scaffoldState = sheetState,
+        containerColor = Canvas,
+        contentColor = Ink,
+        sheetContainerColor = Paper,
+        sheetContentColor = Ink,
+        sheetTonalElevation = 0.dp,
+        sheetShadowElevation = 16.dp,
+        sheetShape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+        sheetPeekHeight = 236.dp,
+        sheetDragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFF5A5A5E)) },
+        sheetContent = {
             ServerSheet(
                 state = state,
                 profiles = profiles,
@@ -163,6 +104,78 @@ fun HomeScreen(
                 onSelect = onSelect,
                 onDelete = onDelete,
             )
+        },
+    ) { padding ->
+        Box(Modifier.fillMaxSize()) {
+            MeshBackground(state.status, animate, Modifier.fillMaxSize())
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .padding(bottom = padding.calculateBottomPadding()),
+            ) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp, vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconButton(onClick = onSettings) {
+                        Icon(Icons.Rounded.Settings, contentDescription = "Настройки", tint = Ink)
+                    }
+                    Spacer(Modifier.weight(1f))
+                    AccessChip(access = access, onClick = onConfirmAccess)
+                    Spacer(Modifier.weight(1f))
+                    IconButton(onClick = onCreateWarp) {
+                        Icon(Icons.Rounded.Add, contentDescription = "Создать WARP", tint = Ink)
+                    }
+                }
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    PowerOrb(status = state.status, animate = animate, onClick = onToggle)
+                    Spacer(Modifier.height(14.dp))
+                    AnimatedContent(
+                        targetState = statusLabel(state.status),
+                        transitionSpec = {
+                            (fadeIn(tween(240)) + slideInVertically(tween(240)) { it / 3 }) togetherWith
+                                (fadeOut(tween(160)) + slideOutVertically(tween(160)) { -it / 4 })
+                        },
+                        label = "status",
+                    ) { label ->
+                        Text(
+                            label,
+                            color = if (state.status == ConnectionStatus.DISCONNECTED) InkMuted else Ink,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
+                    AnimatedVisibility(
+                        visible = state.status == ConnectionStatus.CONNECTED,
+                        enter = fadeIn(tween(280)) + slideInVertically(tween(280)) { it / 2 },
+                        exit = fadeOut(tween(160)),
+                    ) {
+                        Text(
+                            "${formatDuration(state.connectedSince)}  ·  ↓ ${formatRate(state.rxRate)}  ·  ↑ ${formatRate(state.txRate)}",
+                            color = InkMuted,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(top = 6.dp),
+                        )
+                    }
+                    AnimatedVisibility(visible = !state.error.isNullOrBlank()) {
+                        Text(
+                            state.error ?: "",
+                            color = Ink,
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -186,7 +199,7 @@ private fun AccessChip(access: AccessUiState, onClick: () -> Unit) {
         modifier = Modifier
             .clip(shape)
             .background(if (ok) Ink else Color.Transparent)
-            .border(1.dp, Ink, shape)
+            .border(1.dp, Ink.copy(alpha = 0.85f), shape)
             .clickable(enabled = !working, onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 7.dp),
     )
@@ -204,39 +217,31 @@ private fun ServerSheet(
     Column(
         Modifier
             .fillMaxWidth()
-            .shadow(18.dp, RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp), ambientColor = Color(0x66000000))
-            .clip(RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp))
-            .background(Paper)
             .navigationBarsPadding()
-            .height(330.dp),
+            .height(420.dp),
     ) {
         Row(
             Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onCreateWarp)
-                .padding(horizontal = 18.dp, vertical = 14.dp),
+                .padding(horizontal = 18.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(Icons.Rounded.ChevronRight, contentDescription = null, tint = Ink, modifier = Modifier.size(22.dp))
             Text(
                 "Список серверов",
                 color = Ink,
                 fontSize = 17.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.padding(start = 4.dp).weight(1f),
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f),
             )
             Text("${profiles.profiles.size}", color = InkMuted, fontSize = 13.sp)
         }
-        HorizontalDivider(color = Line)
+        HorizontalDivider(color = Line, modifier = Modifier.padding(top = 8.dp))
         if (profiles.profiles.isEmpty()) {
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(22.dp),
-            ) {
+            Column(Modifier.fillMaxWidth().padding(22.dp)) {
                 Text("Пока пусто", color = Ink, fontWeight = FontWeight.Medium)
                 Text(
-                    "Выбери страну и LTE — Bozya сам запросит ключи и соберёт AmneziaWG-конфиг.",
+                    "Выбери страну и LTE — конфиг появится здесь, как в MeowNet.",
                     color = InkMuted,
                     fontSize = 13.sp,
                     modifier = Modifier.padding(top = 6.dp),
@@ -244,7 +249,7 @@ private fun ServerSheet(
                 Button(
                     onClick = onCreateWarp,
                     colors = ButtonDefaults.buttonColors(containerColor = Ink, contentColor = Canvas),
-                    shape = RoundedCornerShape(18.dp),
+                    shape = RoundedCornerShape(16.dp),
                     modifier = Modifier
                         .padding(top = 14.dp)
                         .fillMaxWidth()
@@ -263,14 +268,10 @@ private fun ServerSheet(
                 )
             }
         } else {
-            Text(
-                "Конфиги",
-                color = Ink,
-                fontWeight = FontWeight.Medium,
-                fontSize = 15.sp,
-                modifier = Modifier.padding(start = 20.dp, top = 12.dp, bottom = 4.dp),
-            )
-            LazyColumn(Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 12.dp),
+            ) {
                 items(profiles.profiles, key = { it.id }) { profile ->
                     val preview = remember(profile.rawConfig) { ConfigParser.parse(profile.rawConfig) }
                     val active = profile.id == profiles.activeId
@@ -279,10 +280,10 @@ private fun ServerSheet(
                             .fillMaxWidth()
                             .clickable { onSelect(profile.id) }
                             .background(if (active) Lift else Color.Transparent)
-                            .padding(horizontal = 18.dp, vertical = 12.dp),
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(flagForEndpoint(preview.endpoint), fontSize = 22.sp, modifier = Modifier.padding(end = 12.dp))
+                        FlagBadge(preview.endpoint, Modifier.padding(end = 12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(
                                 profile.name,
@@ -300,14 +301,13 @@ private fun ServerSheet(
                                 overflow = TextOverflow.Ellipsis,
                             )
                         }
-                        if (active && state.status == ConnectionStatus.CONNECTED) {
-                            Text("•", color = Ink, fontSize = 22.sp, modifier = Modifier.padding(end = 6.dp))
+                        if (active) {
+                            Text("●", color = Ink, fontSize = 12.sp, modifier = Modifier.padding(end = 4.dp))
                         }
                         IconButton(onClick = { onDelete(profile.id) }, modifier = Modifier.size(36.dp)) {
                             Icon(Icons.Rounded.Delete, contentDescription = "Удалить", tint = InkMuted)
                         }
                     }
-                    HorizontalDivider(color = Line, modifier = Modifier.padding(start = 52.dp))
                 }
             }
         }
@@ -315,7 +315,7 @@ private fun ServerSheet(
 }
 
 private fun statusLabel(status: ConnectionStatus) = when (status) {
-    ConnectionStatus.DISCONNECTED -> "Отключён"
+    ConnectionStatus.DISCONNECTED -> "Нажми, чтобы подключить"
     ConnectionStatus.CONNECTING -> "Подключение…"
     ConnectionStatus.CONNECTED -> "Подключён"
     ConnectionStatus.ERROR -> "Ошибка"

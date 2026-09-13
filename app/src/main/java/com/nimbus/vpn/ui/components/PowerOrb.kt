@@ -27,9 +27,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -38,8 +38,9 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.nimbus.vpn.tunnel.ConnectionStatus
-import com.nimbus.vpn.ui.theme.Canvas
+import com.nimbus.vpn.ui.theme.Disc
 import com.nimbus.vpn.ui.theme.Ink
+import com.nimbus.vpn.ui.theme.Ring
 
 @Composable
 fun PowerOrb(
@@ -52,51 +53,50 @@ fun PowerOrb(
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val pressScale by animateFloatAsState(
-        targetValue = if (pressed) 0.94f else 1f,
-        animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f),
+        targetValue = if (pressed) 0.96f else 1f,
+        animationSpec = spring(dampingRatio = 0.78f, stiffness = 500f),
         label = "press",
     )
-    val connectedScale by animateFloatAsState(
-        targetValue = if (status == ConnectionStatus.CONNECTED) 1.04f else 1f,
-        animationSpec = tween(480, easing = FastOutSlowInEasing),
-        label = "connectedScale",
+    val fill by animateColorAsState(
+        targetValue = if (status == ConnectionStatus.CONNECTED) Color(0xFF1F1F22) else Disc,
+        animationSpec = tween(320),
+        label = "fill",
     )
     val iconTint by animateColorAsState(
-        when (status) {
-            ConnectionStatus.DISCONNECTED -> Color(0xFF2A2A2A)
-            else -> Canvas
+        targetValue = when (status) {
+            ConnectionStatus.DISCONNECTED -> Color(0xFFD8D8DC)
+            ConnectionStatus.CONNECTING -> Ink
+            ConnectionStatus.CONNECTED -> Ink
+            ConnectionStatus.ERROR -> Ink
         },
         label = "icon",
     )
-    val fill by animateColorAsState(
-        when (status) {
-            ConnectionStatus.CONNECTED -> Ink
-            ConnectionStatus.CONNECTING -> Ink
-            ConnectionStatus.ERROR -> Ink
-            ConnectionStatus.DISCONNECTED -> Ink
-        },
-        label = "fill",
-    )
-    val infinite = rememberInfiniteTransition(label = "power")
+    val infinite = rememberInfiniteTransition(label = "happ-power")
     val spin by infinite.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(1400, easing = LinearEasing), RepeatMode.Restart),
+        animationSpec = infiniteRepeatable(tween(1100, easing = LinearEasing), RepeatMode.Restart),
         label = "spin",
     )
-    val pulse by infinite.animateFloat(
-        initialValue = 0.88f,
-        targetValue = 1.08f,
-        animationSpec = infiniteRepeatable(tween(1600, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "pulse",
+    val ripple by infinite.animateFloat(
+        initialValue = 0.82f,
+        targetValue = 1.12f,
+        animationSpec = infiniteRepeatable(tween(1700, easing = FastOutSlowInEasing), RepeatMode.Restart),
+        label = "ripple",
+    )
+    val rippleAlpha by infinite.animateFloat(
+        initialValue = 0.28f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(tween(1700, easing = LinearEasing), RepeatMode.Restart),
+        label = "rippleA",
     )
     val liveSpin = if (animate && status == ConnectionStatus.CONNECTING) spin else 0f
-    val livePulse = if (animate && status == ConnectionStatus.CONNECTED) pulse else 1f
+    val showRipple = animate && status == ConnectionStatus.CONNECTED
 
     Box(
         modifier
-            .size(300.dp)
-            .scale(pressScale * connectedScale)
+            .size(220.dp)
+            .scale(pressScale)
             .clickable(
                 interactionSource = interaction,
                 indication = null,
@@ -109,60 +109,60 @@ fun PowerOrb(
         Canvas(Modifier.matchParentSize()) {
             val center = Offset(size.width / 2f, size.height / 2f)
             val outer = size.minDimension / 2f
-            if (status == ConnectionStatus.CONNECTED && animate) {
+            drawCircle(
+                color = Ring.copy(alpha = 0.9f),
+                radius = outer * 0.78f,
+                center = center,
+                style = Stroke(width = 1.2.dp.toPx()),
+            )
+            drawCircle(
+                color = Ring.copy(alpha = 0.45f),
+                radius = outer * 0.92f,
+                center = center,
+                style = Stroke(width = 1.dp.toPx()),
+            )
+            if (showRipple) {
                 drawCircle(
-                    color = Ink.copy(alpha = 0.10f * livePulse),
-                    radius = outer * 0.98f * livePulse,
-                    center = center,
-                )
-                drawCircle(
-                    color = Ink.copy(alpha = 0.18f),
-                    radius = outer * 0.78f * livePulse,
+                    color = Ink.copy(alpha = rippleAlpha),
+                    radius = outer * ripple,
                     center = center,
                     style = Stroke(width = 2.dp.toPx()),
                 )
-            } else {
+            }
+            if (status == ConnectionStatus.CONNECTED) {
                 drawCircle(
-                    color = Ink.copy(alpha = 0.12f),
-                    radius = outer * 0.92f,
+                    color = Ink.copy(alpha = 0.95f),
+                    radius = outer * 0.78f,
                     center = center,
-                    style = Stroke(width = 1.4.dp.toPx()),
+                    style = Stroke(width = 2.4.dp.toPx()),
                 )
             }
             if (status == ConnectionStatus.CONNECTING) {
                 rotate(liveSpin, center) {
+                    val diameter = outer * 1.84f
                     drawArc(
-                        color = Ink,
-                        startAngle = -90f,
-                        sweepAngle = 96f,
+                        brush = Brush.sweepGradient(
+                            colorStops = arrayOf(
+                                0.00f to Color.Transparent,
+                                0.55f to Color.Transparent,
+                                0.78f to Ink.copy(alpha = 0.15f),
+                                1.00f to Ink,
+                            ),
+                            center = center,
+                        ),
+                        startAngle = 0f,
+                        sweepAngle = 360f,
                         useCenter = false,
-                        topLeft = Offset(center.x - outer * 0.9f, center.y - outer * 0.9f),
-                        size = Size(outer * 1.8f, outer * 1.8f),
-                        style = Stroke(width = 3.5.dp.toPx(), cap = StrokeCap.Round),
-                    )
-                }
-                rotate(liveSpin * -0.6f, center) {
-                    drawArc(
-                        color = Ink.copy(alpha = 0.35f),
-                        startAngle = 40f,
-                        sweepAngle = 70f,
-                        useCenter = false,
-                        topLeft = Offset(center.x - outer * 0.78f, center.y - outer * 0.78f),
-                        size = Size(outer * 1.56f, outer * 1.56f),
-                        style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round),
+                        topLeft = Offset(center.x - outer * 0.92f, center.y - outer * 0.92f),
+                        size = Size(diameter, diameter),
+                        style = Stroke(width = 3.2.dp.toPx(), cap = StrokeCap.Round),
                     )
                 }
             }
         }
         Box(
             Modifier
-                .size(208.dp)
-                .shadow(
-                    if (status == ConnectionStatus.CONNECTED) 28.dp else 18.dp,
-                    CircleShape,
-                    ambientColor = Color(0x66FFFFFF),
-                    spotColor = Color(0x44FFFFFF),
-                )
+                .size(148.dp)
                 .background(fill, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
@@ -170,7 +170,7 @@ fun PowerOrb(
                 Icons.Rounded.PowerSettingsNew,
                 contentDescription = "Подключить",
                 tint = iconTint,
-                modifier = Modifier.size(78.dp),
+                modifier = Modifier.size(56.dp),
             )
         }
     }
