@@ -42,7 +42,6 @@ data class AmneziaParams(
 }
 
 object ConfigParser {
-    private val KEY_LINE = Regex("""^\s*([A-Za-z][A-Za-z0-9]*)\s*=\s*(.*)\s*$""")
 
     fun parse(raw: String): ParsedConfigPreview {
         val issues = mutableListOf<String>()
@@ -66,8 +65,7 @@ object ConfigParser {
         var current: MutableMap<String, String>? = null
 
         text.lineSequence().forEach { original ->
-            val commentIndex = original.indexOf('#')
-            val line = (if (commentIndex >= 0) original.substring(0, commentIndex) else original).trim()
+            val line = stripComment(original)
             if (line.isEmpty()) return@forEach
             if (line.startsWith("[") && line.endsWith("]")) {
                 currentKind = line.substring(1, line.length - 1).trim()
@@ -75,18 +73,20 @@ object ConfigParser {
                 sections.getOrPut(currentKind!!) { mutableListOf() }.add(current!!)
                 return@forEach
             }
-            val match = KEY_LINE.matchEntire(line)
-            if (match == null) {
-                if (current == null) {
+            val eq = line.indexOf('=')
+            if (eq <= 0) {
+                if (current == null && line.length < 80) {
                     issues += "Строка вне секции: $line"
                 }
                 return@forEach
             }
+            val key = line.substring(0, eq).trim()
+            if (key.isEmpty() || !key[0].isLetter()) return@forEach
             if (current == null || currentKind == null) {
-                issues += "Ключ ${match.groupValues[1]} вне секции"
+                issues += "Ключ $key вне секции"
                 return@forEach
             }
-            current!![match.groupValues[1]] = match.groupValues[2].trim()
+            current!![key] = line.substring(eq + 1).trim()
         }
 
         val iface = sections["Interface"]?.firstOrNull()
@@ -139,6 +139,29 @@ object ConfigParser {
         )
     }
 
+    fun endpointOf(raw: String): String? {
+        raw.lineSequence().forEach { original ->
+            if (original.length > 96 && original.indexOf("Endpoint", ignoreCase = true) < 0) return@forEach
+            val line = stripComment(original)
+            if (!line.startsWith("Endpoint", ignoreCase = true)) return@forEach
+            val value = line.substringAfter('=', "").trim()
+            if (value.isNotEmpty()) return value
+        }
+        return null
+    }
+
+    fun isAmneziaHint(raw: String): Boolean {
+        raw.lineSequence().forEach { original ->
+            if (original.length > 12 && original.startsWith("I1", ignoreCase = true)) return true
+            val line = original.trim()
+            if (line.startsWith("Jc", ignoreCase = true) ||
+                line.startsWith("I1", ignoreCase = true) ||
+                line.startsWith("Jmin", ignoreCase = true)
+            ) return true
+        }
+        return false
+    }
+
     fun suggestName(raw: String, fallback: String = "Bozya"): String {
         val preview = parse(raw)
         val host = preview.endpoint?.substringBefore(":")?.substringBefore(".")
@@ -161,5 +184,19 @@ object ConfigParser {
     private fun looksLikeKey(value: String): Boolean {
         val compact = value.trim()
         return compact.length in 42..46 && compact.matches(Regex("[A-Za-z0-9+/=_-]+"))
+    }
+
+    private fun stripComment(original: String): String {
+        if (original.length > 160) {
+            val eq = original.indexOf('=')
+            val key = if (eq > 0) original.substring(0, eq).trim() else original.trim()
+            if (key.equals("I1", true) || key.equals("I2", true) || key.equals("I3", true) || key.equals("I4", true) ||
+                key.equals("I5", true)
+            ) {
+                return original.trim()
+            }
+        }
+        val commentIndex = original.indexOf('#')
+        return (if (commentIndex >= 0) original.substring(0, commentIndex) else original).trim()
     }
 }

@@ -47,9 +47,9 @@ fun flagResForEndpoint(endpoint: String?): Int? {
 }
 
 fun subtitleForConfig(raw: String): String {
-    val preview = ConfigParser.parse(raw)
-    val proto = if (preview.isAmnezia) "AmneziaWG" else "WireGuard"
-    return listOfNotNull(preview.endpoint, proto).joinToString(" · ")
+    val endpoint = ConfigParser.endpointOf(raw)
+    val proto = if (ConfigParser.isAmneziaHint(raw)) "AmneziaWG" else "WireGuard"
+    return listOfNotNull(endpoint, proto).joinToString(" · ")
 }
 
 @Composable

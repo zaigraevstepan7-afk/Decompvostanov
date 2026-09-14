@@ -2,7 +2,7 @@ package com.nimbus.vpn.ui.home
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -14,19 +14,19 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
@@ -39,14 +39,21 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberBottomSheetScaffoldState
+import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -64,7 +71,9 @@ import com.nimbus.vpn.ui.theme.Ink
 import com.nimbus.vpn.ui.theme.InkMuted
 import com.nimbus.vpn.ui.theme.Lift
 import com.nimbus.vpn.ui.theme.Line
+import com.nimbus.vpn.ui.theme.Motion
 import com.nimbus.vpn.ui.theme.Paper
+import kotlinx.coroutines.delay
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
@@ -83,9 +92,23 @@ fun HomeScreen(
     onSettings: () -> Unit,
     onConfirmAccess: () -> Unit,
 ) {
-    val sheetState = rememberBottomSheetScaffoldState()
+    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+    val peek = minOf(228.dp, screenHeight * 0.30f).coerceAtLeast(156.dp)
+    val sheetState = rememberStandardBottomSheetState(
+        initialValue = SheetValue.PartiallyExpanded,
+        skipHiddenState = true,
+    )
+    val scaffoldState = rememberBottomSheetScaffoldState(bottomSheetState = sheetState)
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(state.status) {
+        if (state.status != ConnectionStatus.CONNECTED) return@LaunchedEffect
+        while (true) {
+            now = System.currentTimeMillis()
+            delay(1000)
+        }
+    }
     BottomSheetScaffold(
-        scaffoldState = sheetState,
+        scaffoldState = scaffoldState,
         containerColor = Canvas,
         contentColor = Ink,
         sheetContainerColor = Paper,
@@ -93,12 +116,12 @@ fun HomeScreen(
         sheetTonalElevation = 0.dp,
         sheetShadowElevation = 16.dp,
         sheetShape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-        sheetPeekHeight = 236.dp,
+        sheetPeekHeight = peek,
         sheetDragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFF5A5A5E)) },
         sheetContent = {
             ServerSheet(
-                state = state,
                 profiles = profiles,
+                maxHeight = screenHeight * 0.72f,
                 onCreateWarp = onCreateWarp,
                 onImport = onImport,
                 onSelect = onSelect,
@@ -142,8 +165,8 @@ fun HomeScreen(
                     AnimatedContent(
                         targetState = statusLabel(state.status),
                         transitionSpec = {
-                            (fadeIn(tween(240)) + slideInVertically(tween(240)) { it / 3 }) togetherWith
-                                (fadeOut(tween(160)) + slideOutVertically(tween(160)) { -it / 4 })
+                            (fadeIn(Motion.fade(320)) + slideInVertically(Motion.offset(360)) { it / 6 }) togetherWith
+                                (fadeOut(Motion.fade(180)) + slideOutVertically(Motion.offset(220)) { -it / 8 })
                         },
                         label = "status",
                     ) { label ->
@@ -156,17 +179,21 @@ fun HomeScreen(
                     }
                     AnimatedVisibility(
                         visible = state.status == ConnectionStatus.CONNECTED,
-                        enter = fadeIn(tween(280)) + slideInVertically(tween(280)) { it / 2 },
-                        exit = fadeOut(tween(160)),
+                        enter = fadeIn(Motion.fade(360)) + slideInVertically(Motion.offset(360)) { it / 4 },
+                        exit = fadeOut(Motion.fade(180)),
                     ) {
                         Text(
-                            "${formatDuration(state.connectedSince)}  ·  ↓ ${formatRate(state.rxRate)}  ·  ↑ ${formatRate(state.txRate)}",
+                            "${formatDuration(state.connectedSince, now)}  ·  ↓ ${formatRate(state.rxRate)}  ·  ↑ ${formatRate(state.txRate)}",
                             color = InkMuted,
                             fontSize = 12.sp,
                             modifier = Modifier.padding(top = 6.dp),
                         )
                     }
-                    AnimatedVisibility(visible = !state.error.isNullOrBlank()) {
+                    AnimatedVisibility(
+                        visible = !state.error.isNullOrBlank(),
+                        enter = fadeIn(Motion.fade(280)),
+                        exit = fadeOut(Motion.fade(160)),
+                    ) {
                         Text(
                             state.error ?: "",
                             color = Ink,
@@ -184,31 +211,46 @@ fun HomeScreen(
 private fun AccessChip(access: AccessUiState, onClick: () -> Unit) {
     val working = access.status == AccessStatus.WORKING
     val ok = access.status == AccessStatus.OK
-    val label = when (access.status) {
-        AccessStatus.IDLE -> "Доступ"
-        AccessStatus.WORKING -> "Активирую"
-        AccessStatus.OK -> "Активирован"
-        AccessStatus.FAIL -> "Повторить"
-    }
-    val shape = RoundedCornerShape(20.dp)
-    Text(
-        label,
-        color = if (ok) Canvas else Ink,
-        fontSize = 12.sp,
-        fontWeight = FontWeight.Medium,
-        modifier = Modifier
-            .clip(shape)
-            .background(if (ok) Ink else Color.Transparent)
-            .border(1.dp, Ink.copy(alpha = 0.85f), shape)
-            .clickable(enabled = !working, onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 7.dp),
+    val bg by animateColorAsState(
+        targetValue = if (ok) Ink else Color.Transparent,
+        animationSpec = Motion.color(280),
+        label = "chip-bg",
     )
+    val fg by animateColorAsState(
+        targetValue = if (ok) Canvas else Ink,
+        animationSpec = Motion.color(280),
+        label = "chip-fg",
+    )
+    val shape = RoundedCornerShape(20.dp)
+    AnimatedContent(
+        targetState = when (access.status) {
+            AccessStatus.IDLE -> "Доступ"
+            AccessStatus.WORKING -> "Активирую"
+            AccessStatus.OK -> "Активирован"
+            AccessStatus.FAIL -> "Повторить"
+        },
+        transitionSpec = { fadeIn(Motion.fade(180)) togetherWith fadeOut(Motion.fade(120)) },
+        label = "chip-label",
+    ) { label ->
+        Text(
+            label,
+            color = fg,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier
+                .clip(shape)
+                .background(bg)
+                .border(1.dp, Ink.copy(alpha = 0.85f), shape)
+                .clickable(enabled = !working, onClick = onClick)
+                .padding(horizontal = 14.dp, vertical = 7.dp),
+        )
+    }
 }
 
 @Composable
 private fun ServerSheet(
-    state: TunnelUiState,
     profiles: ProfileIndex,
+    maxHeight: androidx.compose.ui.unit.Dp,
     onCreateWarp: () -> Unit,
     onImport: () -> Unit,
     onSelect: (String) -> Unit,
@@ -217,8 +259,8 @@ private fun ServerSheet(
     Column(
         Modifier
             .fillMaxWidth()
-            .navigationBarsPadding()
-            .height(420.dp),
+            .heightIn(max = maxHeight)
+            .navigationBarsPadding(),
     ) {
         Row(
             Modifier
@@ -268,12 +310,14 @@ private fun ServerSheet(
                 )
             }
         } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 12.dp),
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
             ) {
-                items(profiles.profiles, key = { it.id }) { profile ->
-                    val preview = remember(profile.rawConfig) { ConfigParser.parse(profile.rawConfig) }
+                profiles.profiles.forEach { profile ->
+                    val endpoint = remember(profile.rawConfig) { ConfigParser.endpointOf(profile.rawConfig) }
+                    val subtitle = remember(profile.rawConfig) { subtitleForConfig(profile.rawConfig) }
                     val active = profile.id == profiles.activeId
                     Row(
                         Modifier
@@ -283,7 +327,7 @@ private fun ServerSheet(
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        FlagBadge(preview.endpoint, Modifier.padding(end = 12.dp))
+                        FlagBadge(endpoint, Modifier.padding(end = 12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(
                                 profile.name,
@@ -294,7 +338,7 @@ private fun ServerSheet(
                                 overflow = TextOverflow.Ellipsis,
                             )
                             Text(
-                                subtitleForConfig(profile.rawConfig),
+                                subtitle,
                                 color = InkMuted,
                                 fontSize = 12.sp,
                                 maxLines = 1,
@@ -332,9 +376,9 @@ private fun formatBytes(bytes: Long): String {
     return String.format(Locale.US, "%.2f GB", mb / 1024.0)
 }
 
-private fun formatDuration(since: Long?): String {
+private fun formatDuration(since: Long?, now: Long): String {
     if (since == null) return "—"
-    val sec = TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis() - since).coerceAtLeast(0)
+    val sec = TimeUnit.MILLISECONDS.toSeconds(now - since).coerceAtLeast(0)
     val h = sec / 3600
     val m = (sec % 3600) / 60
     val s = sec % 60

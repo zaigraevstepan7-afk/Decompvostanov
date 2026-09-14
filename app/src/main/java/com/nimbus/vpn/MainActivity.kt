@@ -11,7 +11,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -35,6 +34,7 @@ import com.nimbus.vpn.ui.importcfg.ImportScreen
 import com.nimbus.vpn.ui.profiles.ProfilesScreen
 import com.nimbus.vpn.ui.settings.SettingsScreen
 import com.nimbus.vpn.ui.theme.BozyaTheme
+import com.nimbus.vpn.ui.theme.Motion
 import com.nimbus.vpn.ui.warp.WarpCreateScreen
 
 class MainActivity : ComponentActivity() {
@@ -100,21 +100,27 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                fun go(route: String) {
+                    nav.navigate(route) {
+                        launchSingleTop = true
+                    }
+                }
+
                 NavHost(
                     navController = nav,
                     startDestination = "home",
                     modifier = Modifier.fillMaxSize(),
                     enterTransition = {
-                        fadeIn(tween(380)) + slideInHorizontally(tween(420)) { it / 5 }
+                        fadeIn(Motion.fade(380)) + slideInHorizontally(Motion.offset(420)) { it / 10 }
                     },
                     exitTransition = {
-                        fadeOut(tween(220)) + slideOutHorizontally(tween(320)) { -it / 8 }
+                        fadeOut(Motion.fade(220)) + slideOutHorizontally(Motion.offset(280)) { -it / 12 }
                     },
                     popEnterTransition = {
-                        fadeIn(tween(320)) + slideInHorizontally(tween(360)) { -it / 8 }
+                        fadeIn(Motion.fade(320)) + slideInHorizontally(Motion.offset(360)) { -it / 12 }
                     },
                     popExitTransition = {
-                        fadeOut(tween(220)) + slideOutHorizontally(tween(320)) { it / 5 }
+                        fadeOut(Motion.fade(200)) + slideOutHorizontally(Motion.offset(280)) { it / 10 }
                     },
                 ) {
                     composable("home") {
@@ -124,11 +130,11 @@ class MainActivity : ComponentActivity() {
                             access = access,
                             animate = animate,
                             onToggle = { requestConnect() },
-                            onCreateWarp = { nav.navigate("warp") },
-                            onImport = { nav.navigate("import") },
+                            onCreateWarp = { go("warp") },
+                            onImport = { go("import") },
                             onSelect = viewModel::selectProfile,
                             onDelete = viewModel::deleteProfile,
-                            onSettings = { nav.navigate("settings") },
+                            onSettings = { go("settings") },
                             onConfirmAccess = viewModel::activateAccess,
                         )
                     }
@@ -137,7 +143,7 @@ class MainActivity : ComponentActivity() {
                             warp = warp,
                             onBack = { nav.popBackStack() },
                             onCreate = viewModel::createWarp,
-                            onImport = { nav.navigate("import") },
+                            onImport = { go("import") },
                             onCreated = { nav.popBackStack("home", inclusive = false) },
                             onConsumed = viewModel::consumeWarpCreated,
                         )
@@ -158,7 +164,7 @@ class MainActivity : ComponentActivity() {
                                 nav.popBackStack()
                             },
                             onDelete = viewModel::deleteProfile,
-                            onImport = { nav.navigate("import") },
+                            onImport = { go("import") },
                         )
                     }
                     composable("settings") {
@@ -172,7 +178,7 @@ class MainActivity : ComponentActivity() {
                             onBatteryExemption = {
                                 viewModel.batteryIntent()?.let { battery.launch(it) }
                             },
-                            onCreateWarp = { nav.navigate("warp") },
+                            onCreateWarp = { go("warp") },
                             onAccessLink = viewModel::setAccessLink,
                         )
                     }

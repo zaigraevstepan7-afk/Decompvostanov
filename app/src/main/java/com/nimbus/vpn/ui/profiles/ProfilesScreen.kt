@@ -71,7 +71,8 @@ fun ProfilesScreen(
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(index.profiles, key = { it.id }) { profile ->
-                        val preview = ConfigParser.parse(profile.rawConfig)
+                        val endpoint = ConfigParser.endpointOf(profile.rawConfig)
+                        val amnezia = ConfigParser.isAmneziaHint(profile.rawConfig)
                         val active = profile.id == index.activeId
                         GlassCard(
                             Modifier
@@ -88,9 +89,9 @@ fun ProfilesScreen(
                                         color = if (active) Cyan else TextPrimary,
                                         fontSize = 16.sp,
                                     )
-                                    Text(preview.endpoint ?: "без endpoint", color = TextMuted, fontSize = 13.sp)
+                                    Text(endpoint ?: "без endpoint", color = TextMuted, fontSize = 13.sp)
                                     Text(
-                                        if (preview.isAmnezia) "AmneziaWG" else "WireGuard",
+                                        if (amnezia) "AmneziaWG" else "WireGuard",
                                         color = TextMuted,
                                         fontSize = 12.sp,
                                     )

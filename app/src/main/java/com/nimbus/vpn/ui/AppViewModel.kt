@@ -13,6 +13,8 @@ import com.nimbus.vpn.data.WarpGenerator
 import com.nimbus.vpn.data.AccessApi
 import com.nimbus.vpn.tunnel.ConnectionStatus
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -20,8 +22,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 
 enum class AccessStatus { IDLE, WORKING, OK, FAIL }
 
@@ -53,6 +58,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _access = MutableStateFlow(AccessUiState())
     val access: StateFlow<AccessUiState> = _access.asStateFlow()
+    private val opMutex = Mutex()
+    private val toggleGate = AtomicBoolean(false)
+    private var switchJob: Job? = null
 
     fun activateAccess() {
         if (_access.value.status == AccessStatus.WORKING) return
@@ -85,12 +93,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             }
             result.fold(
                 onSuccess = { profile ->
-                    val running = tunnel.value.status == ConnectionStatus.CONNECTED ||
-                        tunnel.value.status == ConnectionStatus.CONNECTING
-                    app.container.profiles.upsert(profile, makeActive = true)
-                    if (running) {
-                        app.container.tunnel.disconnect()
-                        app.container.tunnel.connectActive()
+                    opMutex.withLock {
+                        val running = tunnel.value.status == ConnectionStatus.CONNECTED ||
+                            tunnel.value.status == ConnectionStatus.CONNECTING
+                        app.container.profiles.upsert(profile, makeActive = true)
+                        if (running) {
+                            runCatching { app.container.tunnel.disconnect() }
+                            runCatching { app.container.tunnel.connectActive() }
+                        }
                     }
                     _warp.value = WarpUiState(
                         message = "Создан ${profile.name}",
@@ -118,30 +128,53 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun batteryIntent(): Intent? = app.container.tunnel.requestBatteryExemption()
 
-    fun toggle() = viewModelScope.launch { app.container.tunnel.toggle() }
+    fun toggle() {
+        if (!toggleGate.compareAndSet(false, true)) return
+        viewModelScope.launch {
+            try {
+                opMutex.withLock { app.container.tunnel.toggle() }
+            } finally {
+                delay(320)
+                toggleGate.set(false)
+            }
+        }
+    }
 
-    fun connect() = viewModelScope.launch { app.container.tunnel.connectActive() }
+    fun connect() = viewModelScope.launch {
+        opMutex.withLock { runCatching { app.container.tunnel.connectActive() } }
+    }
 
-    fun disconnect() = viewModelScope.launch { app.container.tunnel.disconnect() }
+    fun disconnect() = viewModelScope.launch {
+        opMutex.withLock { runCatching { app.container.tunnel.disconnect() } }
+    }
 
     fun selectProfile(id: String) {
-        val running = tunnel.value.status == ConnectionStatus.CONNECTED ||
-            tunnel.value.status == ConnectionStatus.CONNECTING
-        app.container.profiles.setActive(id)
-        if (running) {
-            viewModelScope.launch {
-                app.container.tunnel.disconnect()
-                app.container.tunnel.connectActive()
+        switchJob?.cancel()
+        switchJob = viewModelScope.launch {
+            opMutex.withLock {
+                val running = tunnel.value.status == ConnectionStatus.CONNECTED ||
+                    tunnel.value.status == ConnectionStatus.CONNECTING
+                app.container.profiles.setActive(id)
+                if (running) {
+                    runCatching { app.container.tunnel.disconnect() }
+                    runCatching { app.container.tunnel.connectActive() }
+                }
             }
         }
     }
 
     fun deleteProfile(id: String) {
-        val wasActive = app.container.profiles.active?.id == id
-        val connected = tunnel.value.status == ConnectionStatus.CONNECTED ||
-            tunnel.value.status == ConnectionStatus.CONNECTING
-        app.container.profiles.delete(id)
-        if (wasActive && connected) disconnect()
+        viewModelScope.launch {
+            opMutex.withLock {
+                val wasActive = app.container.profiles.active?.id == id
+                val connected = tunnel.value.status == ConnectionStatus.CONNECTED ||
+                    tunnel.value.status == ConnectionStatus.CONNECTING
+                app.container.profiles.delete(id)
+                if (wasActive && connected) {
+                    runCatching { app.container.tunnel.disconnect() }
+                }
+            }
+        }
     }
 
     fun importText(name: String, raw: String): Result<VpnProfile> {

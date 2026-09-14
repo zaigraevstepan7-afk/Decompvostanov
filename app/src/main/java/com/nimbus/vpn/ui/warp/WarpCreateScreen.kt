@@ -72,7 +72,7 @@ fun WarpCreateScreen(
     LaunchedEffect(warp.created) {
         if (warp.created) {
             onConsumed()
-            onCreated()
+            runCatching { onCreated() }
         }
     }
 

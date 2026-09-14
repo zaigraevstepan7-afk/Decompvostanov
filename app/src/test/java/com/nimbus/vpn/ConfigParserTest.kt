@@ -75,4 +75,11 @@ class ConfigParserTest {
         assertThat(flagForEndpoint("ru.node.example:51820")).isEqualTo("🇷🇺")
         assertThat(flagForEndpoint("ru0.tribukvy.ltd:4500")).isEqualTo("🇷🇺")
     }
+
+    @Test
+    fun endpointOfSkipsHugeJunkPacket() {
+        val huge = "I1 = <b 0x" + "ab".repeat(8000) + ">\nEndpoint = pl.tribukvy.ltd:4500\n"
+        assertThat(ConfigParser.endpointOf(huge)).isEqualTo("pl.tribukvy.ltd:4500")
+        assertThat(ConfigParser.isAmneziaHint(huge)).isTrue()
+    }
 }

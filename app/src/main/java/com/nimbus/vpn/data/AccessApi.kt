@@ -26,7 +26,7 @@ object AccessApi {
             requestMethod = "GET"
             instanceFollowRedirects = true
             setRequestProperty("Accept", "text/html,application/json")
-            setRequestProperty("User-Agent", "BozyaVPN/1.0.8")
+            setRequestProperty("User-Agent", "BozyaVPN/1.0.9")
         }
         try {
             val code = connection.responseCode

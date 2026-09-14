@@ -26,6 +26,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,6 +39,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nimbus.vpn.data.ConfigParser
+import com.nimbus.vpn.data.ParsedConfigPreview
 import com.nimbus.vpn.ui.components.GlassCard
 import com.nimbus.vpn.ui.components.MeshBackground
 import com.nimbus.vpn.tunnel.ConnectionStatus
@@ -47,7 +49,10 @@ import com.nimbus.vpn.ui.theme.Line
 import com.nimbus.vpn.ui.theme.Paper
 import com.nimbus.vpn.ui.theme.Danger
 import com.nimbus.vpn.ui.theme.Success
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private val FieldShape = RoundedCornerShape(22.dp)
 private val PlaceholderGray = Color(0xFF8A8A8A)
@@ -61,8 +66,16 @@ fun ImportScreen(
     var name by remember { mutableStateOf("") }
     var raw by remember { mutableStateOf("") }
     var message by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
-    val preview = remember(raw) { if (raw.isBlank()) null else ConfigParser.parse(raw) }
+    var preview by remember { mutableStateOf<ParsedConfigPreview?>(null) }
     val scope = rememberCoroutineScope()
+    LaunchedEffect(raw) {
+        if (raw.isBlank()) {
+            preview = null
+            return@LaunchedEffect
+        }
+        delay(220)
+        preview = withContext(Dispatchers.Default) { ConfigParser.parse(raw) }
+    }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             scope.launch {
@@ -128,21 +141,21 @@ fun ImportScreen(
                 textStyle = TextStyle(color = Ink, fontFamily = FontFamily.Monospace, fontSize = 14.sp),
                 colors = fieldColors(),
             )
-            if (preview != null) {
+            preview?.let { parsed ->
                 Spacer(Modifier.height(12.dp))
                 GlassCard(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
-                            if (preview.canConnect) "Конфиг валиден" else "Нужно исправить",
-                            color = if (preview.canConnect) Success else Danger,
+                            if (parsed.canConnect) "Конфиг валиден" else "Нужно исправить",
+                            color = if (parsed.canConnect) Success else Danger,
                         )
-                        Text("Endpoint: ${preview.endpoint ?: "—"}", color = InkMuted, fontSize = 13.sp)
+                        Text("Endpoint: ${parsed.endpoint ?: "—"}", color = InkMuted, fontSize = 13.sp)
                         Text(
-                            if (preview.isAmnezia) "Обфускация AmneziaWG: да" else "Обычный WireGuard",
+                            if (parsed.isAmnezia) "Обфускация AmneziaWG: да" else "Обычный WireGuard",
                             color = InkMuted,
                             fontSize = 13.sp,
                         )
-                        preview.issues.forEach { Text("• $it", color = Danger, fontSize = 12.sp) }
+                        parsed.issues.forEach { Text("• $it", color = Danger, fontSize = 12.sp) }
                     }
                 }
             }
@@ -153,7 +166,11 @@ fun ImportScreen(
             Spacer(Modifier.height(16.dp))
             Button(
                 onClick = {
-                    val result = onImportText(name, raw)
+                    val result = try {
+                        onImportText(name, raw)
+                    } catch (t: Throwable) {
+                        Result.failure<Any>(t)
+                    }
                     message = result.fold(
                         onSuccess = { true to "Сохранено" },
                         onFailure = { false to (it.message ?: "Ошибка") },
