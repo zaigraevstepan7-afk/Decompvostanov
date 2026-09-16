@@ -22,14 +22,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.BottomSheetScaffold
@@ -47,6 +45,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -64,6 +63,8 @@ import com.nimbus.vpn.tunnel.ConnectionStatus
 import com.nimbus.vpn.tunnel.TunnelUiState
 import com.nimbus.vpn.ui.AccessStatus
 import com.nimbus.vpn.ui.AccessUiState
+import com.nimbus.vpn.ui.components.ConfirmDeleteDialog
+import com.nimbus.vpn.ui.components.DeleteServerButton
 import com.nimbus.vpn.ui.components.MeshBackground
 import com.nimbus.vpn.ui.components.PowerOrb
 import com.nimbus.vpn.ui.theme.Canvas
@@ -100,6 +101,7 @@ fun HomeScreen(
     )
     val scaffoldState = rememberBottomSheetScaffoldState(bottomSheetState = sheetState)
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var pendingDelete by remember { mutableStateOf<Pair<String, String>?>(null) }
     LaunchedEffect(state.status) {
         if (state.status != ConnectionStatus.CONNECTED) return@LaunchedEffect
         while (true) {
@@ -125,7 +127,10 @@ fun HomeScreen(
                 onCreateWarp = onCreateWarp,
                 onImport = onImport,
                 onSelect = onSelect,
-                onDelete = onDelete,
+                onDelete = { id ->
+                    val name = profiles.profiles.firstOrNull { it.id == id }?.name ?: "сервер"
+                    pendingDelete = id to name
+                },
             )
         },
     ) { padding ->
@@ -204,6 +209,16 @@ fun HomeScreen(
                 }
             }
         }
+    }
+    pendingDelete?.let { (id, name) ->
+        ConfirmDeleteDialog(
+            serverName = name,
+            onConfirm = {
+                onDelete(id)
+                pendingDelete = null
+            },
+            onDismiss = { pendingDelete = null },
+        )
     }
 }
 
@@ -348,9 +363,7 @@ private fun ServerSheet(
                         if (active) {
                             Text("●", color = Ink, fontSize = 12.sp, modifier = Modifier.padding(end = 4.dp))
                         }
-                        IconButton(onClick = { onDelete(profile.id) }, modifier = Modifier.size(36.dp)) {
-                            Icon(Icons.Rounded.Delete, contentDescription = "Удалить", tint = InkMuted)
-                        }
+                        DeleteServerButton(onClick = { onDelete(profile.id) })
                     }
                 }
             }

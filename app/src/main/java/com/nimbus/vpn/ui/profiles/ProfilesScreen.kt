@@ -15,11 +15,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -27,6 +30,8 @@ import androidx.compose.ui.unit.sp
 import com.nimbus.vpn.data.ConfigParser
 import com.nimbus.vpn.data.ProfileIndex
 import com.nimbus.vpn.tunnel.ConnectionStatus
+import com.nimbus.vpn.ui.components.ConfirmDeleteDialog
+import com.nimbus.vpn.ui.components.DeleteServerButton
 import com.nimbus.vpn.ui.components.GlassCard
 import com.nimbus.vpn.ui.components.MeshBackground
 import com.nimbus.vpn.ui.theme.Cyan
@@ -41,6 +46,7 @@ fun ProfilesScreen(
     onDelete: (String) -> Unit,
     onImport: () -> Unit,
 ) {
+    var pendingDelete by remember { mutableStateOf<Pair<String, String>?>(null) }
     Box(Modifier.fillMaxSize()) {
         MeshBackground(ConnectionStatus.DISCONNECTED, animate = true, modifier = Modifier.fillMaxSize())
         Column(
@@ -96,14 +102,24 @@ fun ProfilesScreen(
                                         fontSize = 12.sp,
                                     )
                                 }
-                                IconButton(onClick = { onDelete(profile.id) }) {
-                                    Icon(Icons.Rounded.Delete, contentDescription = "Удалить", tint = TextMuted)
-                                }
+                                DeleteServerButton(
+                                    onClick = { pendingDelete = profile.id to profile.name },
+                                )
                             }
                         }
                     }
                 }
             }
+        }
+        pendingDelete?.let { (id, name) ->
+            ConfirmDeleteDialog(
+                serverName = name,
+                onConfirm = {
+                    onDelete(id)
+                    pendingDelete = null
+                },
+                onDismiss = { pendingDelete = null },
+            )
         }
     }
 }
