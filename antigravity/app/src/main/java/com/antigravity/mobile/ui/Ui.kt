@@ -41,6 +41,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -51,8 +52,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
+import androidx.compose.material.icons.automirrored.outlined.Chat
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
@@ -90,6 +94,7 @@ import com.antigravity.core.agent.ToolLabels
 import com.antigravity.core.api.GeminiModels
 import com.antigravity.mobile.PendingAttachment
 import com.antigravity.mobile.UiState
+import com.antigravity.mobile.chat.ChatThread
 import com.antigravity.mobile.root.RootState
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
@@ -108,6 +113,9 @@ fun AntigravityAppUi(
     onRetryRoot: () -> Unit,
     onAttach: () -> Unit = {},
     onRemoveAttachment: (String) -> Unit = {},
+    onNewChat: () -> Unit = {},
+    onOpenChat: (String) -> Unit = {},
+    onDeleteChat: (String) -> Unit = {},
 ) {
     val screen = when {
         state.root != RootState.Granted -> "root"
@@ -132,7 +140,10 @@ fun AntigravityAppUi(
             when (current) {
                 "root" -> RootGate(state.root, onRetryRoot)
                 "login" -> LoginScreen(state, onLogin)
-                else -> ChatScreen(state, onSend, onModel, onWorkspace, onLogout, onAttach, onRemoveAttachment)
+                else -> ChatScreen(
+                    state, onSend, onModel, onWorkspace, onLogout, onAttach, onRemoveAttachment,
+                    onNewChat, onOpenChat, onDeleteChat,
+                )
             }
         }
     }
@@ -221,41 +232,62 @@ private fun ChatScreen(
     onLogout: () -> Unit,
     onAttach: () -> Unit,
     onRemoveAttachment: (String) -> Unit,
+    onNewChat: () -> Unit,
+    onOpenChat: (String) -> Unit,
+    onDeleteChat: (String) -> Unit,
 ) {
     var draft by remember { mutableStateOf("") }
-    var settings by remember { mutableStateOf(false) }
+    var pane by remember { mutableStateOf("chat") }
+    val order = mapOf("chats" to 0, "chat" to 1, "settings" to 2)
     AnimatedContent(
-        targetState = settings,
+        targetState = pane,
         modifier = Modifier.fillMaxSize(),
         transitionSpec = {
-            if (targetState) {
+            val to = order[targetState] ?: 1
+            val from = order[initialState] ?: 1
+            if (to > from) {
                 (slideInHorizontally(tween(360, easing = EnterEase)) { it } + fadeIn(tween(280))) togetherWith
                     (slideOutHorizontally(tween(280, easing = EnterEase)) { -it / 5 } + fadeOut(tween(180)))
             } else {
-                (slideInHorizontally(tween(360, easing = EnterEase)) { -it / 5 } + fadeIn(tween(280))) togetherWith
-                    (slideOutHorizontally(tween(280, easing = EnterEase)) { it } + fadeOut(tween(180)))
+                (slideInHorizontally(tween(360, easing = EnterEase)) { -it } + fadeIn(tween(280))) togetherWith
+                    (slideOutHorizontally(tween(280, easing = EnterEase)) { it / 5 } + fadeOut(tween(180)))
             }
         },
-        label = "settings",
-    ) { open ->
-        if (open) {
-            SettingsScreen(
+        label = "pane",
+    ) { current ->
+        when (current) {
+            "settings" -> SettingsScreen(
                 state = state,
-                onBack = { settings = false },
+                onBack = { pane = "chat" },
                 onWorkspace = onWorkspace,
                 onLogout = {
-                    settings = false
+                    pane = "chat"
                     onLogout()
                 },
             )
-        } else {
-            ChatPane(
+            "chats" -> ChatsScreen(
+                state = state,
+                onBack = { pane = "chat" },
+                onNew = {
+                    onNewChat()
+                    draft = ""
+                    pane = "chat"
+                },
+                onOpen = { id ->
+                    onOpenChat(id)
+                    draft = ""
+                    pane = "chat"
+                },
+                onDelete = onDeleteChat,
+            )
+            else -> ChatPane(
                 state = state,
                 draft = draft,
                 onDraft = { draft = it },
                 onSend = onSend,
                 onModel = onModel,
-                onSettings = { settings = true },
+                onSettings = { pane = "settings" },
+                onChats = { pane = "chats" },
                 onAttach = onAttach,
                 onRemoveAttachment = onRemoveAttachment,
             )
@@ -271,11 +303,12 @@ private fun ChatPane(
     onSend: (String) -> Unit,
     onModel: (String) -> Unit,
     onSettings: () -> Unit,
+    onChats: () -> Unit,
     onAttach: () -> Unit,
     onRemoveAttachment: (String) -> Unit,
 ) {
     val listState = rememberLazyListState()
-    LaunchedEffect(state.messages.size, state.busy) {
+    LaunchedEffect(state.messages.size, state.busy, state.chatId) {
         val last = state.messages.lastIndex + if (state.busy) 1 else 0
         if (last >= 0) listState.animateScrollToItem(last.coerceAtLeast(0))
     }
@@ -286,6 +319,9 @@ private fun ChatPane(
                 .padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            IconPress(onClick = onChats) {
+                Icon(Icons.AutoMirrored.Outlined.Chat, contentDescription = "Чаты", tint = AgColors.Muted, modifier = Modifier.size(22.dp))
+            }
             Spacer(Modifier.weight(1f))
             IconPress(onClick = onSettings) {
                 Icon(Icons.Outlined.Settings, contentDescription = "Настройки", tint = AgColors.Muted, modifier = Modifier.size(22.dp))
@@ -411,6 +447,107 @@ private fun SettingsScreen(
             }
         }
         Spacer(Modifier.height(12.dp))
+    }
+}
+
+@Composable
+private fun ChatsScreen(
+    state: UiState,
+    onBack: () -> Unit,
+    onNew: () -> Unit,
+    onOpen: (String) -> Unit,
+    onDelete: (String) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconPress(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Назад", tint = AgColors.Text)
+            }
+            Spacer(Modifier.width(4.dp))
+            Text("Чаты", color = AgColors.Text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.4).sp)
+            Spacer(Modifier.weight(1f))
+            IconPress(onClick = onNew, enabled = !state.busy) {
+                Icon(Icons.Outlined.Add, contentDescription = "Новый чат", tint = AgColors.Accent, modifier = Modifier.size(22.dp))
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Appear(40) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(AgRadius.Inner))
+                    .background(AgColors.AccentSoft)
+                    .clickable(enabled = !state.busy, onClick = onNew)
+                    .padding(vertical = 12.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("Новый чат", color = AgColors.Accent, fontWeight = FontWeight.SemiBold)
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(bottom = 16.dp),
+        ) {
+            items(state.chats, key = { it.id }) { chat ->
+                ChatRow(
+                    chat = chat,
+                    active = chat.id == state.chatId,
+                    enabled = !state.busy || chat.id == state.chatId,
+                    onOpen = { onOpen(chat.id) },
+                    onDelete = { onDelete(chat.id) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChatRow(
+    chat: ChatThread,
+    active: Boolean,
+    enabled: Boolean,
+    onOpen: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(AgRadius.Chip))
+            .background(if (active) AgColors.AccentSoft else AgColors.Surface)
+            .border(1.dp, if (active) AgColors.AccentDim.copy(alpha = 0.55f) else AgColors.Border, RoundedCornerShape(AgRadius.Chip))
+            .clickable(enabled = enabled, onClick = onOpen)
+            .padding(start = 14.dp, top = 12.dp, bottom = 12.dp, end = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                chat.title.ifBlank { "Новый чат" },
+                color = AgColors.Text,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (chat.preview.isNotBlank()) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    chat.preview,
+                    color = AgColors.Muted,
+                    fontSize = 13.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        IconPress(onClick = onDelete, enabled = enabled, size = 36.dp) {
+            Icon(Icons.Outlined.Delete, contentDescription = "Удалить", tint = AgColors.Muted, modifier = Modifier.size(18.dp))
+        }
     }
 }
 

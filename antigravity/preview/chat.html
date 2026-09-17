@@ -16,8 +16,8 @@
       border-radius: 28px; overflow: hidden; display: flex; flex-direction: column;
       box-shadow: 0 30px 80px rgba(0,0,0,.55);
     }
-    .top { display: flex; justify-content: flex-end; padding: 8px 12px 0; }
-    .gear { width: 44px; height: 44px; display: grid; place-items: center; color: #7A9A86; font-size: 18px; }
+    .top { display: flex; justify-content: space-between; padding: 8px 12px 0; }
+    .icon { width: 44px; height: 44px; display: grid; place-items: center; color: #7A9A86; font-size: 18px; }
     main { flex: 1; overflow: auto; padding: 8px 16px 12px; }
     .user { display: flex; justify-content: flex-end; margin: 10px 0; }
     .user p {
@@ -70,7 +70,7 @@
 </head>
 <body>
   <div class="phone">
-    <div class="top"><div class="gear">⚙</div></div>
+    <div class="top"><div class="icon">💬</div><div class="icon">⚙</div></div>
     <main>
       <div class="user"><p>что в Download</p></div>
       <div class="think">Thought <span>for 2s</span> ▾</div>

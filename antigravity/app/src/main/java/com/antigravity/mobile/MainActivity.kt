@@ -67,6 +67,9 @@ class MainActivity : ComponentActivity() {
                         onRetryRoot = viewModel::refreshRoot,
                         onAttach = { pickFiles.launch(arrayOf("*/*")) },
                         onRemoveAttachment = viewModel::removeAttachment,
+                        onNewChat = viewModel::newChat,
+                        onOpenChat = viewModel::openChat,
+                        onDeleteChat = viewModel::deleteChat,
                     )
                 }
             }

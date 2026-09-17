@@ -29,12 +29,17 @@ object AttachmentIo {
             raw to mime.ifBlank { "application/octet-stream" }
         }
         val dest = uniqueFile(inbox, sanitize(name), outMime)
-        dest.writeBytes(bytes)
+        try {
+            dest.writeBytes(bytes)
+        } catch (error: Exception) {
+            error("Не сохранить вложение ${dest.name}: ${error.message ?: "нет доступа"}")
+        }
         return PendingAttachment(
             id = UUID.randomUUID().toString(),
             name = dest.name,
             mime = outMime,
             path = dest.absolutePath,
+            devicePath = dest.absolutePath,
             size = dest.length(),
             isImage = AttachmentCodec.isImage(outMime, dest.name),
         )

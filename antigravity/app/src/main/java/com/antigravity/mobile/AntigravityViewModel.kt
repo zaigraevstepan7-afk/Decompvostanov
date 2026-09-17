@@ -20,6 +20,10 @@ import com.antigravity.core.auth.AntigravityAuthClient
 import com.antigravity.core.auth.AntigravityOAuth
 import com.antigravity.core.auth.AntigravitySession
 import com.antigravity.mobile.auth.SessionStore
+import com.antigravity.mobile.chat.ChatStore
+import com.antigravity.mobile.chat.ChatThread
+import com.antigravity.mobile.chat.ChatTitle
+import com.antigravity.mobile.chat.StoredChat
 import com.antigravity.mobile.fs.AttachmentIo
 import com.antigravity.mobile.fs.RootDeviceFs
 import com.antigravity.mobile.root.RootAccess
@@ -37,6 +41,7 @@ data class PendingAttachment(
     val name: String,
     val mime: String,
     val path: String,
+    val devicePath: String = path,
     val size: Long,
     val isImage: Boolean,
 ) {
@@ -54,6 +59,8 @@ data class UiState(
     val error: String? = null,
     val messages: List<ChatMessage> = emptyList(),
     val pending: List<PendingAttachment> = emptyList(),
+    val chatId: String = "",
+    val chats: List<ChatThread> = emptyList(),
 )
 
 data class GoogleLoginRequest(val url: String, val state: String)
@@ -65,18 +72,29 @@ fun defaultWorkspace(): String {
 
 class AntigravityViewModel(application: Application) : AndroidViewModel(application) {
     private val store = SessionStore(application)
+    private val chatStore = ChatStore(application.filesDir)
     private val auth = AntigravityAuthClient()
     private val llm = CloudCodeClient()
     private val history = mutableListOf<ContentTurn>()
+    private val initialChat: StoredChat = chatStore.currentId()?.let { chatStore.load(it) }
+        ?: chatStore.list().firstOrNull()?.let { chatStore.load(it.id) }
+        ?: chatStore.create()
 
     private val _state = MutableStateFlow(
         UiState(
             session = store.load(),
             model = store.loadModel() ?: GeminiModels.DEFAULT,
             workspace = store.loadWorkspace() ?: defaultWorkspace(),
+            chatId = initialChat.id,
+            chats = chatStore.list(),
+            messages = ChatStore.toMessages(initialChat),
         ),
     )
     val state: StateFlow<UiState> = _state
+
+    init {
+        history.addAll(ChatStore.toHistory(initialChat))
+    }
 
     fun refreshRoot() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -102,8 +120,68 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
 
     fun logout() {
         store.clear()
+        persistCurrent()
+        _state.update { it.copy(session = null, pending = emptyList(), error = null) }
+    }
+
+    fun newChat() {
+        if (_state.value.busy) return
+        persistCurrent()
+        val created = chatStore.create()
         history.clear()
-        _state.update { it.copy(session = null, messages = emptyList(), pending = emptyList(), error = null) }
+        _state.update {
+            it.copy(
+                chatId = created.id,
+                chats = chatStore.list(),
+                messages = emptyList(),
+                pending = emptyList(),
+                error = null,
+                busy = false,
+            )
+        }
+    }
+
+    fun openChat(id: String) {
+        if (_state.value.busy) return
+        if (id == _state.value.chatId) return
+        persistCurrent()
+        val loaded = chatStore.load(id) ?: return
+        history.clear()
+        history.addAll(ChatStore.toHistory(loaded))
+        chatStore.setCurrent(loaded.id)
+        _state.update {
+            it.copy(
+                chatId = loaded.id,
+                chats = chatStore.list(),
+                messages = ChatStore.toMessages(loaded),
+                pending = emptyList(),
+                error = null,
+            )
+        }
+    }
+
+    fun deleteChat(id: String) {
+        if (_state.value.busy) return
+        val current = _state.value.chatId
+        if (current == id) persistCurrent()
+        chatStore.delete(id)
+        if (current != id) {
+            _state.update { it.copy(chats = chatStore.list()) }
+            return
+        }
+        val next = chatStore.list().firstOrNull()?.let { chatStore.load(it.id) } ?: chatStore.create()
+        history.clear()
+        history.addAll(ChatStore.toHistory(next))
+        chatStore.setCurrent(next.id)
+        _state.update {
+            it.copy(
+                chatId = next.id,
+                chats = chatStore.list(),
+                messages = ChatStore.toMessages(next),
+                pending = emptyList(),
+                error = null,
+            )
+        }
     }
 
     fun createGoogleLogin(): GoogleLoginRequest? {
@@ -142,20 +220,30 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
     fun addAttachments(uris: List<Uri>) {
         if (uris.isEmpty()) return
         viewModelScope.launch(Dispatchers.IO) {
-            val inbox = File(_state.value.workspace, "inbox").also { it.mkdirs() }
+            val app = getApplication<Application>()
+            val inbox = File(app.filesDir, "inbox").also { it.mkdirs() }
             val imported = mutableListOf<PendingAttachment>()
             var lastError: String? = null
             uris.take(12).forEach { uri ->
                 try {
-                    imported += AttachmentIo.import(getApplication(), uri, inbox)
+                    imported += AttachmentIo.import(app, uri, inbox)
                 } catch (error: Exception) {
                     lastError = error.message ?: "Не удалось прикрепить файл"
                 }
             }
+            val workspace = _state.value.workspace
+            val withDevice = imported.map { item ->
+                runCatching {
+                    val fs = RootDeviceFs(app, File(workspace))
+                    val rel = "inbox/${item.name}"
+                    fs.writeBytes(rel, File(item.path).readBytes())
+                    item.copy(devicePath = fs.resolve(rel))
+                }.getOrDefault(item)
+            }
             _state.update {
                 it.copy(
-                    pending = (it.pending + imported).distinctBy { item -> item.path }.take(12),
-                    error = if (imported.isEmpty()) lastError else it.error,
+                    pending = (it.pending + withDevice).distinctBy { item -> item.path }.take(12),
+                    error = if (withDevice.isEmpty()) lastError else null,
                 )
             }
         }
@@ -188,6 +276,7 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
             )
         }
         viewModelScope.launch(Dispatchers.IO) {
+            persistCurrent()
             try {
                 var live = auth.ensureFresh(session)
                 store.save(live)
@@ -200,7 +289,7 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
                             name = item.name,
                             mime = item.mime,
                             bytes = File(item.path).readBytes(),
-                            savedPath = item.path,
+                            savedPath = item.devicePath,
                         )
                     },
                 )
@@ -288,6 +377,7 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
                 } else {
                     _state.update { it.copy(messages = stampThinking(it.messages), busy = false) }
                 }
+                persistCurrent()
             } catch (error: Exception) {
                 val raw = error.message.orEmpty()
                 val quota = raw.contains("429") || raw.contains("RESOURCE_EXHAUSTED")
@@ -300,8 +390,33 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
                     else -> raw.ifBlank { "Сбой агента" }
                 }
                 _state.update { it.copy(busy = false, error = message, messages = stampThinking(it.messages)) }
+                persistCurrent()
             }
         }
+    }
+
+    private fun persistCurrent() {
+        val state = _state.value
+        if (state.chatId.isBlank()) return
+        val previous = chatStore.load(state.chatId)
+        val userText = state.messages.firstOrNull { it.role == "user" }?.text.orEmpty()
+        val title = if (previous != null && previous.title.isNotBlank() && previous.title != "Новый чат") {
+            previous.title
+        } else {
+            ChatTitle.fromUserText(userText)
+        }
+        chatStore.save(
+            StoredChat(
+                id = state.chatId,
+                title = title,
+                preview = ChatTitle.preview(state.messages),
+                createdAtMs = previous?.createdAtMs ?: System.currentTimeMillis(),
+                updatedAtMs = System.currentTimeMillis(),
+                messages = ChatStore.fromMessages(state.messages),
+                history = ChatStore.fromHistory(history.toList()),
+            ),
+        )
+        _state.update { it.copy(chats = chatStore.list()) }
     }
 
     private fun stampThinking(messages: List<ChatMessage>, now: Long = System.currentTimeMillis()): List<ChatMessage> =
