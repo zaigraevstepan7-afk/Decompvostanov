@@ -28,13 +28,16 @@ import com.antigravity.mobile.fs.AttachmentIo
 import com.antigravity.mobile.fs.RootDeviceFs
 import com.antigravity.mobile.root.RootAccess
 import com.antigravity.mobile.root.RootState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
 import java.io.File
+import java.util.concurrent.atomic.AtomicBoolean
 
 data class PendingAttachment(
     val id: String,
@@ -61,6 +64,7 @@ data class UiState(
     val pending: List<PendingAttachment> = emptyList(),
     val chatId: String = "",
     val chats: List<ChatThread> = emptyList(),
+    val mode: String = "auto",
 )
 
 data class GoogleLoginRequest(val url: String, val state: String)
@@ -88,9 +92,12 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
             chatId = initialChat.id,
             chats = chatStore.list(),
             messages = ChatStore.toMessages(initialChat),
+            mode = store.loadMode() ?: "auto",
         ),
     )
     val state: StateFlow<UiState> = _state
+    private val cancelled = AtomicBoolean(false)
+    private var agentJob: Job? = null
 
     init {
         history.addAll(ChatStore.toHistory(initialChat))
@@ -104,6 +111,18 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
                 runCatching { File(_state.value.workspace).mkdirs() }
             }
         }
+    }
+
+    fun setMode(mode: String) {
+        val id = if (mode == "plan") "plan" else "auto"
+        store.saveMode(id)
+        _state.update { it.copy(mode = id) }
+    }
+
+    fun stop() {
+        cancelled.set(true)
+        agentJob?.cancel()
+        _state.update { it.copy(busy = false, error = null, messages = stampThinking(it.messages)) }
     }
 
     fun setModel(model: String) {
@@ -275,36 +294,78 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
                 messages = it.messages + ChatMessage("user", display, attachments = pending.map { item -> item.toChat() }),
             )
         }
-        viewModelScope.launch(Dispatchers.IO) {
+        val extraParts = AttachmentCodec.toGeminiParts(
+            pending.map { item ->
+                LoadedAttachment(
+                    name = item.name,
+                    mime = item.mime,
+                    bytes = runCatching { File(item.path).readBytes() }.getOrDefault(ByteArray(0)),
+                    savedPath = item.devicePath,
+                )
+            },
+        )
+        startAgent(
+            session = session,
+            model = snapshot.model,
+            workspace = snapshot.workspace,
+            chatId = snapshot.chatId,
+            userText = trimmed.ifBlank { "Смотри вложения. Ответь по картинкам и файлам." },
+            extraParts = extraParts,
+            planOnly = snapshot.mode == "plan",
+        )
+    }
+
+    fun confirmPlan() {
+        val snapshot = _state.value
+        if (snapshot.busy) return
+        val plan = snapshot.messages.lastOrNull { it.role == "plan" }?.text?.trim().orEmpty()
+        if (plan.isBlank()) return
+        val session = snapshot.session ?: return
+        _state.update { it.copy(busy = true, error = null) }
+        startAgent(
+            session = session,
+            model = snapshot.model,
+            workspace = snapshot.workspace,
+            chatId = snapshot.chatId,
+            userText = "План подтверждён. Реализуй его по шагам, не переспрашивай:\n\n$plan",
+            extraParts = emptyList(),
+            planOnly = false,
+        )
+    }
+
+    private fun startAgent(
+        session: AntigravitySession,
+        model: String,
+        workspace: String,
+        chatId: String,
+        userText: String,
+        extraParts: List<kotlinx.serialization.json.JsonObject>,
+        planOnly: Boolean,
+    ) {
+        cancelled.set(false)
+        agentJob?.cancel()
+        agentJob = viewModelScope.launch(Dispatchers.IO) {
             persistCurrent()
+            val still = { !cancelled.get() && _state.value.chatId == chatId }
             try {
                 var live = auth.ensureFresh(session)
                 store.save(live)
-                _state.update { it.copy(session = live) }
-                val fs = RootDeviceFs(getApplication(), File(snapshot.workspace))
-                fs.workspace = snapshot.workspace
-                val extraParts = AttachmentCodec.toGeminiParts(
-                    pending.map { item ->
-                        LoadedAttachment(
-                            name = item.name,
-                            mime = item.mime,
-                            bytes = File(item.path).readBytes(),
-                            savedPath = item.devicePath,
-                        )
-                    },
-                )
+                if (still()) _state.update { it.copy(session = live) }
+                val fs = RootDeviceFs(getApplication(), File(workspace))
+                fs.workspace = workspace
                 val loop = AgentLoop(llm, fs)
-                val prompt = trimmed.ifBlank { "Смотри вложения. Ответь по картинкам и файлам." }
                 val answer = loop.run(
                     session = live,
-                    model = snapshot.model,
-                    userText = prompt,
+                    model = model,
+                    userText = userText,
                     history = history,
                     extraParts = extraParts,
                     rooted = true,
+                    planOnly = planOnly,
+                    shouldCancel = { cancelled.get() },
                     listener = object : AgentListener {
                         override fun onThinking(text: String) {
-                            if (text.isBlank()) return
+                            if (text.isBlank() || !still()) return
                             _state.update { state ->
                                 val last = state.messages.lastOrNull()
                                 if (last?.role == "thinking") {
@@ -322,13 +383,14 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
                         }
 
                         override fun onAssistantText(text: String) {
-                            if (text.isBlank()) return
+                            if (text.isBlank() || !still()) return
                             _state.update { state ->
                                 state.copy(messages = stampThinking(state.messages) + ChatMessage("assistant", text))
                             }
                         }
 
                         override fun onToolStart(name: String, args: JsonObject) {
+                            if (!still()) return
                             _state.update { state ->
                                 state.copy(
                                     messages = state.messages + ChatMessage(
@@ -343,6 +405,7 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
                         }
 
                         override fun onToolResult(name: String, result: String) {
+                            if (!still()) return
                             _state.update { state ->
                                 val messages = state.messages.toMutableList()
                                 val index = messages.indexOfLast {
@@ -367,7 +430,21 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
                         }
                     },
                 )
-                if (answer.isNotBlank() && _state.value.messages.none { it.role == "assistant" && it.text == answer }) {
+                if (cancelled.get() || _state.value.chatId != chatId) {
+                    if (_state.value.chatId == chatId) {
+                        _state.update { it.copy(busy = false, messages = stampThinking(it.messages)) }
+                    }
+                    persistCurrent()
+                    return@launch
+                }
+                if (planOnly) {
+                    _state.update {
+                        it.copy(
+                            messages = stampThinking(it.messages) + ChatMessage("plan", answer.ifBlank { "План пустой" }),
+                            busy = false,
+                        )
+                    }
+                } else if (answer.isNotBlank() && _state.value.messages.none { it.role == "assistant" && it.text == answer }) {
                     _state.update {
                         it.copy(
                             messages = stampThinking(it.messages) + ChatMessage("assistant", answer),
@@ -378,15 +455,23 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
                     _state.update { it.copy(messages = stampThinking(it.messages), busy = false) }
                 }
                 persistCurrent()
+            } catch (error: CancellationException) {
+                _state.update { it.copy(busy = false, messages = stampThinking(it.messages)) }
+                persistCurrent()
             } catch (error: Exception) {
+                if (cancelled.get()) {
+                    _state.update { it.copy(busy = false, messages = stampThinking(it.messages)) }
+                    persistCurrent()
+                    return@launch
+                }
                 val raw = error.message.orEmpty()
                 val quota = raw.contains("429") || raw.contains("RESOURCE_EXHAUSTED")
                 val missing = raw.contains("404") || raw.contains("NOT_FOUND")
                 val message = when {
                     quota ->
-                        "429 на модели ${snapshot.model}. Если на ПК лимит полный — переустановите APK: запросы должны идти на daily-cloudcode-pa, не на prod."
+                        "429 на модели $model. Если на ПК лимит полный — переустановите APK: запросы должны идти на daily-cloudcode-pa, не на prod."
                     missing ->
-                        "404 на ${snapshot.model}: Google не нашёл эту модель. Выберите другую из списка или переустановите APK."
+                        "404 на $model: Google не нашёл эту модель. Выберите другую из списка или переустановите APK."
                     else -> raw.ifBlank { "Сбой агента" }
                 }
                 _state.update { it.copy(busy = false, error = message, messages = stampThinking(it.messages)) }

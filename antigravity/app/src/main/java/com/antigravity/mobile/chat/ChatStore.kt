@@ -62,7 +62,7 @@ object ChatTitle {
     }
 
     fun preview(messages: List<ChatMessage>): String {
-        val last = messages.lastOrNull { it.role == "user" || it.role == "assistant" } ?: return ""
+        val last = messages.lastOrNull { it.role == "user" || it.role == "assistant" || it.role == "plan" } ?: return ""
         return last.text.trim().replace(Regex("\\s+"), " ").take(80)
     }
 }

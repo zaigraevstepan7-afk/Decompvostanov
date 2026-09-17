@@ -504,4 +504,85 @@ class AntigravityCoreTest {
             com.antigravity.core.agent.ToolLabels.headline("web_search", buildJsonObject { put("query", "pixel 9") }),
         )
     }
+
+    @Test
+    fun planModeSkipsToolsAndAsksForPlan() {
+        val fs = LocalDeviceFs(tmp)
+        val session = AntigravitySession(
+            accessToken = "a",
+            refreshToken = "r",
+            expiresAtEpochMs = Long.MAX_VALUE,
+            email = "me@gmail.com",
+            projectId = "p",
+        )
+        val toolsUsed = mutableListOf<String>()
+        val llm = object : LlmClient {
+            override fun generate(
+                session: AntigravitySession,
+                model: String,
+                systemInstruction: String,
+                contents: List<ContentTurn>,
+                tools: JsonArray,
+            ): ModelReply {
+                assertTrue(systemInstruction.contains("режим ПЛАН"))
+                assertFalse(tools.toString().contains("extract_archive"))
+                return ModelReply(
+                    parts = emptyList(),
+                    finishReason = "STOP",
+                    text = "1. Прочитать файл\n2. Поправить",
+                    functionCalls = listOf(
+                        FunctionCall("extract_archive", buildJsonObject { put("archive", "x.zip") }, "1"),
+                    ),
+                )
+            }
+        }
+        val answer = AgentLoop(llm, fs).run(
+            session,
+            "gemini-3-flash",
+            "поправь проект",
+            mutableListOf(),
+            object : AgentListener {
+                override fun onToolStart(name: String, args: JsonObject) {
+                    toolsUsed += name
+                }
+            },
+            planOnly = true,
+        )
+        assertEquals("1. Прочитать файл\n2. Поправить", answer)
+        assertTrue(toolsUsed.isEmpty())
+    }
+
+    @Test
+    fun cancelStopsBeforeGenerate() {
+        val fs = LocalDeviceFs(tmp)
+        val session = AntigravitySession(
+            accessToken = "a",
+            refreshToken = "r",
+            expiresAtEpochMs = Long.MAX_VALUE,
+            email = "me@gmail.com",
+            projectId = "p",
+        )
+        var calls = 0
+        val llm = object : LlmClient {
+            override fun generate(
+                session: AntigravitySession,
+                model: String,
+                systemInstruction: String,
+                contents: List<ContentTurn>,
+                tools: JsonArray,
+            ): ModelReply {
+                calls += 1
+                return ModelReply(emptyList(), "STOP", "hi", emptyList())
+            }
+        }
+        val answer = AgentLoop(llm, fs).run(
+            session,
+            "gemini-3-flash",
+            "hi",
+            mutableListOf(),
+            shouldCancel = { true },
+        )
+        assertEquals("Остановлено", answer)
+        assertEquals(0, calls)
+    }
 }

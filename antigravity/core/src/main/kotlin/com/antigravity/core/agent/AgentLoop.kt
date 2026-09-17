@@ -7,6 +7,7 @@ import com.antigravity.core.api.modelPartsTurn
 import com.antigravity.core.api.textTurn
 import com.antigravity.core.api.userTurn
 import com.antigravity.core.auth.AntigravitySession
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 
 data class ChatAttachment(
@@ -48,14 +49,28 @@ class AgentLoop(
         listener: AgentListener = object : AgentListener {},
         rooted: Boolean = true,
         extraParts: List<JsonObject> = emptyList(),
+        planOnly: Boolean = false,
+        shouldCancel: () -> Boolean = { false },
     ): String {
         history.add(userTurn(userText, extraParts))
-        val system = SystemPrompt.build(fs.workspace, session.email, rooted)
+        val system = SystemPrompt.build(fs.workspace, session.email, rooted, planOnly = planOnly)
         val collected = StringBuilder()
+        val toolDefs = if (planOnly) JsonArray(emptyList()) else ToolCatalog.declarations
         repeat(maxTurns) {
-            val reply = llm.generate(session, model, system, history.toList(), ToolCatalog.declarations)
+            if (shouldCancel()) return collected.toString().ifBlank { "Остановлено" }
+            val reply = llm.generate(session, model, system, history.toList(), toolDefs)
+            if (shouldCancel()) return collected.toString().ifBlank { "Остановлено" }
             if (reply.thoughts.isNotBlank()) {
                 listener.onThinking(reply.thoughts)
+            }
+            if (planOnly) {
+                val plan = reply.text.ifBlank { reply.thoughts }
+                if (reply.parts.isNotEmpty()) {
+                    history.add(modelPartsTurn(reply.parts.filter { it["functionCall"] == null }))
+                } else if (plan.isNotBlank()) {
+                    history.add(textTurn("model", plan))
+                }
+                return plan
             }
             if (reply.functionCalls.isEmpty()) {
                 if (reply.text.isNotBlank()) {
@@ -75,6 +90,7 @@ class AgentLoop(
                 collected.append(reply.text).append('\n')
             }
             reply.functionCalls.forEach { call ->
+                if (shouldCancel()) return collected.toString().ifBlank { "Остановлено" }
                 listener.onToolStart(call.name, call.args)
                 val result = tools.execute(call.name, call.args)
                 listener.onToolResult(call.name, result)

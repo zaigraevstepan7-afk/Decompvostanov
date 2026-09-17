@@ -18,34 +18,38 @@
     }
     .top { display: flex; justify-content: space-between; padding: 8px 12px 0; }
     .icon { width: 44px; height: 44px; display: grid; place-items: center; color: #7A9A86; font-size: 18px; }
-    main { flex: 1; overflow: auto; padding: 8px 16px 12px; }
+    main { flex: 1; overflow: auto; padding: 8px 16px 80px; }
     .user { display: flex; justify-content: flex-end; margin: 10px 0; }
     .user p {
       max-width: 86%; background: #3DFF9A; color: #03140A;
       border-radius: 18px 18px 4px 18px; padding: 10px 14px; margin: 0; font-size: 15px;
     }
-    .think { color: #8FB89C; font-size: 13px; font-weight: 500; margin: 12px 0 6px; }
+    .think {
+      color: #8FB89C; font-size: 13px; font-weight: 500; margin: 12px 0 6px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .think .live {
+      background: linear-gradient(90deg, #7A9A86 0%, #7A9A86 20%, #3DFF9A 50%, #7A9A86 80%, #7A9A86 100%);
+      background-size: 220% 100%;
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      animation: shine 1.6s linear infinite;
+    }
     .think span { color: #7A9A86; font-weight: 400; }
-    .tool-line {
-      color: #7A9A86; font-size: 13px; font-weight: 500;
-      display: flex; align-items: center; gap: 4px; padding: 3px 0;
+    @keyframes shine {
+      0% { background-position: 120% 0; }
+      100% { background-position: -120% 0; }
     }
-    .tool-line em { font-style: normal; color: #5f7d6a; font-size: 14px; }
-    .cmd {
-      display: flex; align-items: center; gap: 8px;
-      border: 1px solid #1C3326; background: #0C140F; border-radius: 10px;
-      padding: 8px 10px; margin: 6px 0 4px; color: #3DFF9A;
-      font: 12px ui-monospace, monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    .plan {
+      margin: 10px 0; padding: 12px; border-radius: 12px; border: 1px solid #1C3326; background: #0C140F;
     }
-    .cmd span { color: #7A9A86; margin-left: auto; }
-    .out {
-      color: #8FB89C; font: 12px/17px ui-monospace, monospace;
-      max-height: 88px; overflow: hidden; padding: 0 10px 6px;
+    .plan-head { display: flex; align-items: center; gap: 6px; }
+    .plan b { color: #3DFF9A; }
+    .plan small { color: #7A9A86; flex: 1; }
+    .plan ol { margin: 10px 0 0; padding-left: 18px; color: #E7F6EC; font-size: 14px; line-height: 20px; }
+    .ok {
+      margin-top: 10px; display: inline-block; padding: 10px 16px; border-radius: 16px;
+      background: #3DFF9A; color: #03140A; font-weight: 600;
     }
-    h3 { color: #3DFF9A; font-size: 15px; margin: 14px 0 8px; }
-    ul { margin: 0; padding: 0; list-style: none; }
-    li { display: flex; gap: 8px; font-size: 15px; line-height: 22px; margin: 0 0 8px; }
-    li:before { content: "•"; color: #3DFF9A; width: 14px; }
     footer { padding: 8px 12px 12px; }
     .composer {
       display: flex; align-items: center; gap: 4px; padding: 6px;
@@ -62,9 +66,19 @@
       flex: 1; border: 0; background: transparent; color: #E7F6EC;
       font-size: 16px; padding: 8px 4px; outline: none; min-width: 0;
     }
+    .modes { display: flex; gap: 6px; margin: 0 0 8px; }
+    .mode {
+      padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+      border: 1px solid #1C3326; color: #7A9A86; background: #0C140F;
+    }
+    .mode.on { color: #3DFF9A; background: rgba(61,255,154,.13); border-color: #178A4E; }
+    .stop {
+      width: 44px; height: 44px; border-radius: 99px;
+      display: grid; place-items: center; background: #FF6B6B; color: #03140A; font-size: 16px;
+    }
     .send {
       width: 44px; height: 44px; border-radius: 99px;
-      display: grid; place-items: center; background: #3DFF9A; color: #03140A;
+      display: grid; place-items: center; background: #3DFF9A; color: #03140A; font-size: 16px;
     }
   </style>
 </head>
@@ -72,25 +86,24 @@
   <div class="phone">
     <div class="top"><div class="icon">💬</div><div class="icon">⚙</div></div>
     <main>
-      <div class="user"><p>что в Download</p></div>
-      <div class="think">Thought <span>for 2s</span> ▾</div>
-      <div class="tool-line">Explored 11 files <em>▾</em></div>
-      <div class="tool-line">Read ToolCatalog.kt <em>▾</em></div>
-      <div class="tool-line">Read ToolExecutor.kt <em>▾</em></div>
-      <div class="cmd">ls /sdcard/Download <span>▾</span></div>
-      <div class="out">Attached_image.png<br>BRENE-v0.0.66.zip<br>Bozya-VPN-debug.apk</div>
-      <h3>В Download</h3>
-      <ul>
-        <li><span>Картинки, zip и несколько APK.</span></li>
-        <li><span>Команда свёрнута в одну строку.</span></li>
-      </ul>
+      <div class="user"><p>поправь проект</p></div>
+      <div class="think"><span class="live">Thinking</span> <span>4s</span> ▾</div>
+      <div class="plan">
+        <div class="plan-head"><b>План</b> <small>нажми чтобы прочитать</small> ▾</div>
+        <ol>
+          <li>Прочитать файлы проекта</li>
+          <li>Поправить UI скролла и стоп</li>
+        </ol>
+        <div class="ok">Подтвердить</div>
+      </div>
     </main>
     <footer>
+      <div class="modes"><div class="mode">Авто</div><div class="mode on">План</div></div>
       <div class="composer">
         <div class="model">3.8 Flash</div>
         <div class="clip">📎</div>
         <input placeholder="Задача для телефона…" />
-        <div class="send">➤</div>
+        <div class="stop">■</div>
       </div>
     </footer>
   </div>

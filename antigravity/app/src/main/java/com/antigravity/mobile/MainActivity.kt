@@ -70,6 +70,9 @@ class MainActivity : ComponentActivity() {
                         onNewChat = viewModel::newChat,
                         onOpenChat = viewModel::openChat,
                         onDeleteChat = viewModel::deleteChat,
+                        onStop = viewModel::stop,
+                        onMode = viewModel::setMode,
+                        onConfirmPlan = viewModel::confirmPlan,
                     )
                 }
             }

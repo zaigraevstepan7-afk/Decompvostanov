@@ -3,6 +3,7 @@ package com.antigravity.mobile.ui
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
@@ -59,6 +60,7 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -68,6 +70,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -81,6 +84,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -100,7 +104,6 @@ import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
 private val EnterEase = CubicBezierEasing(0.22f, 1f, 0.36f, 1f)
-private val ShineEase = CubicBezierEasing(0.25f, 0.1f, 0.25f, 1f)
 
 @Composable
 fun AntigravityAppUi(
@@ -116,6 +119,9 @@ fun AntigravityAppUi(
     onNewChat: () -> Unit = {},
     onOpenChat: (String) -> Unit = {},
     onDeleteChat: (String) -> Unit = {},
+    onStop: () -> Unit = {},
+    onMode: (String) -> Unit = {},
+    onConfirmPlan: () -> Unit = {},
 ) {
     val screen = when {
         state.root != RootState.Granted -> "root"
@@ -142,7 +148,7 @@ fun AntigravityAppUi(
                 "login" -> LoginScreen(state, onLogin)
                 else -> ChatScreen(
                     state, onSend, onModel, onWorkspace, onLogout, onAttach, onRemoveAttachment,
-                    onNewChat, onOpenChat, onDeleteChat,
+                    onNewChat, onOpenChat, onDeleteChat, onStop, onMode, onConfirmPlan,
                 )
             }
         }
@@ -235,6 +241,9 @@ private fun ChatScreen(
     onNewChat: () -> Unit,
     onOpenChat: (String) -> Unit,
     onDeleteChat: (String) -> Unit,
+    onStop: () -> Unit,
+    onMode: (String) -> Unit,
+    onConfirmPlan: () -> Unit,
 ) {
     var draft by remember { mutableStateOf("") }
     var pane by remember { mutableStateOf("chat") }
@@ -290,6 +299,9 @@ private fun ChatScreen(
                 onChats = { pane = "chats" },
                 onAttach = onAttach,
                 onRemoveAttachment = onRemoveAttachment,
+                onStop = onStop,
+                onMode = onMode,
+                onConfirmPlan = onConfirmPlan,
             )
         }
     }
@@ -306,11 +318,18 @@ private fun ChatPane(
     onChats: () -> Unit,
     onAttach: () -> Unit,
     onRemoveAttachment: (String) -> Unit,
+    onStop: () -> Unit,
+    onMode: (String) -> Unit,
+    onConfirmPlan: () -> Unit,
 ) {
     val listState = rememberLazyListState()
-    LaunchedEffect(state.messages.size, state.busy, state.chatId) {
-        val last = state.messages.lastIndex + if (state.busy) 1 else 0
-        if (last >= 0) listState.animateScrollToItem(last.coerceAtLeast(0))
+    val last = state.messages.lastOrNull()
+    LaunchedEffect(state.chatId, last?.id, last?.text?.length, last?.durationMs, state.busy, state.messages.size) {
+        kotlinx.coroutines.yield()
+        val index = listState.layoutInfo.totalItemsCount - 1
+        if (index >= 0) {
+            listState.scrollToItem(index)
+        }
     }
     Column(Modifier.fillMaxSize().imePadding()) {
         Row(
@@ -334,7 +353,7 @@ private fun ChatPane(
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
-            contentPadding = PaddingValues(bottom = 8.dp),
+            contentPadding = PaddingValues(bottom = 80.dp),
         ) {
             if (state.messages.isEmpty() && !state.busy) {
                 item { EmptyState() }
@@ -346,6 +365,11 @@ private fun ChatPane(
                         when (message.role) {
                             "user" -> UserBubble(message)
                             "thinking" -> ThinkingBlock(message, live = state.busy && message.durationMs == null)
+                            "plan" -> PlanCard(
+                                message = message,
+                                confirm = !state.busy && state.messages.lastOrNull()?.id == message.id,
+                                onConfirm = onConfirmPlan,
+                            )
                             "tool", "tool-result" -> ToolLine(
                                 message = message,
                                 live = message.role == "tool" && state.busy && message.text.isEmpty(),
@@ -358,6 +382,7 @@ private fun ChatPane(
             if (state.busy && state.messages.none { it.role == "thinking" && it.durationMs == null }) {
                 item { ShimmerLabel("Thinking") }
             }
+            item { Spacer(Modifier.height(56.dp)) }
         }
         state.error?.let {
             Appear {
@@ -368,11 +393,14 @@ private fun ChatPane(
             draft = draft,
             busy = state.busy,
             model = state.model,
+            mode = state.mode,
             pending = state.pending,
             onDraft = onDraft,
             onModel = onModel,
+            onMode = onMode,
             onAttach = onAttach,
             onRemove = onRemoveAttachment,
+            onStop = onStop,
             onSend = {
                 val text = draft
                 onDraft("")
@@ -632,8 +660,20 @@ private fun AssistantBubble(text: String) {
 
 @Composable
 private fun ThinkingBlock(message: ChatMessage, live: Boolean) {
-    var open by remember(message.durationMs) { mutableStateOf(live) }
-    val seconds = ((message.durationMs ?: 0L) / 1000.0).roundToInt().coerceAtLeast(1)
+    var open by remember(message.id) { mutableStateOf(false) }
+    var now by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(live, message.startedAtMs) {
+        while (live) {
+            now = System.currentTimeMillis()
+            delay(250)
+        }
+    }
+    val elapsed = if (live) {
+        (now - (message.startedAtMs ?: now)).coerceAtLeast(0)
+    } else {
+        message.durationMs ?: 0L
+    }
+    val seconds = (elapsed / 1000.0).roundToInt().coerceAtLeast(if (live) 0 else 1)
     val rotation by animateFloatAsState(
         targetValue = if (open) 180f else 0f,
         animationSpec = tween(280, easing = EnterEase),
@@ -644,31 +684,33 @@ private fun ThinkingBlock(message: ChatMessage, live: Boolean) {
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .clip(RoundedCornerShape(8.dp))
-                .clickable(enabled = !live) { open = !open }
+                .clickable { open = !open }
                 .padding(vertical = 2.dp),
         ) {
             if (live) {
                 ShimmerLabel("Thinking")
+                Text("  ${seconds}s", color = AgColors.Muted, fontSize = 13.sp)
             } else {
                 Text("Thought", color = AgColors.Thought, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                 Text(" for ${seconds}s", color = AgColors.Muted, fontSize = 13.sp)
-                Icon(
-                    Icons.Outlined.ExpandMore,
-                    contentDescription = null,
-                    tint = AgColors.Muted,
-                    modifier = Modifier
-                        .size(16.dp)
-                        .graphicsLayer { rotationZ = rotation },
-                )
             }
+            Icon(
+                Icons.Outlined.ExpandMore,
+                contentDescription = null,
+                tint = AgColors.Muted,
+                modifier = Modifier
+                    .size(16.dp)
+                    .graphicsLayer { rotationZ = rotation },
+            )
         }
         AnimatedVisibility(
-            visible = live || open,
+            visible = open,
             enter = fadeIn(tween(220, easing = EnterEase)) + slideInVertically(tween(280, easing = EnterEase)) { 10 },
             exit = fadeOut(tween(160)) + slideOutVertically(tween(180)) { 8 },
         ) {
             Column(Modifier.padding(top = 6.dp)) {
-                message.text.split('\n').filter { it.isNotBlank() }.takeLast(6).forEach { line ->
+                val lines = message.text.split('\n').filter { it.isNotBlank() }
+                lines.takeLast(if (live) 8 else 40).forEach { line ->
                     Text(
                         line,
                         color = AgColors.Muted,
@@ -678,6 +720,54 @@ private fun ThinkingBlock(message: ChatMessage, live: Boolean) {
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun PlanCard(message: ChatMessage, confirm: Boolean, onConfirm: () -> Unit) {
+    var open by remember(message.id) { mutableStateOf(false) }
+    val rotation by animateFloatAsState(
+        targetValue = if (open) 180f else 0f,
+        animationSpec = tween(240, easing = EnterEase),
+        label = "plan-chevron",
+    )
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(AgRadius.Chip))
+            .background(AgColors.Surface)
+            .border(1.dp, AgColors.Border, RoundedCornerShape(AgRadius.Chip))
+            .padding(12.dp),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .clickable { open = !open },
+        ) {
+            Text("План", color = AgColors.Accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.width(6.dp))
+            Text("нажми чтобы прочитать", color = AgColors.Muted, fontSize = 12.sp, modifier = Modifier.weight(1f))
+            Icon(
+                Icons.Outlined.ExpandMore,
+                contentDescription = null,
+                tint = AgColors.Muted,
+                modifier = Modifier
+                    .size(18.dp)
+                    .graphicsLayer { rotationZ = rotation },
+            )
+        }
+        AnimatedVisibility(
+            visible = open,
+            enter = fadeIn(tween(200, easing = EnterEase)) + slideInVertically(tween(240, easing = EnterEase)) { 8 },
+            exit = fadeOut(tween(140)),
+        ) {
+            MarkdownBody(message.text, modifier = Modifier.padding(top = 10.dp))
+        }
+        if (confirm) {
+            Spacer(Modifier.height(10.dp))
+            AccentButton("Подтвердить", onConfirm)
         }
     }
 }
@@ -793,11 +883,14 @@ private fun Composer(
     draft: String,
     busy: Boolean,
     model: String,
+    mode: String,
     pending: List<PendingAttachment>,
     onDraft: (String) -> Unit,
     onModel: (String) -> Unit,
+    onMode: (String) -> Unit,
     onAttach: () -> Unit,
     onRemove: (String) -> Unit,
+    onStop: () -> Unit,
     onSend: () -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
@@ -806,6 +899,13 @@ private fun Composer(
     val canSend = !busy && (draft.isNotBlank() || pending.isNotEmpty())
     Appear(fromBottom = true) {
         Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+            Row(
+                modifier = Modifier.padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                ModeChip("Авто", selected = mode != "plan", enabled = !busy) { onMode("auto") }
+                ModeChip("План", selected = mode == "plan", enabled = !busy) { onMode("plan") }
+            }
             if (pending.isNotEmpty()) {
                 Row(
                     modifier = Modifier
@@ -833,7 +933,7 @@ private fun Composer(
                             .height(44.dp)
                             .clip(RoundedCornerShape(AgRadius.Inner))
                             .background(AgColors.AccentSoft)
-                            .clickable { menu = true }
+                            .clickable(enabled = !busy) { menu = true }
                             .padding(horizontal = 10.dp),
                         contentAlignment = Alignment.CenterStart,
                     ) {
@@ -874,6 +974,7 @@ private fun Composer(
                 BasicTextField(
                     value = draft,
                     onValueChange = onDraft,
+                    enabled = !busy,
                     textStyle = TextStyle(color = AgColors.Text, fontSize = 16.sp, lineHeight = 22.sp),
                     cursorBrush = SolidColor(AgColors.Accent),
                     modifier = Modifier
@@ -889,24 +990,49 @@ private fun Composer(
                         .size(44.dp)
                         .scale(if (pressed) 0.96f else 1f)
                         .clip(CircleShape)
-                        .background(if (canSend) AgColors.Accent else AgColors.SurfaceRaised)
+                        .background(
+                            when {
+                                busy -> AgColors.Danger
+                                canSend -> AgColors.Accent
+                                else -> AgColors.SurfaceRaised
+                            },
+                        )
                         .clickable(
-                            enabled = canSend,
+                            enabled = busy || canSend,
                             interactionSource = interaction,
                             indication = null,
-                            onClick = onSend,
+                            onClick = { if (busy) onStop() else onSend() },
                         ),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        Icons.AutoMirrored.Outlined.Send,
-                        contentDescription = "Отправить",
-                        tint = if (canSend) AgColors.OnAccent else AgColors.Muted,
-                        modifier = Modifier.size(18.dp).padding(start = 1.dp),
+                        if (busy) Icons.Outlined.Stop else Icons.AutoMirrored.Outlined.Send,
+                        contentDescription = if (busy) "Стоп" else "Отправить",
+                        tint = if (busy || canSend) AgColors.OnAccent else AgColors.Muted,
+                        modifier = Modifier.size(18.dp),
                     )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ModeChip(label: String, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(if (selected) AgColors.AccentSoft else AgColors.Surface)
+            .border(1.dp, if (selected) AgColors.AccentDim else AgColors.Border, RoundedCornerShape(20.dp))
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+    ) {
+        Text(
+            label,
+            color = if (selected) AgColors.Accent else AgColors.Muted,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
     }
 }
 
@@ -1069,16 +1195,27 @@ private fun StatusDot(active: Boolean) {
 @Composable
 fun ShimmerLabel(text: String) {
     val transition = rememberInfiniteTransition(label = "shimmer")
+    var widthPx by remember { mutableFloatStateOf(120f) }
     val shift by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(2250, easing = ShineEase)),
+        initialValue = -0.35f,
+        targetValue = 1.35f,
+        animationSpec = infiniteRepeatable(tween(1600, easing = LinearEasing), RepeatMode.Restart),
         label = "shine",
     )
+    val band = 56f
+    val center = widthPx * shift
     val brush = Brush.linearGradient(
-        colors = listOf(AgColors.Muted, AgColors.Accent.copy(alpha = 0.45f), AgColors.Accent, AgColors.Accent.copy(alpha = 0.45f), AgColors.Muted),
-        start = Offset(280f * (1f - shift), 0f),
-        end = Offset(280f * (1f - shift) + 220f, 0f),
+        colors = listOf(
+            AgColors.Muted,
+            AgColors.Muted,
+            AgColors.Accent.copy(alpha = 0.45f),
+            AgColors.Accent,
+            AgColors.Accent.copy(alpha = 0.45f),
+            AgColors.Muted,
+            AgColors.Muted,
+        ),
+        start = Offset(center - band, 0f),
+        end = Offset(center + band, 0f),
     )
     Text(
         text,
@@ -1088,6 +1225,7 @@ fun ShimmerLabel(text: String) {
             fontWeight = FontWeight.Medium,
             letterSpacing = (-0.1).sp,
         ),
+        modifier = Modifier.onSizeChanged { widthPx = it.width.toFloat().coerceAtLeast(1f) },
     )
 }
 
