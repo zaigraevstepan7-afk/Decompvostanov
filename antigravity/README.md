@@ -4,7 +4,7 @@
 
 - Без root приложение не работает: нет чата, нет входа.
 - Вход только через **Google / Antigravity OAuth** (квоты Cloud Code Assist). Это **не** Gemini API key.
-- Модели: `gemini-3-flash`, `gemini-3.5-flash`, `gemini-3-pro-low`, `gemini-3-pro-high`, `gemini-2.5-pro`, `gemini-2.5-flash`.
+- Модели: `gemini-3.8-flash-high`, `gemini-3.7-flash-high`, `gemini-3.6-flash-high`, `gemini-3-flash-agent`, `gemini-3-pro-high`, Claude / GPT-OSS через квоты Antigravity. На 404 клиент повторяет запрос с `-tiered` id.
 - Файлы, zip/rar/7z/tar, загрузки и shell выполняются локально на устройстве. Пример: «в Download лежит zip — распакуй и поправь» → агент сам вызывает `extract_archive` и правит распакованное.
 
 OAuth совпадает с [EasyCLIProxyAPI](https://github.com/router-for-me/EasyCLIProxyAPI) / [CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI): браузер Google → `http://127.0.0.1:51121/oauth-callback` → обмен code → `loadCodeAssist` / `onboardUser` → `cloudcode-pa.googleapis.com/v1internal:generateContent`.

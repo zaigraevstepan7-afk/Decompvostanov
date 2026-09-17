@@ -14,7 +14,7 @@ EasyCLIProxyAPI is a Tauri desktop console around CLIProxyAPI. Antigravity login
 4. Exchange `code` at `https://oauth2.googleapis.com/token`.
 5. `GET https://www.googleapis.com/oauth2/v2/userinfo` → email.
 6. `POST https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist` with `metadata.ideType=ANTIGRAVITY` → `cloudaicompanionProject`. If empty, poll `daily-cloudcode-pa.googleapis.com/v1internal:onboardUser`.
-7. Model calls go to `POST https://cloudcode-pa.googleapis.com/v1internal:generateContent` with envelope `{ project, model, request: { contents, systemInstruction, tools } }` and `User-Agent: antigravity/...`.
+7. Model calls go to `POST https://daily-cloudcode-pa.googleapis.com/v1internal:generateContent` with envelope `{ project, model, request: { contents, systemInstruction, tools } }` and `User-Agent: antigravity/hub/2.13.0 darwin/arm64`. Google 404s `gemini-3.7-flash-high` (and newer) if the UA is still `antigravity/cli/1.0.13` or hub &lt; 2.9.0. On 404 the client retries the `-tiered` wire id with `thinkingLevel`.
 
 Quota endpoint used by EasyCLIProxyAPI: `POST .../v1internal:retrieveUserQuotaSummary`.
 

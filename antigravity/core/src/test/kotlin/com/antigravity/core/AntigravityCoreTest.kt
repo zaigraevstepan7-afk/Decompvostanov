@@ -14,10 +14,16 @@ import com.antigravity.core.auth.AntigravityOAuth
 import com.antigravity.core.auth.AntigravitySession
 import com.antigravity.core.auth.decodeSession
 import com.antigravity.core.auth.encodeSession
+import com.antigravity.core.api.textTurn
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -212,6 +218,11 @@ class AntigravityCoreTest {
         assertTrue(GeminiModels.ids().contains("gemini-3.7-flash-high"))
         assertTrue(GeminiModels.ids().contains("gemini-pro-agent"))
         assertTrue(GeminiModels.ALL.first().id != "gemini-3-flash")
+        val flash37 = GeminiModels.resolve("gemini-3.7-flash-high")
+        assertEquals(listOf("gemini-3.7-flash-high", "gemini-3.7-flash-tiered"), flash37.wireIds)
+        assertEquals("high", flash37.thinkingLevel)
+        val customTiered = GeminiModels.resolve("gemini-3.7-flash-tiered")
+        assertEquals(listOf("gemini-3.7-flash-tiered"), customTiered.wireIds)
     }
 
     @Test
@@ -219,7 +230,72 @@ class AntigravityCoreTest {
         assertEquals("https://daily-cloudcode-pa.googleapis.com", AntigravityOAuth.GENERATE_ENDPOINT)
         assertEquals(AntigravityOAuth.DAILY_API_ENDPOINT, AntigravityOAuth.GENERATE_ENDPOINT)
         assertTrue(AntigravityOAuth.API_ENDPOINT.contains("cloudcode-pa.googleapis.com"))
+        assertTrue(AntigravityOAuth.USER_AGENT.startsWith("antigravity/hub/"))
         assertTrue(AntigravityOAuth.USER_AGENT.contains("darwin"))
+        assertFalse(AntigravityOAuth.USER_AGENT.contains("/cli/"))
         assertFalse(AntigravityOAuth.GENERATE_ENDPOINT.contains("://cloudcode-pa."))
+        val version = AntigravityOAuth.CLIENT_VERSION.split(".").map { it.toInt() }
+        assertTrue(version[0] > 2 || (version[0] == 2 && version[1] >= 9))
+    }
+
+    @Test
+    fun envelopeUsesThinkingLevelForFlashHigh() {
+        val envelope = CloudCodeClient().buildEnvelope(
+            projectId = "proj",
+            wireId = "gemini-3.7-flash-tiered",
+            thinkingLevel = "high",
+            systemInstruction = "sys",
+            contents = listOf(textTurn("user", "hi")),
+            tools = JsonArray(emptyList()),
+        )
+        val thinking = envelope["request"]!!.jsonObject["generationConfig"]!!.jsonObject["thinkingConfig"]!!.jsonObject
+        assertEquals("gemini-3.7-flash-tiered", envelope["model"]!!.jsonPrimitive.content)
+        assertEquals("high", thinking["thinkingLevel"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun generateRetriesTieredWireIdOn404() {
+        val server = MockWebServer()
+        server.enqueue(
+            MockResponse().setResponseCode(404).setBody(
+                """{"error":{"code":404,"message":"Requested entity was not found.","status":"NOT_FOUND"}}""",
+            ),
+        )
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                """{"response":{"candidates":[{"content":{"role":"model","parts":[{"text":"ok"}]},"finishReason":"STOP"}]}}""",
+            ),
+        )
+        server.start()
+        try {
+            val client = CloudCodeClient(baseUrl = server.url("/").toString().trimEnd('/'))
+            val session = AntigravitySession(
+                accessToken = "tok",
+                refreshToken = "rt",
+                expiresAtEpochMs = Long.MAX_VALUE,
+                email = "me@gmail.com",
+                projectId = "proj",
+            )
+            val reply = client.generate(
+                session,
+                "gemini-3.7-flash-high",
+                "sys",
+                listOf(textTurn("user", "hi")),
+                JsonArray(emptyList()),
+            )
+            assertEquals("ok", reply.text)
+            val first = Json.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject
+            val secondRequest = server.takeRequest()
+            val second = Json.parseToJsonElement(secondRequest.body.readUtf8()).jsonObject
+            assertEquals("gemini-3.7-flash-high", first["model"]!!.jsonPrimitive.content)
+            assertEquals("gemini-3.7-flash-tiered", second["model"]!!.jsonPrimitive.content)
+            assertEquals(AntigravityOAuth.USER_AGENT, secondRequest.getHeader("User-Agent"))
+            assertEquals(
+                "high",
+                second["request"]!!.jsonObject["generationConfig"]!!.jsonObject["thinkingConfig"]!!.jsonObject["thinkingLevel"]!!.jsonPrimitive.content,
+            )
+        } finally {
+            server.shutdown()
+        }
     }
 }

@@ -49,7 +49,10 @@ object AntigravityOAuth {
     // cloudcode-pa (prod) always returns 429 RESOURCE_EXHAUSTED for consumer tokens.
     const val GENERATE_ENDPOINT = DAILY_API_ENDPOINT
     const val API_VERSION = "v1internal"
-    const val USER_AGENT = "antigravity/cli/1.0.13 (aidev_client; os_type=darwin; arch=arm64)"
+    // Cloud Code gates gemini-3.7+ on hub version >= 2.9.0. The old
+    // antigravity/cli/1.0.13 fingerprint always 404s those models.
+    const val CLIENT_VERSION = "2.13.0"
+    const val USER_AGENT = "antigravity/hub/$CLIENT_VERSION darwin/arm64"
 
     private fun decodePub(vararg parts: String): String =
         String(java.util.Base64.getDecoder().decode(parts.joinToString("")), Charsets.UTF_8)

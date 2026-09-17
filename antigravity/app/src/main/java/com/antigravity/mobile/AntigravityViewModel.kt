@@ -191,10 +191,13 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
             } catch (error: Exception) {
                 val raw = error.message.orEmpty()
                 val quota = raw.contains("429") || raw.contains("RESOURCE_EXHAUSTED")
-                val message = if (quota) {
-                    "429 на модели ${snapshot.model}. Если на ПК лимит полный — переустановите APK: запросы должны идти на daily-cloudcode-pa, не на prod."
-                } else {
-                    raw.ifBlank { "Сбой агента" }
+                val missing = raw.contains("404") || raw.contains("NOT_FOUND")
+                val message = when {
+                    quota ->
+                        "429 на модели ${snapshot.model}. Если на ПК лимит полный — переустановите APK: запросы должны идти на daily-cloudcode-pa, не на prod."
+                    missing ->
+                        "404 на ${snapshot.model}: Google не нашёл эту модель. Выберите другую из списка или переустановите APK."
+                    else -> raw.ifBlank { "Сбой агента" }
                 }
                 _state.update { it.copy(busy = false, error = message) }
             }

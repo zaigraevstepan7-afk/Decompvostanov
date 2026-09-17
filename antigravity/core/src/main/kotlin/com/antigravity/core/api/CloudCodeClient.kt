@@ -59,54 +59,84 @@ class CloudCodeClient(
         contents: List<ContentTurn>,
         tools: JsonArray,
     ): ModelReply {
-        val envelope = buildJsonObject {
-            put("project", session.projectId)
-            put("model", model)
-            put("requestType", "agent")
-            put("userAgent", "antigravity")
-            put("requestId", "agent-${UUID.randomUUID()}")
-            put("request", buildJsonObject {
-                put("contents", buildJsonArray {
-                    contents.forEach { turn ->
-                        add(buildJsonObject {
-                            put("role", turn.role)
-                            put("parts", JsonArray(turn.parts))
-                        })
-                    }
-                })
-                put("systemInstruction", buildJsonObject {
-                    put("parts", buildJsonArray {
-                        add(buildJsonObject { put("text", systemInstruction) })
+        val resolved = GeminiModels.resolve(model)
+        var lastError: String? = null
+        for (wireId in resolved.wireIds) {
+            val envelope = buildEnvelope(
+                projectId = session.projectId,
+                wireId = wireId,
+                thinkingLevel = resolved.thinkingLevel,
+                systemInstruction = systemInstruction,
+                contents = contents,
+                tools = tools,
+            )
+            val url = "$baseUrl/${AntigravityOAuth.API_VERSION}:generateContent"
+            val request = Request.Builder()
+                .url(url)
+                .header("Authorization", "Bearer ${session.accessToken}")
+                .header("Content-Type", "application/json")
+                .header("User-Agent", AntigravityOAuth.USER_AGENT)
+                .post(envelope.toString().toRequestBody(JSON))
+                .build()
+            http.newCall(request).execute().use { response ->
+                val text = response.body?.string().orEmpty()
+                if (response.isSuccessful) {
+                    return parseReply(text)
+                }
+                lastError = "Antigravity ${response.code}: $text"
+                if (!isNotFound(response.code, text)) {
+                    error(lastError!!)
+                }
+            }
+        }
+        error(lastError ?: "Antigravity 404: модель ${resolved.pickerId} не найдена")
+    }
+
+    fun buildEnvelope(
+        projectId: String,
+        wireId: String,
+        thinkingLevel: String?,
+        systemInstruction: String,
+        contents: List<ContentTurn>,
+        tools: JsonArray,
+    ): JsonObject = buildJsonObject {
+        put("project", projectId)
+        put("model", wireId)
+        put("requestType", "agent")
+        put("userAgent", "antigravity")
+        put("requestId", "agent-${UUID.randomUUID()}")
+        put("request", buildJsonObject {
+            put("contents", buildJsonArray {
+                contents.forEach { turn ->
+                    add(buildJsonObject {
+                        put("role", turn.role)
+                        put("parts", JsonArray(turn.parts))
                     })
-                })
-                put("generationConfig", buildJsonObject {
-                    put("maxOutputTokens", 8192)
-                    put("temperature", 0.4)
-                    put("thinkingConfig", buildJsonObject {
-                        put("includeThoughts", false)
-                    })
-                })
-                if (tools.isNotEmpty()) {
-                    put("tools", tools)
                 }
             })
-        }
-        val url = "$baseUrl/${AntigravityOAuth.API_VERSION}:generateContent"
-        val request = Request.Builder()
-            .url(url)
-            .header("Authorization", "Bearer ${session.accessToken}")
-            .header("Content-Type", "application/json")
-            .header("User-Agent", AntigravityOAuth.USER_AGENT)
-            .post(envelope.toString().toRequestBody(JSON))
-            .build()
-        http.newCall(request).execute().use { response ->
-            val text = response.body?.string().orEmpty()
-            if (!response.isSuccessful) {
-                error("Antigravity ${response.code}: $text")
+            put("systemInstruction", buildJsonObject {
+                put("parts", buildJsonArray {
+                    add(buildJsonObject { put("text", systemInstruction) })
+                })
+            })
+            put("generationConfig", buildJsonObject {
+                put("maxOutputTokens", 8192)
+                put("temperature", 0.4)
+                put("thinkingConfig", buildJsonObject {
+                    put("includeThoughts", false)
+                    if (!thinkingLevel.isNullOrBlank()) {
+                        put("thinkingLevel", thinkingLevel)
+                    }
+                })
+            })
+            if (tools.isNotEmpty()) {
+                put("tools", tools)
             }
-            return parseReply(text)
-        }
+        })
     }
+
+    private fun isNotFound(code: Int, body: String): Boolean =
+        code == 404 || body.contains("NOT_FOUND") || body.contains("Requested entity was not found")
 
     fun parseReply(raw: String): ModelReply {
         val root = json.parseToJsonElement(raw).jsonObject

@@ -17,6 +17,7 @@ dependencies {
     implementation("com.github.junrar:junrar:7.5.5")
     testImplementation(kotlin("test"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
 }
 
 tasks.test {
