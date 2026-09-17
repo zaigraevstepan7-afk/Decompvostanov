@@ -39,7 +39,6 @@ class AgentLoop(
     private val llm: LlmClient,
     private val fs: DeviceFs,
     private val tools: ToolExecutor = ToolExecutor(fs),
-    private val maxTurns: Int = 40,
 ) {
     fun run(
         session: AntigravitySession,
@@ -56,7 +55,7 @@ class AgentLoop(
         val system = SystemPrompt.build(fs.workspace, session.email, rooted, planOnly = planOnly)
         val collected = StringBuilder()
         val toolDefs = if (planOnly) JsonArray(emptyList()) else ToolCatalog.declarations
-        repeat(maxTurns) {
+        while (true) {
             if (shouldCancel()) return collected.toString().ifBlank { "Остановлено" }
             val reply = llm.generate(session, model, system, history.toList(), toolDefs)
             if (shouldCancel()) return collected.toString().ifBlank { "Остановлено" }
@@ -97,6 +96,5 @@ class AgentLoop(
                 history.add(functionResponseTurn(call.name, call.id, result))
             }
         }
-        return collected.toString().ifBlank { "Достигнут лимит шагов агента" }
     }
 }

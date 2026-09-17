@@ -123,6 +123,8 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
         cancelled.set(true)
         agentJob?.cancel()
         _state.update { it.copy(busy = false, error = null, messages = stampThinking(it.messages)) }
+        persistCurrent()
+        AgentService.stop(getApplication())
     }
 
     fun setModel(model: String) {
@@ -344,8 +346,10 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
     ) {
         cancelled.set(false)
         agentJob?.cancel()
-        agentJob = viewModelScope.launch(Dispatchers.IO) {
+        val app = getApplication<AntigravityApp>()
+        agentJob = app.agentScope.launch {
             persistCurrent()
+            AgentService.start(app)
             val still = { !cancelled.get() && _state.value.chatId == chatId }
             try {
                 var live = auth.ensureFresh(session)
@@ -387,6 +391,7 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
                             _state.update { state ->
                                 state.copy(messages = stampThinking(state.messages) + ChatMessage("assistant", text))
                             }
+                            persistCurrent()
                         }
 
                         override fun onToolStart(name: String, args: JsonObject) {
@@ -427,6 +432,7 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
                                 }
                                 state.copy(messages = messages)
                             }
+                            persistCurrent()
                         }
                     },
                 )
@@ -476,10 +482,13 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
                 }
                 _state.update { it.copy(busy = false, error = message, messages = stampThinking(it.messages)) }
                 persistCurrent()
+            } finally {
+                AgentService.stop(app)
             }
         }
     }
 
+    @Synchronized
     private fun persistCurrent() {
         val state = _state.value
         if (state.chatId.isBlank()) return
@@ -519,7 +528,10 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return AntigravityViewModel(application) as T
+                    val app = application as AntigravityApp
+                    val existing = app.agent
+                    if (existing != null) return existing as T
+                    return AntigravityViewModel(app).also { app.agent = it } as T
                 }
             }
     }

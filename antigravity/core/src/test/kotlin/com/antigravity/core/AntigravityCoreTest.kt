@@ -585,4 +585,46 @@ class AntigravityCoreTest {
         assertEquals("Остановлено", answer)
         assertEquals(0, calls)
     }
+
+    @Test
+    fun agentKeepsGoingPastFormerFortyTurnCap() {
+        val fs = LocalDeviceFs(tmp)
+        val session = AntigravitySession(
+            accessToken = "a",
+            refreshToken = "r",
+            expiresAtEpochMs = Long.MAX_VALUE,
+            email = "me@gmail.com",
+            projectId = "p",
+        )
+        var generates = 0
+        val llm = object : LlmClient {
+            override fun generate(
+                session: AntigravitySession,
+                model: String,
+                systemInstruction: String,
+                contents: List<ContentTurn>,
+                tools: JsonArray,
+            ): ModelReply {
+                generates += 1
+                if (generates <= 45) {
+                    return ModelReply(
+                        parts = emptyList(),
+                        finishReason = "STOP",
+                        text = "",
+                        functionCalls = listOf(
+                            FunctionCall(
+                                "list_dir",
+                                buildJsonObject { put("path", ".") },
+                                generates.toString(),
+                            ),
+                        ),
+                    )
+                }
+                return ModelReply(emptyList(), "STOP", "готово", emptyList())
+            }
+        }
+        val answer = AgentLoop(llm, fs).run(session, "gemini-3-flash", "работай", mutableListOf())
+        assertEquals("готово", answer)
+        assertEquals(46, generates)
+    }
 }

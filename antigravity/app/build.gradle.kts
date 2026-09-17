@@ -13,8 +13,8 @@ android {
         applicationId = "com.antigravity.mobile"
         minSdk = 26
         targetSdk = 34
-        versionCode = 9
-        versionName = "1.2.3"
+        versionCode = 10
+        versionName = "1.2.4"
         vectorDrawables.useSupportLibrary = true
     }
 

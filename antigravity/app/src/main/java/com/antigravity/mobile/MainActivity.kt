@@ -1,6 +1,8 @@
 package com.antigravity.mobile
 
+import android.Manifest
 import android.app.Activity
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -42,9 +44,16 @@ class MainActivity : ComponentActivity() {
         if (uris.isNotEmpty()) viewModel.addAttachments(uris)
     }
 
+    private val notifyPermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        if (Build.VERSION.SDK_INT >= 33) {
+            notifyPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
         viewModel.refreshRoot()
         setContent {
             val state by viewModel.state.collectAsState()
