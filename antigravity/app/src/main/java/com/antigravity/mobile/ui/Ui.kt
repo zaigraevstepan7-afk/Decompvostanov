@@ -50,10 +50,10 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Send
+import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
 import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ExpandMore
-import androidx.compose.material.icons.outlined.InsertDriveFile
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -720,7 +720,7 @@ private fun FileChip(name: String) {
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(Icons.Outlined.InsertDriveFile, contentDescription = null, tint = AgColors.Accent, modifier = Modifier.size(16.dp))
+        Icon(Icons.AutoMirrored.Outlined.InsertDriveFile, contentDescription = null, tint = AgColors.Accent, modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(6.dp))
         Text(name, color = AgColors.Text, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
@@ -752,7 +752,7 @@ private fun AttachmentThumb(path: String, isImage: Boolean, modifier: Modifier) 
                 .background(AgColors.SurfaceRaised),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Outlined.InsertDriveFile, contentDescription = null, tint = AgColors.Accent, modifier = Modifier.size(18.dp))
+            Icon(Icons.AutoMirrored.Outlined.InsertDriveFile, contentDescription = null, tint = AgColors.Accent, modifier = Modifier.size(18.dp))
         }
     }
 }
