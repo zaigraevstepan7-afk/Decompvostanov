@@ -19,7 +19,10 @@ echo "sdk.dir=/path/to/Android/sdk" > local.properties
 ./gradlew :app:assembleDebug
 ```
 
-APK: `app/build/outputs/apk/debug/app-debug.apk`.
+Готовый debug APK:
+
+- [скачать antigravity-debug.apk](https://github.com/zaigraevstepan7-afk/Decompvostanov/raw/cursor/antigravity-android-agent-56df/antigravity/dist/antigravity-debug.apk)
+- локально после сборки: `app/build/outputs/apk/debug/app-debug.apk` / `dist/antigravity-debug.apk`
 
 Установите на телефон, выдайте приложению root в Magisk, откройте **Antigravity**, войдите Google, укажите workspace (по умолчанию `/sdcard/Antigravity`).
 
