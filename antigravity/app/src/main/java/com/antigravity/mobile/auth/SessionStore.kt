@@ -8,6 +8,7 @@ import java.io.File
 
 class SessionStore(context: Context) {
     private val file = File(context.filesDir, "antigravity-session.json")
+    private val modelFile = File(context.filesDir, "selected-model.txt")
 
     fun load(): AntigravitySession? {
         if (!file.exists()) return null
@@ -16,6 +17,13 @@ class SessionStore(context: Context) {
 
     fun save(session: AntigravitySession) {
         file.writeText(encodeSession(session))
+    }
+
+    fun loadModel(): String? =
+        runCatching { modelFile.readText().trim().takeIf { it.isNotBlank() } }.getOrNull()
+
+    fun saveModel(id: String) {
+        modelFile.writeText(id.trim())
     }
 
     fun clear() {

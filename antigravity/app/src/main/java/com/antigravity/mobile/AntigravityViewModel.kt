@@ -52,7 +52,12 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
     private val llm = CloudCodeClient()
     private val history = mutableListOf<ContentTurn>()
 
-    private val _state = MutableStateFlow(UiState(session = store.load()))
+    private val _state = MutableStateFlow(
+        UiState(
+            session = store.load(),
+            model = store.loadModel() ?: GeminiModels.DEFAULT,
+        ),
+    )
     val state: StateFlow<UiState> = _state
 
     fun refreshRoot() {
@@ -65,7 +70,11 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    fun setModel(model: String) = _state.update { it.copy(model = model) }
+    fun setModel(model: String) {
+        val id = model.trim().ifBlank { GeminiModels.DEFAULT }
+        store.saveModel(id)
+        _state.update { it.copy(model = id, error = null) }
+    }
 
     fun setWorkspace(path: String) = _state.update { it.copy(workspace = path) }
 
@@ -180,9 +189,14 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
                     _state.update { it.copy(busy = false) }
                 }
             } catch (error: Exception) {
-                _state.update {
-                    it.copy(busy = false, error = error.message ?: "Сбой агента")
+                val raw = error.message.orEmpty()
+                val quota = raw.contains("429") || raw.contains("RESOURCE_EXHAUSTED")
+                val message = if (quota) {
+                    "Квота модели ${snapshot.model} исчерпана (429). Сверху выберите новую: Gemini 3.8 / 3.7 / 3.6 Flash или 3.1 Pro."
+                } else {
+                    raw.ifBlank { "Сбой агента" }
                 }
+                _state.update { it.copy(busy = false, error = message) }
             }
         }
     }

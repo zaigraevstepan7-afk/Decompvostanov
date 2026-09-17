@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -191,15 +192,31 @@ private fun ChatScreen(
                 TextButton(onClick = onLogout) { Text("Выйти", color = TextDim) }
             }
             Text(state.session?.email ?: "", color = TextDim, fontSize = 12.sp)
+            var customModel by remember(state.model) { mutableStateOf(state.model) }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 TextButton(onClick = { menu = true }) {
-                    Text(state.model, color = Accent, fontFamily = FontFamily.Monospace, fontSize = 13.sp)
+                    Text(
+                        "▾ ${GeminiModels.titleOf(state.model)}",
+                        color = Accent,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
                 }
-                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                DropdownMenu(
+                    expanded = menu,
+                    onDismissRequest = { menu = false },
+                    modifier = Modifier.heightIn(max = 420.dp),
+                ) {
                     GeminiModels.ALL.forEach { model ->
                         DropdownMenuItem(
-                            text = { Text("${model.title}\n${model.description}") },
+                            text = {
+                                Column {
+                                    Text(model.title, fontWeight = FontWeight.SemiBold)
+                                    Text(model.id, fontSize = 11.sp, color = TextDim, fontFamily = FontFamily.Monospace)
+                                }
+                            },
                             onClick = {
+                                customModel = model.id
                                 onModel(model.id)
                                 menu = false
                             },
@@ -207,6 +224,23 @@ private fun ChatScreen(
                     }
                 }
             }
+            BasicTextField(
+                value = customModel,
+                onValueChange = {
+                    customModel = it
+                    if (it.isNotBlank()) onModel(it)
+                },
+                textStyle = TextStyle(color = Accent, fontSize = 12.sp, fontFamily = FontFamily.Monospace),
+                cursorBrush = SolidColor(Accent),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Surface, RoundedCornerShape(8.dp))
+                    .padding(8.dp),
+                decorationBox = { inner ->
+                    if (customModel.isEmpty()) Text("id модели, любая из Antigravity…", color = TextDim, fontSize = 12.sp)
+                    inner()
+                },
+            )
             BasicTextField(
                 value = workspace,
                 onValueChange = {

@@ -5,6 +5,7 @@ import com.antigravity.core.agent.AgentLoop
 import com.antigravity.core.agent.LocalDeviceFs
 import com.antigravity.core.agent.ToolExecutor
 import com.antigravity.core.api.CloudCodeClient
+import com.antigravity.core.api.GeminiModels
 import com.antigravity.core.api.ContentTurn
 import com.antigravity.core.api.FunctionCall
 import com.antigravity.core.api.LlmClient
@@ -203,5 +204,13 @@ class AntigravityCoreTest {
         val reply = CloudCodeClient().parseReply(raw)
         assertEquals("extract_archive", reply.functionCalls.single().name)
         assertEquals("/sdcard/a.zip", reply.functionCalls.single().args["archive"]?.toString()?.trim('"'))
+    }
+
+    @Test
+    fun defaultModelIsCurrentFlashNotLegacyGemini3() {
+        assertEquals("gemini-3.8-flash-high", GeminiModels.DEFAULT)
+        assertTrue(GeminiModels.ids().contains("gemini-3.7-flash-high"))
+        assertTrue(GeminiModels.ids().contains("gemini-pro-agent"))
+        assertTrue(GeminiModels.ALL.first().id != "gemini-3-flash")
     }
 }
