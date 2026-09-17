@@ -16,6 +16,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
+import okhttp3.Protocol
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.UUID
@@ -47,13 +48,9 @@ interface LlmClient {
 }
 
 class CloudCodeClient(
-    private val http: OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(180, TimeUnit.SECONDS)
-        .writeTimeout(60, TimeUnit.SECONDS)
-        .build(),
+    private val http: OkHttpClient = defaultHttp(),
     private val json: Json = Json { ignoreUnknownKeys = true },
-    private val baseUrl: String = AntigravityOAuth.API_ENDPOINT,
+    private val baseUrl: String = AntigravityOAuth.GENERATE_ENDPOINT,
 ) : LlmClient {
     override fun generate(
         session: AntigravitySession,
@@ -99,12 +96,7 @@ class CloudCodeClient(
             .url(url)
             .header("Authorization", "Bearer ${session.accessToken}")
             .header("Content-Type", "application/json")
-            .header("Accept", "application/json")
             .header("User-Agent", AntigravityOAuth.USER_AGENT)
-            .header(
-                "Client-Metadata",
-                """{"ideType":"ANTIGRAVITY","platform":"ANDROID","pluginType":"GEMINI"}""",
-            )
             .post(envelope.toString().toRequestBody(JSON))
             .build()
         http.newCall(request).execute().use { response ->
@@ -145,6 +137,14 @@ class CloudCodeClient(
 
     companion object {
         private val JSON = "application/json; charset=utf-8".toMediaType()
+
+        fun defaultHttp(): OkHttpClient = OkHttpClient.Builder()
+            .protocols(listOf(Protocol.HTTP_1_1))
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(180, TimeUnit.SECONDS)
+            .writeTimeout(60, TimeUnit.SECONDS)
+            .retryOnConnectionFailure(true)
+            .build()
     }
 }
 

@@ -45,8 +45,11 @@ object AntigravityOAuth {
     const val USER_INFO_ENDPOINT = "https://www.googleapis.com/oauth2/v2/userinfo?alt=json"
     const val API_ENDPOINT = "https://cloudcode-pa.googleapis.com"
     const val DAILY_API_ENDPOINT = "https://daily-cloudcode-pa.googleapis.com"
+    // Personal Google / Antigravity accounts generate only on daily.
+    // cloudcode-pa (prod) always returns 429 RESOURCE_EXHAUSTED for consumer tokens.
+    const val GENERATE_ENDPOINT = DAILY_API_ENDPOINT
     const val API_VERSION = "v1internal"
-    const val USER_AGENT = "antigravity/cli/1.0.13 (aidev_client; os_type=android; arch=arm64)"
+    const val USER_AGENT = "antigravity/cli/1.0.13 (aidev_client; os_type=darwin; arch=arm64)"
 
     private fun decodePub(vararg parts: String): String =
         String(java.util.Base64.getDecoder().decode(parts.joinToString("")), Charsets.UTF_8)

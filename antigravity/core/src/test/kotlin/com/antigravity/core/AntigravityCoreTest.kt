@@ -213,4 +213,13 @@ class AntigravityCoreTest {
         assertTrue(GeminiModels.ids().contains("gemini-pro-agent"))
         assertTrue(GeminiModels.ALL.first().id != "gemini-3-flash")
     }
+
+    @Test
+    fun consumerGenerateUsesDailyEndpointNotProd() {
+        assertEquals("https://daily-cloudcode-pa.googleapis.com", AntigravityOAuth.GENERATE_ENDPOINT)
+        assertEquals(AntigravityOAuth.DAILY_API_ENDPOINT, AntigravityOAuth.GENERATE_ENDPOINT)
+        assertTrue(AntigravityOAuth.API_ENDPOINT.contains("cloudcode-pa.googleapis.com"))
+        assertTrue(AntigravityOAuth.USER_AGENT.contains("darwin"))
+        assertFalse(AntigravityOAuth.GENERATE_ENDPOINT.contains("://cloudcode-pa."))
+    }
 }

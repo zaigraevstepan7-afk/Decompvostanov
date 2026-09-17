@@ -192,7 +192,7 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
                 val raw = error.message.orEmpty()
                 val quota = raw.contains("429") || raw.contains("RESOURCE_EXHAUSTED")
                 val message = if (quota) {
-                    "Квота модели ${snapshot.model} исчерпана (429). Сверху выберите новую: Gemini 3.8 / 3.7 / 3.6 Flash или 3.1 Pro."
+                    "429 на модели ${snapshot.model}. Если на ПК лимит полный — переустановите APK: запросы должны идти на daily-cloudcode-pa, не на prod."
                 } else {
                     raw.ifBlank { "Сбой агента" }
                 }
