@@ -23,6 +23,8 @@ data class ChatMessage(
     val startedAtMs: Long? = null,
     val durationMs: Long? = null,
     val attachments: List<ChatAttachment> = emptyList(),
+    val args: String? = null,
+    val id: String = java.util.UUID.randomUUID().toString(),
 )
 
 interface AgentListener {

@@ -243,9 +243,11 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
                             _state.update { state ->
                                 state.copy(
                                     messages = state.messages + ChatMessage(
-                                        "tool",
-                                        args.toString(),
+                                        role = "tool",
+                                        text = "",
                                         tool = name,
+                                        args = args.toString(),
+                                        startedAtMs = System.currentTimeMillis(),
                                     ),
                                 )
                             }
@@ -253,13 +255,25 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
 
                         override fun onToolResult(name: String, result: String) {
                             _state.update { state ->
-                                state.copy(
-                                    messages = state.messages + ChatMessage(
-                                        "tool-result",
-                                        result.take(4000),
+                                val messages = state.messages.toMutableList()
+                                val index = messages.indexOfLast {
+                                    it.role == "tool" && it.tool == name && it.text.isEmpty()
+                                }
+                                if (index >= 0) {
+                                    val old = messages[index]
+                                    val now = System.currentTimeMillis()
+                                    messages[index] = old.copy(
+                                        text = result.take(8_000),
+                                        durationMs = old.startedAtMs?.let { now - it }?.coerceAtLeast(0),
+                                    )
+                                } else {
+                                    messages += ChatMessage(
+                                        role = "tool",
+                                        text = result.take(8_000),
                                         tool = name,
-                                    ),
-                                )
+                                    )
+                                }
+                                state.copy(messages = messages)
                             }
                         }
                     },

@@ -86,6 +86,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.graphics.BitmapFactory
 import com.antigravity.core.agent.ChatMessage
+import com.antigravity.core.agent.ToolLabels
 import com.antigravity.core.api.GeminiModels
 import com.antigravity.mobile.PendingAttachment
 import com.antigravity.mobile.UiState
@@ -296,20 +297,25 @@ private fun ChatPane(
                 .weight(1f)
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
             contentPadding = PaddingValues(bottom = 8.dp),
         ) {
             if (state.messages.isEmpty() && !state.busy) {
                 item { EmptyState() }
             }
-            itemsIndexed(state.messages, key = { index, message -> "$index-${message.role}-${message.text.hashCode()}" }) { _, message ->
+            itemsIndexed(state.messages, key = { _, message -> message.id }) { index, message ->
+                val tight = message.role == "tool" && state.messages.getOrNull(index - 1)?.role == "tool"
                 Appear(fromUser = message.role == "user") {
-                    when (message.role) {
-                        "user" -> UserBubble(message)
-                        "thinking" -> ThinkingBlock(message, live = state.busy && message.durationMs == null)
-                        "tool" -> ToolCard(message.tool ?: "tool", message.text, running = true)
-                        "tool-result" -> ToolCard(message.tool ?: "tool", message.text, running = false)
-                        else -> AssistantBubble(message.text)
+                    Box(Modifier.padding(top = if (tight) 0.dp else 4.dp)) {
+                        when (message.role) {
+                            "user" -> UserBubble(message)
+                            "thinking" -> ThinkingBlock(message, live = state.busy && message.durationMs == null)
+                            "tool", "tool-result" -> ToolLine(
+                                message = message,
+                                live = message.role == "tool" && state.busy && message.text.isEmpty(),
+                            )
+                            else -> AssistantBubble(message.text)
+                        }
                     }
                 }
             }
@@ -540,24 +546,107 @@ private fun ThinkingBlock(message: ChatMessage, live: Boolean) {
 }
 
 @Composable
-private fun ToolCard(name: String, body: String, running: Boolean) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(AgColors.Surface, RoundedCornerShape(AgRadius.Chip))
-            .border(1.dp, AgColors.Border, RoundedCornerShape(AgRadius.Chip))
-            .padding(12.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            StatusDot(active = running)
-            Spacer(Modifier.width(8.dp))
-            Text(name, color = AgColors.Accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace)
-            Spacer(Modifier.weight(1f))
-            Text(if (running) "running" else "done", color = AgColors.Muted, fontSize = 11.sp)
+private fun ToolLine(message: ChatMessage, live: Boolean) {
+    val args = remember(message.args, message.text) { ToolLabels.parseArgs(message.args) }
+    val command = ToolLabels.command(message.tool, args)
+    val title = remember(message.tool, message.args, message.text) {
+        ToolLabels.headline(message.tool, args, message.text.takeIf { it.isNotBlank() })
+    }
+    var open by remember(message.id) { mutableStateOf(false) }
+    val rotation by animateFloatAsState(
+        targetValue = if (open) 180f else 0f,
+        animationSpec = tween(240, easing = EnterEase),
+        label = "tool-chevron",
+    )
+    val output = message.text
+    Column(Modifier.fillMaxWidth().padding(end = 12.dp)) {
+        if (command != null) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(AgColors.Surface)
+                    .border(1.dp, AgColors.Border, RoundedCornerShape(10.dp))
+                    .clickable(enabled = !live && output.isNotBlank()) { open = !open }
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+            ) {
+                if (live) {
+                    StatusDot(active = true)
+                    Spacer(Modifier.width(8.dp))
+                }
+                Text(
+                    command,
+                    color = AgColors.Accent,
+                    fontSize = 12.sp,
+                    fontFamily = FontFamily.Monospace,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                if (!live && output.isNotBlank()) {
+                    Icon(
+                        Icons.Outlined.ExpandMore,
+                        contentDescription = null,
+                        tint = AgColors.Muted,
+                        modifier = Modifier
+                            .size(16.dp)
+                            .graphicsLayer { rotationZ = rotation },
+                    )
+                }
+            }
+        } else {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable(enabled = !live && output.isNotBlank()) { open = !open }
+                    .padding(vertical = 3.dp),
+            ) {
+                if (live) {
+                    StatusDot(active = true)
+                    Spacer(Modifier.width(8.dp))
+                    ShimmerLabel(title)
+                } else {
+                    Text(
+                        title,
+                        color = AgColors.Muted,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    if (output.isNotBlank()) {
+                        Icon(
+                            Icons.Outlined.ExpandMore,
+                            contentDescription = null,
+                            tint = AgColors.Muted,
+                            modifier = Modifier
+                                .size(16.dp)
+                                .graphicsLayer { rotationZ = rotation },
+                        )
+                    }
+                }
+            }
         }
-        if (body.isNotBlank()) {
-            Spacer(Modifier.height(8.dp))
-            Text(body, color = AgColors.Thought, fontSize = 12.sp, fontFamily = FontFamily.Monospace, lineHeight = 17.sp)
+        AnimatedVisibility(
+            visible = open && output.isNotBlank(),
+            enter = fadeIn(tween(200, easing = EnterEase)) + slideInVertically(tween(240, easing = EnterEase)) { 8 },
+            exit = fadeOut(tween(140)) + slideOutVertically(tween(160)) { 6 },
+        ) {
+            val lines = remember(output) { output.lineSequence().take(40).joinToString("\n") }
+            Text(
+                lines,
+                color = AgColors.Thought,
+                fontSize = 12.sp,
+                fontFamily = FontFamily.Monospace,
+                lineHeight = 17.sp,
+                modifier = Modifier
+                    .padding(top = 6.dp, start = if (command != null) 10.dp else 0.dp, bottom = 4.dp)
+                    .fillMaxWidth(),
+            )
         }
     }
 }

@@ -20,36 +20,33 @@
     .gear { width: 44px; height: 44px; display: grid; place-items: center; color: #7A9A86; font-size: 18px; }
     main { flex: 1; overflow: auto; padding: 8px 16px 12px; }
     .user { display: flex; justify-content: flex-end; margin: 10px 0; }
-    .user-col { max-width: 86%; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-    .thumb {
-      width: 148px; height: 110px; border-radius: 12px;
-      background: linear-gradient(135deg, #178A4E, #3DFF9A);
-    }
     .user p {
-      background: #3DFF9A; color: #03140A;
+      max-width: 86%; background: #3DFF9A; color: #03140A;
       border-radius: 18px 18px 4px 18px; padding: 10px 14px; margin: 0; font-size: 15px;
     }
-    .think { color: #8FB89C; font-size: 13px; font-weight: 500; margin: 8px 0 4px; }
+    .think { color: #8FB89C; font-size: 13px; font-weight: 500; margin: 12px 0 6px; }
     .think span { color: #7A9A86; font-weight: 400; }
-    .reason { color: #7A9A86; font-size: 13px; line-height: 18px; max-height: 72px; overflow: hidden; }
-    .tool {
-      border: 1px solid #1C3326; background: #0C140F; border-radius: 12px; padding: 12px; margin: 10px 0;
-      font: 12px ui-monospace, monospace; color: #8FB89C;
+    .tool-line {
+      color: #7A9A86; font-size: 13px; font-weight: 500;
+      display: flex; align-items: center; gap: 4px; padding: 3px 0;
     }
-    .tool b { color: #3DFF9A; }
-    h3 { color: #3DFF9A; font-size: 15px; margin: 12px 0 8px; }
+    .tool-line em { font-style: normal; color: #5f7d6a; font-size: 14px; }
+    .cmd {
+      display: flex; align-items: center; gap: 8px;
+      border: 1px solid #1C3326; background: #0C140F; border-radius: 10px;
+      padding: 8px 10px; margin: 6px 0 4px; color: #3DFF9A;
+      font: 12px ui-monospace, monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .cmd span { color: #7A9A86; margin-left: auto; }
+    .out {
+      color: #8FB89C; font: 12px/17px ui-monospace, monospace;
+      max-height: 88px; overflow: hidden; padding: 0 10px 6px;
+    }
+    h3 { color: #3DFF9A; font-size: 15px; margin: 14px 0 8px; }
     ul { margin: 0; padding: 0; list-style: none; }
     li { display: flex; gap: 8px; font-size: 15px; line-height: 22px; margin: 0 0 8px; }
     li:before { content: "•"; color: #3DFF9A; width: 14px; }
-    strong { font-weight: 600; }
-    code { font: 12.5px ui-monospace, monospace; background: #0A160F; color: #3DFF9A; padding: 1px 5px; border-radius: 5px; }
     footer { padding: 8px 12px 12px; }
-    .chips { display: flex; gap: 8px; margin-bottom: 8px; }
-    .chip {
-      display: flex; align-items: center; gap: 8px; padding: 4px 8px 4px 4px;
-      border: 1px solid #1C3326; background: #121C16; border-radius: 14px; font-size: 12px;
-    }
-    .chip i { width: 36px; height: 36px; border-radius: 10px; background: #178A4E; display: grid; place-items: center; }
     .composer {
       display: flex; align-items: center; gap: 4px; padding: 6px;
       border: 1px solid #1C3326; background: #0C140F; border-radius: 22px;
@@ -75,26 +72,20 @@
   <div class="phone">
     <div class="top"><div class="gear">⚙</div></div>
     <main>
-      <div class="user">
-        <div class="user-col">
-          <div class="thumb"></div>
-          <p>что на скрине? найди это в интернете</p>
-        </div>
-      </div>
-      <div class="think">Thought <span>for 2s</span></div>
-      <div class="reason">Сначала опишу картинку, затем web_search по объекту.</div>
-      <div class="tool"><b>web_search</b> · done<br/>Поиск «pixel 9 pro» (3)</div>
-      <h3>На скрине</h3>
+      <div class="user"><p>что в Download</p></div>
+      <div class="think">Thought <span>for 2s</span> ▾</div>
+      <div class="tool-line">Explored 11 files <em>▾</em></div>
+      <div class="tool-line">Read ToolCatalog.kt <em>▾</em></div>
+      <div class="tool-line">Read ToolExecutor.kt <em>▾</em></div>
+      <div class="cmd">ls /sdcard/Download <span>▾</span></div>
+      <div class="out">Attached_image.png<br>BRENE-v0.0.66.zip<br>Bozya-VPN-debug.apk</div>
+      <h3>В Download</h3>
       <ul>
-        <li><span>Это <strong>Pixel 9 Pro</strong> — зелёная рамка, камера-остров.</span></li>
-        <li><span>Актуальные факты взял через <code>web_search</code>.</span></li>
+        <li><span>Картинки, zip и несколько APK.</span></li>
+        <li><span>Команда свёрнута в одну строку.</span></li>
       </ul>
     </main>
     <footer>
-      <div class="chips">
-        <div class="chip"><i>🖼</i> shot.jpg ×</div>
-        <div class="chip"><i>📄</i> notes.md ×</div>
-      </div>
       <div class="composer">
         <div class="model">3.8 Flash</div>
         <div class="clip">📎</div>

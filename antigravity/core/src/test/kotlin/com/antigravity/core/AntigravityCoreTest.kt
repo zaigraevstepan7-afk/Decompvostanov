@@ -481,4 +481,27 @@ class AntigravityCoreTest {
         assertEquals("вижу картинку", answer)
         assertTrue(history.first().parts.toString().contains("inlineData"))
     }
+
+    @Test
+    fun toolLabelsLookLikeCursorRows() {
+        val read = com.antigravity.core.agent.ToolLabels.headline(
+            "read_file",
+            buildJsonObject { put("path", "/sdcard/Download/ToolCatalog.kt") },
+        )
+        assertEquals("Read ToolCatalog.kt", read)
+        val listed = com.antigravity.core.agent.ToolLabels.headline(
+            "list_dir",
+            buildJsonObject { put("path", "/sdcard/Download") },
+            result = "file\t1\ta\nfile\t1\tb\nfile\t1\tc",
+        )
+        assertEquals("Explored 3 files", listed)
+        val args = com.antigravity.core.agent.ToolLabels.parseArgs("""{"command":"ls /sdcard/Download"}""")
+        assertEquals("ls /sdcard/Download", com.antigravity.core.agent.ToolLabels.command("shell", args))
+        assertTrue(com.antigravity.core.agent.ToolLabels.isCommand("shell"))
+        assertFalse(com.antigravity.core.agent.ToolLabels.isCommand("read_file"))
+        assertEquals(
+            "Searched pixel 9",
+            com.antigravity.core.agent.ToolLabels.headline("web_search", buildJsonObject { put("query", "pixel 9") }),
+        )
+    }
 }
