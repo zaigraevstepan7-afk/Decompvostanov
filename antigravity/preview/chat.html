@@ -26,23 +26,7 @@
       flex-direction: column;
       box-shadow: 0 30px 80px rgba(0,0,0,.55);
     }
-    header { padding: 18px 16px 10px; }
-    .row { display: flex; align-items: center; }
-    .brand { color: #3DFF9A; font-weight: 700; font-size: 20px; letter-spacing: -.3px; }
-    .dot { width: 7px; height: 7px; border-radius: 99px; background: #178A4E; margin-left: 8px; }
-    .out { margin-left: auto; color: #7A9A86; font-size: 13px; }
-    .email { color: #7A9A86; font-size: 12px; margin-top: 4px; }
-    .chip {
-      display: inline-block; margin-top: 8px; padding: 6px 10px;
-      border: 1px solid #1C3326; background: rgba(61,255,154,.13); color: #3DFF9A;
-      border-radius: 12px; font-size: 13px; font-weight: 600;
-    }
-    .field {
-      margin-top: 8px; padding: 8px 10px; border: 1px solid #1C3326;
-      background: #0C140F; border-radius: 12px; font: 12px ui-monospace, monospace; color: #3DFF9A;
-    }
-    .field.muted { color: #7A9A86; }
-    main { flex: 1; overflow: auto; padding: 8px 16px 12px; }
+    main { flex: 1; overflow: auto; padding: 16px 16px 12px; }
     .user { display: flex; justify-content: flex-end; margin: 10px 0; }
     .user p {
       max-width: 86%; background: #3DFF9A; color: #03140A;
@@ -60,32 +44,28 @@
     code { font: 12.5px ui-monospace, monospace; background: #0A160F; color: #3DFF9A; padding: 1px 5px; border-radius: 5px; }
     footer { padding: 12px; }
     .composer {
-      display: flex; align-items: center; gap: 8px; padding: 6px;
+      display: flex; align-items: center; gap: 6px; padding: 6px;
       border: 1px solid #1C3326; background: #0C140F; border-radius: 22px;
+    }
+    .model {
+      height: 44px; max-width: 118px; padding: 0 10px;
+      display: grid; place-items: center; border-radius: 16px;
+      background: rgba(61,255,154,.13); color: #3DFF9A; font-size: 12px; font-weight: 600;
+      white-space: nowrap;
     }
     .composer input {
       flex: 1; border: 0; background: transparent; color: #E7F6EC;
-      font-size: 16px; padding: 8px 10px; outline: none;
+      font-size: 16px; padding: 8px 4px; outline: none; min-width: 0;
     }
-    .send {
-      width: 44px; height: 44px; border-radius: 99px; background: #3DFF9A; color: #03140A;
-      display: grid; place-items: center; font-size: 16px;
+    .gear, .send {
+      width: 44px; height: 44px; border-radius: 99px;
+      display: grid; place-items: center; font-size: 16px; color: #7A9A86;
     }
+    .send { background: #3DFF9A; color: #03140A; }
   </style>
 </head>
 <body>
   <div class="phone">
-    <header>
-      <div class="row">
-        <div class="brand">Antigravity</div>
-        <div class="dot"></div>
-        <div class="out">Выйти</div>
-      </div>
-      <div class="email">zaigraevstepan7@gmail.com</div>
-      <div class="chip">▾ Gemini 3.8 Flash</div>
-      <div class="field">gemini-3.8-flash-high</div>
-      <div class="field muted">/storage/emulated/0/Antigravity</div>
-    </header>
     <main>
       <div class="user"><p>что умеешь</p></div>
       <div class="think">Thought <span>for 2s</span></div>
@@ -105,7 +85,9 @@
     </main>
     <footer>
       <div class="composer">
+        <div class="model">3.8 Flash</div>
         <input value="" placeholder="Задача для телефона…" />
+        <div class="gear">⚙</div>
         <div class="send">➤</div>
       </div>
     </footer>

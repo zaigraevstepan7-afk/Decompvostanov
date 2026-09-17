@@ -218,6 +218,7 @@ class AntigravityCoreTest {
         assertTrue(GeminiModels.ids().contains("gemini-3.7-flash-high"))
         assertTrue(GeminiModels.ids().contains("gemini-pro-agent"))
         assertTrue(GeminiModels.ALL.first().id != "gemini-3-flash")
+        assertEquals("3.8 Flash", GeminiModels.shortTitle("gemini-3.8-flash-high"))
         val flash37 = GeminiModels.resolve("gemini-3.7-flash-high")
         assertEquals(listOf("gemini-3.7-flash-high", "gemini-3.7-flash-tiered"), flash37.wireIds)
         assertEquals("high", flash37.thinkingLevel)

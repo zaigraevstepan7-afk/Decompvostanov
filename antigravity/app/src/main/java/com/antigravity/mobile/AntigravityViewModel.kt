@@ -56,6 +56,7 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
         UiState(
             session = store.load(),
             model = store.loadModel() ?: GeminiModels.DEFAULT,
+            workspace = store.loadWorkspace() ?: defaultWorkspace(),
         ),
     )
     val state: StateFlow<UiState> = _state
@@ -76,7 +77,11 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
         _state.update { it.copy(model = id, error = null) }
     }
 
-    fun setWorkspace(path: String) = _state.update { it.copy(workspace = path) }
+    fun setWorkspace(path: String) {
+        val trimmed = path.trim().ifBlank { defaultWorkspace() }
+        store.saveWorkspace(trimmed)
+        _state.update { it.copy(workspace = trimmed) }
+    }
 
     fun logout() {
         store.clear()

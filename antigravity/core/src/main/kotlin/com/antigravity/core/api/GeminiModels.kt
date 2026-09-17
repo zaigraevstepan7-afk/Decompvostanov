@@ -51,6 +51,14 @@ object GeminiModels {
 
     fun titleOf(id: String): String = ALL.firstOrNull { it.id == id }?.title ?: id
 
+    fun shortTitle(id: String): String {
+        val title = titleOf(id)
+            .removePrefix("Gemini ")
+            .removeSuffix(" (старая)")
+            .replace(" Thinking", "")
+        return if (title.length > 16) title.take(14) + "…" else title
+    }
+
     fun ids(): List<String> = ALL.map { it.id }
 
     fun resolve(id: String): ResolvedModel {

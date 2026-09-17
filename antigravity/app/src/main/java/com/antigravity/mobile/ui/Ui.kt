@@ -2,7 +2,6 @@ package com.antigravity.mobile.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.CubicBezierEasing
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -30,6 +29,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -37,16 +37,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -173,87 +174,25 @@ private fun ChatScreen(
     onLogout: () -> Unit,
 ) {
     var draft by remember { mutableStateOf("") }
-    var workspace by remember(state.workspace) { mutableStateOf(state.workspace) }
-    var menu by remember { mutableStateOf(false) }
+    var settings by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     LaunchedEffect(state.messages.size, state.busy) {
         val last = state.messages.lastIndex + if (state.busy) 1 else 0
         if (last >= 0) listState.animateScrollToItem(last.coerceAtLeast(0))
     }
+    if (settings) {
+        SettingsScreen(
+            state = state,
+            onBack = { settings = false },
+            onWorkspace = onWorkspace,
+            onLogout = {
+                settings = false
+                onLogout()
+            },
+        )
+        return
+    }
     Column(Modifier.fillMaxSize().imePadding()) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Antigravity", color = AgColors.Accent, fontWeight = FontWeight.Bold, fontSize = 20.sp, letterSpacing = (-0.3).sp)
-                Spacer(Modifier.width(8.dp))
-                LiveDot(active = state.busy)
-                Spacer(Modifier.weight(1f))
-                TextButton(onClick = onLogout, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)) {
-                    Text("Выйти", color = AgColors.Muted, fontSize = 13.sp)
-                }
-            }
-            Text(state.session?.email ?: "", color = AgColors.Muted, fontSize = 12.sp)
-            Spacer(Modifier.height(8.dp))
-            var customModel by remember(state.model) { mutableStateOf(state.model) }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(AgRadius.Chip))
-                        .background(AgColors.AccentSoft)
-                        .border(1.dp, AgColors.Border, RoundedCornerShape(AgRadius.Chip))
-                        .clickable { menu = true }
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                ) {
-                    Text(
-                        "▾ ${GeminiModels.titleOf(state.model)}",
-                        color = AgColors.Accent,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-                DropdownMenu(
-                    expanded = menu,
-                    onDismissRequest = { menu = false },
-                    modifier = Modifier
-                        .heightIn(max = 420.dp)
-                        .background(AgColors.SurfaceRaised),
-                ) {
-                    GeminiModels.ALL.forEach { model ->
-                        DropdownMenuItem(
-                            text = {
-                                Column {
-                                    Text(model.title, fontWeight = FontWeight.SemiBold, color = AgColors.Text)
-                                    Text(model.id, fontSize = 11.sp, color = AgColors.Muted, fontFamily = FontFamily.Monospace)
-                                }
-                            },
-                            onClick = {
-                                customModel = model.id
-                                onModel(model.id)
-                                menu = false
-                            },
-                        )
-                    }
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-            Field(
-                value = customModel,
-                onValueChange = {
-                    customModel = it
-                    if (it.isNotBlank()) onModel(it)
-                },
-                placeholder = "id модели",
-                accent = true,
-            )
-            Spacer(Modifier.height(6.dp))
-            Field(
-                value = workspace,
-                onValueChange = {
-                    workspace = it
-                    onWorkspace(it)
-                },
-                placeholder = "/storage/emulated/0/Antigravity",
-            )
-        }
         LazyColumn(
             state = listState,
             modifier = Modifier
@@ -261,7 +200,7 @@ private fun ChatScreen(
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
-            contentPadding = PaddingValues(bottom = 8.dp),
+            contentPadding = PaddingValues(top = 12.dp, bottom = 8.dp),
         ) {
             if (state.messages.isEmpty() && !state.busy) {
                 item { EmptyState() }
@@ -290,11 +229,85 @@ private fun ChatScreen(
         state.error?.let {
             Text(it, color = AgColors.Danger, modifier = Modifier.padding(horizontal = 16.dp), fontSize = 13.sp, lineHeight = 18.sp)
         }
-        Composer(draft = draft, busy = state.busy, onDraft = { draft = it }, onSend = {
-            val text = draft
-            draft = ""
-            onSend(text)
-        })
+        Composer(
+            draft = draft,
+            busy = state.busy,
+            model = state.model,
+            onDraft = { draft = it },
+            onModel = onModel,
+            onSettings = { settings = true },
+            onSend = {
+                val text = draft
+                draft = ""
+                onSend(text)
+            },
+        )
+    }
+}
+
+@Composable
+private fun SettingsScreen(
+    state: UiState,
+    onBack: () -> Unit,
+    onWorkspace: (String) -> Unit,
+    onLogout: () -> Unit,
+) {
+    var workspace by remember(state.workspace) { mutableStateOf(state.workspace) }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .clickable(onClick = onBack),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Назад", tint = AgColors.Text)
+            }
+            Spacer(Modifier.width(4.dp))
+            Text("Настройки", color = AgColors.Text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.4).sp)
+        }
+        Spacer(Modifier.height(24.dp))
+        BrandMark()
+        Spacer(Modifier.height(18.dp))
+        Text("Аккаунт", color = AgColors.Muted, fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
+        Spacer(Modifier.height(6.dp))
+        Text(state.session?.email ?: "", color = AgColors.Text, fontSize = 16.sp)
+        Spacer(Modifier.height(22.dp))
+        Text("Рабочая папка", color = AgColors.Muted, fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
+        Spacer(Modifier.height(8.dp))
+        Field(
+            value = workspace,
+            onValueChange = {
+                workspace = it
+                if (it.isNotBlank()) onWorkspace(it)
+            },
+            placeholder = "/storage/emulated/0/Antigravity",
+        )
+        Text(
+            "Агент читает и пишет файлы относительно этой директории.",
+            color = AgColors.Muted,
+            fontSize = 12.sp,
+            lineHeight = 16.sp,
+            modifier = Modifier.padding(top = 8.dp),
+        )
+        Spacer(Modifier.weight(1f))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(AgRadius.Inner))
+                .border(1.dp, AgColors.Border, RoundedCornerShape(AgRadius.Inner))
+                .clickable(onClick = onLogout)
+                .padding(vertical = 14.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("Выйти", color = AgColors.Danger, fontWeight = FontWeight.SemiBold)
+        }
+        Spacer(Modifier.height(12.dp))
     }
 }
 
@@ -423,9 +436,18 @@ private fun ToolCard(name: String, body: String, running: Boolean) {
 }
 
 @Composable
-private fun Composer(draft: String, busy: Boolean, onDraft: (String) -> Unit, onSend: () -> Unit) {
+private fun Composer(
+    draft: String,
+    busy: Boolean,
+    model: String,
+    onDraft: (String) -> Unit,
+    onModel: (String) -> Unit,
+    onSettings: () -> Unit,
+    onSend: () -> Unit,
+) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
+    var menu by remember { mutableStateOf(false) }
     Row(
         modifier = Modifier
             .padding(12.dp)
@@ -434,6 +456,48 @@ private fun Composer(draft: String, busy: Boolean, onDraft: (String) -> Unit, on
             .padding(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        Box {
+            Box(
+                modifier = Modifier
+                    .widthIn(max = 118.dp)
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(AgRadius.Inner))
+                    .background(AgColors.AccentSoft)
+                    .clickable { menu = true }
+                    .padding(horizontal = 10.dp),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                Text(
+                    GeminiModels.shortTitle(model),
+                    color = AgColors.Accent,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                )
+            }
+            DropdownMenu(
+                expanded = menu,
+                onDismissRequest = { menu = false },
+                modifier = Modifier
+                    .heightIn(max = 420.dp)
+                    .background(AgColors.SurfaceRaised),
+            ) {
+                GeminiModels.ALL.forEach { item ->
+                    DropdownMenuItem(
+                        text = {
+                            Column {
+                                Text(item.title, fontWeight = FontWeight.SemiBold, color = AgColors.Text)
+                                Text(item.id, fontSize = 11.sp, color = AgColors.Muted, fontFamily = FontFamily.Monospace)
+                            }
+                        },
+                        onClick = {
+                            onModel(item.id)
+                            menu = false
+                        },
+                    )
+                }
+            }
+        }
         BasicTextField(
             value = draft,
             onValueChange = onDraft,
@@ -441,12 +505,21 @@ private fun Composer(draft: String, busy: Boolean, onDraft: (String) -> Unit, on
             cursorBrush = SolidColor(AgColors.Accent),
             modifier = Modifier
                 .weight(1f)
-                .padding(horizontal = 10.dp, vertical = 8.dp),
+                .padding(horizontal = 8.dp, vertical = 8.dp),
             decorationBox = { inner ->
                 if (draft.isEmpty()) Text("Задача для телефона…", color = AgColors.Muted, fontSize = 16.sp)
                 inner()
             },
         )
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .clickable(onClick = onSettings),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Outlined.Settings, contentDescription = "Настройки", tint = AgColors.Muted, modifier = Modifier.size(20.dp))
+        }
         Box(
             modifier = Modifier
                 .size(44.dp)
@@ -472,13 +545,13 @@ private fun Composer(draft: String, busy: Boolean, onDraft: (String) -> Unit, on
 }
 
 @Composable
-private fun Field(value: String, onValueChange: (String) -> Unit, placeholder: String, accent: Boolean = false) {
+private fun Field(value: String, onValueChange: (String) -> Unit, placeholder: String) {
     BasicTextField(
         value = value,
         onValueChange = onValueChange,
         textStyle = TextStyle(
-            color = if (accent) AgColors.Accent else AgColors.Muted,
-            fontSize = 12.sp,
+            color = AgColors.Text,
+            fontSize = 13.sp,
             fontFamily = FontFamily.Monospace,
         ),
         cursorBrush = SolidColor(AgColors.Accent),
@@ -501,23 +574,6 @@ private fun BrandMark() {
         Spacer(Modifier.width(8.dp))
         Text("ANTIGRAVITY", color = AgColors.Accent, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
     }
-}
-
-@Composable
-private fun LiveDot(active: Boolean) {
-    val pulse = rememberInfiniteTransition(label = "live")
-    val alpha by pulse.animateFloat(
-        initialValue = if (active) 0.35f else 1f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
-        label = "dot",
-    )
-    Box(
-        Modifier
-            .size(7.dp)
-            .graphicsLayer { this.alpha = if (active) alpha else 1f }
-            .background(if (active) AgColors.Accent else AgColors.AccentDim, CircleShape),
-    )
 }
 
 @Composable
