@@ -141,7 +141,7 @@ private fun LoginScreen(state: UiState, onLogin: () -> Unit) {
         Text("Вход Google", color = TextMain, fontSize = 32.sp, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(12.dp))
         Text(
-            "Это не Gemini API key. Откроется аккаунт Google → OAuth Antigravity (Cloud Code Assist). Модели Gemini идут с лимитов Antigravity.",
+            "Это не Gemini API key. Откроется страница Google. Предупреждение «Make sure that you downloaded this app from Google» — нормально: нажмите Sign in. После входа приложение само перехватит возврат, без broken pipe.",
             color = TextDim,
             fontSize = 16.sp,
         )

@@ -1,10 +1,7 @@
 package com.antigravity.mobile
 
 import android.app.Application
-import android.content.Context
-import android.net.Uri
 import android.os.Environment
-import androidx.browser.customtabs.CustomTabsIntent
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -18,7 +15,6 @@ import com.antigravity.core.api.GeminiModels
 import com.antigravity.core.auth.AntigravityAuthClient
 import com.antigravity.core.auth.AntigravityOAuth
 import com.antigravity.core.auth.AntigravitySession
-import com.antigravity.core.auth.OAuthCallbackServer
 import com.antigravity.mobile.auth.SessionStore
 import com.antigravity.mobile.fs.RootDeviceFs
 import com.antigravity.mobile.root.RootAccess
@@ -28,7 +24,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
 import java.io.File
 
@@ -43,6 +38,8 @@ data class UiState(
     val error: String? = null,
     val messages: List<ChatMessage> = emptyList(),
 )
+
+data class GoogleLoginRequest(val url: String, val state: String)
 
 fun defaultWorkspace(): String {
     val ext = Environment.getExternalStorageDirectory()
@@ -78,47 +75,36 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
         _state.update { it.copy(session = null, messages = emptyList(), error = null) }
     }
 
-    fun loginWithGoogle(context: Context) {
+    fun createGoogleLogin(): GoogleLoginRequest? {
         if (_state.value.root != RootState.Granted) {
             _state.update { it.copy(error = "Без root вход недоступен") }
-            return
+            return null
         }
-        viewModelScope.launch {
-            _state.update { it.copy(loggingIn = true, error = null) }
-            try {
-                val session = withContext(Dispatchers.IO) {
-                    val stateToken = AntigravityOAuth.randomState()
-                    val url = AntigravityOAuth.buildAuthUrl(stateToken)
-                    val waiter = launch(Dispatchers.IO) {
-                        // started below after browser opens — we need server FIRST
-                    }
-                    waiter.cancel()
-                    val callback = startLogin(context, stateToken, url)
-                    auth.exchangeCode(callback.code)
-                }
-                store.save(session)
-                _state.update { it.copy(session = session, loggingIn = false) }
-            } catch (error: Exception) {
-                _state.update {
-                    it.copy(loggingIn = false, error = error.message ?: "Ошибка входа Google")
-                }
-            }
+        val state = AntigravityOAuth.randomState()
+        _state.update { it.copy(loggingIn = true, error = null) }
+        return GoogleLoginRequest(url = AntigravityOAuth.buildAuthUrl(state), state = state)
+    }
+
+    fun cancelGoogleLogin(message: String?) {
+        _state.update {
+            it.copy(loggingIn = false, error = message)
         }
     }
 
-    private fun startLogin(context: Context, stateToken: String, url: String): com.antigravity.core.auth.OAuthCallback {
-        val server = OAuthCallbackServer()
-        val executor = java.util.concurrent.Executors.newSingleThreadExecutor()
-        val future = executor.submit<com.antigravity.core.auth.OAuthCallback> {
-            server.awaitCode(stateToken, timeoutMs = 180_000)
-        }
-        try {
-            android.os.Handler(android.os.Looper.getMainLooper()).post {
-                CustomTabsIntent.Builder().build().launchUrl(context, Uri.parse(url))
+    fun finishGoogleLogin(code: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val session = auth.exchangeCode(code)
+                store.save(session)
+                _state.update { it.copy(session = session, loggingIn = false, error = null) }
+            } catch (error: Exception) {
+                _state.update {
+                    it.copy(
+                        loggingIn = false,
+                        error = error.message ?: "Ошибка обмена кода Google",
+                    )
+                }
             }
-            return future.get()
-        } finally {
-            executor.shutdownNow()
         }
     }
 
