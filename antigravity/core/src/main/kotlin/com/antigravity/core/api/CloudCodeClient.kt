@@ -29,6 +29,7 @@ data class ModelReply(
     val finishReason: String?,
     val text: String,
     val functionCalls: List<FunctionCall>,
+    val thoughts: String = "",
 )
 
 data class FunctionCall(
@@ -123,7 +124,7 @@ class CloudCodeClient(
                 put("maxOutputTokens", 8192)
                 put("temperature", 0.4)
                 put("thinkingConfig", buildJsonObject {
-                    put("includeThoughts", false)
+                    put("includeThoughts", true)
                     if (!thinkingLevel.isNullOrBlank()) {
                         put("thinkingLevel", thinkingLevel)
                     }
@@ -147,9 +148,11 @@ class CloudCodeClient(
         val parts = content?.get("parts")?.jsonArray?.map { it.jsonObject } ?: emptyList()
         val finish = candidate["finishReason"]?.jsonPrimitive?.content
         val text = parts.mapNotNull { part ->
-            val thought = part["thought"]?.toString() == "true"
-            if (thought) null else part["text"]?.jsonPrimitive?.content
+            if (isThoughtPart(part)) null else part["text"]?.jsonPrimitive?.content
         }.joinToString("")
+        val thoughts = parts.mapNotNull { part ->
+            if (!isThoughtPart(part)) null else part["text"]?.jsonPrimitive?.content
+        }.joinToString("\n").trim()
         val calls = parts.mapNotNull { part ->
             val call = part["functionCall"]?.jsonObject ?: return@mapNotNull null
             val name = call["name"]?.jsonPrimitive?.content ?: return@mapNotNull null
@@ -162,7 +165,21 @@ class CloudCodeClient(
             }
             FunctionCall(name = name, args = args, id = call["id"]?.jsonPrimitive?.content)
         }
-        return ModelReply(parts = parts, finishReason = finish, text = text, functionCalls = calls)
+        return ModelReply(
+            parts = parts,
+            finishReason = finish,
+            text = text,
+            functionCalls = calls,
+            thoughts = thoughts,
+        )
+    }
+
+    private fun isThoughtPart(part: JsonObject): Boolean {
+        val flag = part["thought"] ?: return false
+        return when (flag) {
+            is JsonPrimitive -> flag.content.equals("true", ignoreCase = true) || flag.toString() == "true"
+            else -> false
+        }
     }
 
     companion object {

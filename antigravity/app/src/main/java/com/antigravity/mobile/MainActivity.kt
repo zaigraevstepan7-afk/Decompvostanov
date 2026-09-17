@@ -43,7 +43,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val state by viewModel.state.collectAsState()
             AntigravityTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
+                Surface(modifier = Modifier.fillMaxSize(), color = com.antigravity.mobile.ui.AgColors.Bg) {
                     AntigravityAppUi(
                         state = state,
                         onLogin = {

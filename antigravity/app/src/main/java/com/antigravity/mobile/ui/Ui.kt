@@ -1,10 +1,23 @@
 package com.antigravity.mobile.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,22 +27,26 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Send
+import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -38,8 +55,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -49,28 +70,10 @@ import com.antigravity.core.agent.ChatMessage
 import com.antigravity.core.api.GeminiModels
 import com.antigravity.mobile.UiState
 import com.antigravity.mobile.root.RootState
+import kotlin.math.roundToInt
 
-private val Bg = Color(0xFF0B0F14)
-private val Surface = Color(0xFF141A22)
-private val Accent = Color(0xFF7CFFB2)
-private val TextMain = Color(0xFFE8EEF5)
-private val TextDim = Color(0xFF9AA6B2)
-private val Danger = Color(0xFFFF6B6B)
-
-@Composable
-fun AntigravityTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = darkColorScheme(
-            background = Bg,
-            surface = Surface,
-            primary = Accent,
-            onBackground = TextMain,
-            onSurface = TextMain,
-            onPrimary = Color(0xFF04140C),
-        ),
-        content = content,
-    )
-}
+private val EnterEase = CubicBezierEasing(0.22f, 1f, 0.36f, 1f)
+private val ShineEase = CubicBezierEasing(0.25f, 0.1f, 0.25f, 1f)
 
 @Composable
 fun AntigravityAppUi(
@@ -85,7 +88,7 @@ fun AntigravityAppUi(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Bg)
+            .background(AgColors.Bg)
             .statusBarsPadding()
             .navigationBarsPadding(),
     ) {
@@ -105,26 +108,23 @@ private fun RootGate(root: RootState, onRetry: () -> Unit) {
             .padding(28.dp),
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("ANTIGRAVITY", color = Accent, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-        Spacer(Modifier.height(12.dp))
-        Text("Нужен root", color = TextMain, fontSize = 32.sp, fontWeight = FontWeight.SemiBold)
-        Spacer(Modifier.height(12.dp))
+        BrandMark()
+        Spacer(Modifier.height(18.dp))
+        Text("Нужен root", color = AgColors.Text, fontSize = 34.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.6).sp)
+        Spacer(Modifier.height(10.dp))
         Text(
-            "Приложение работает только на рутованном телефоне. Без root агент не стартует, вход Google закрыт, файлы не трогаем.",
-            color = TextDim,
+            "Без Magisk / su агент не стартует. Файлы на телефоне не трогаем, Google закрыт.",
+            color = AgColors.Muted,
             fontSize = 16.sp,
+            lineHeight = 22.sp,
         )
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(28.dp))
         if (root == RootState.Checking) {
-            CircularProgressIndicator(color = Accent)
-            Spacer(Modifier.height(12.dp))
-            Text("Проверяю Magisk / su…", color = TextDim)
+            ShimmerLabel("Проверяю Magisk…")
         } else {
-            Text("Root не выдан этому приложению.", color = Danger)
+            Text("Root не выдан этому приложению.", color = AgColors.Danger, fontSize = 14.sp)
             Spacer(Modifier.height(16.dp))
-            Button(onClick = onRetry, colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = Color(0xFF04140C))) {
-                Text("Проверить снова")
-            }
+            AccentButton("Проверить снова", onRetry)
         }
     }
 }
@@ -137,30 +137,29 @@ private fun LoginScreen(state: UiState, onLogin: () -> Unit) {
             .padding(28.dp),
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("ANTIGRAVITY", color = Accent, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-        Spacer(Modifier.height(12.dp))
-        Text("Вход Google", color = TextMain, fontSize = 32.sp, fontWeight = FontWeight.SemiBold)
-        Spacer(Modifier.height(12.dp))
+        BrandMark()
+        Spacer(Modifier.height(18.dp))
+        Text("Вход Google", color = AgColors.Text, fontSize = 34.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.6).sp)
+        Spacer(Modifier.height(10.dp))
         Text(
-            "Это не Gemini API key. Откроется страница Google. Предупреждение «Make sure that you downloaded this app from Google» — нормально: нажмите Sign in. После входа приложение само перехватит возврат, без broken pipe.",
-            color = TextDim,
+            "Это квоты Antigravity, не Gemini API key. На экране «downloaded this app from Google» нажмите Sign in — возврат перехватится сам.",
+            color = AgColors.Muted,
             fontSize = 16.sp,
+            lineHeight = 22.sp,
         )
-        Spacer(Modifier.height(24.dp))
-        Button(
-            onClick = onLogin,
+        Spacer(Modifier.height(28.dp))
+        AccentButton(
+            if (state.loggingIn) "Жду браузер…" else "Войти через Google",
+            onLogin,
             enabled = !state.loggingIn,
-            colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = Color(0xFF04140C)),
-        ) {
-            Text(if (state.loggingIn) "Жду браузер…" else "Войти через Google")
-        }
+        )
         state.error?.let {
             Spacer(Modifier.height(16.dp))
-            Text(it, color = Danger)
+            Text(it, color = AgColors.Danger, fontSize = 13.sp, lineHeight = 18.sp)
         }
         if (state.loggingIn) {
-            Spacer(Modifier.height(16.dp))
-            CircularProgressIndicator(color = Accent)
+            Spacer(Modifier.height(18.dp))
+            ShimmerLabel("Thinking")
         }
     }
 }
@@ -177,42 +176,53 @@ private fun ChatScreen(
     var workspace by remember(state.workspace) { mutableStateOf(state.workspace) }
     var menu by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
-    LaunchedEffect(state.messages.size) {
-        if (state.messages.isNotEmpty()) listState.animateScrollToItem(state.messages.lastIndex)
+    LaunchedEffect(state.messages.size, state.busy) {
+        val last = state.messages.lastIndex + if (state.busy) 1 else 0
+        if (last >= 0) listState.animateScrollToItem(last.coerceAtLeast(0))
     }
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .imePadding(),
-    ) {
+    Column(Modifier.fillMaxSize().imePadding()) {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Antigravity", color = Accent, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                Text("Antigravity", color = AgColors.Accent, fontWeight = FontWeight.Bold, fontSize = 20.sp, letterSpacing = (-0.3).sp)
+                Spacer(Modifier.width(8.dp))
+                LiveDot(active = state.busy)
                 Spacer(Modifier.weight(1f))
-                TextButton(onClick = onLogout) { Text("Выйти", color = TextDim) }
+                TextButton(onClick = onLogout, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)) {
+                    Text("Выйти", color = AgColors.Muted, fontSize = 13.sp)
+                }
             }
-            Text(state.session?.email ?: "", color = TextDim, fontSize = 12.sp)
+            Text(state.session?.email ?: "", color = AgColors.Muted, fontSize = 12.sp)
+            Spacer(Modifier.height(8.dp))
             var customModel by remember(state.model) { mutableStateOf(state.model) }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = { menu = true }) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(AgRadius.Chip))
+                        .background(AgColors.AccentSoft)
+                        .border(1.dp, AgColors.Border, RoundedCornerShape(AgRadius.Chip))
+                        .clickable { menu = true }
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                ) {
                     Text(
                         "▾ ${GeminiModels.titleOf(state.model)}",
-                        color = Accent,
-                        fontSize = 15.sp,
+                        color = AgColors.Accent,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
                 DropdownMenu(
                     expanded = menu,
                     onDismissRequest = { menu = false },
-                    modifier = Modifier.heightIn(max = 420.dp),
+                    modifier = Modifier
+                        .heightIn(max = 420.dp)
+                        .background(AgColors.SurfaceRaised),
                 ) {
                     GeminiModels.ALL.forEach { model ->
                         DropdownMenuItem(
                             text = {
                                 Column {
-                                    Text(model.title, fontWeight = FontWeight.SemiBold)
-                                    Text(model.id, fontSize = 11.sp, color = TextDim, fontFamily = FontFamily.Monospace)
+                                    Text(model.title, fontWeight = FontWeight.SemiBold, color = AgColors.Text)
+                                    Text(model.id, fontSize = 11.sp, color = AgColors.Muted, fontFamily = FontFamily.Monospace)
                                 }
                             },
                             onClick = {
@@ -224,35 +234,24 @@ private fun ChatScreen(
                     }
                 }
             }
-            BasicTextField(
+            Spacer(Modifier.height(8.dp))
+            Field(
                 value = customModel,
                 onValueChange = {
                     customModel = it
                     if (it.isNotBlank()) onModel(it)
                 },
-                textStyle = TextStyle(color = Accent, fontSize = 12.sp, fontFamily = FontFamily.Monospace),
-                cursorBrush = SolidColor(Accent),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Surface, RoundedCornerShape(8.dp))
-                    .padding(8.dp),
-                decorationBox = { inner ->
-                    if (customModel.isEmpty()) Text("id модели, любая из Antigravity…", color = TextDim, fontSize = 12.sp)
-                    inner()
-                },
+                placeholder = "id модели",
+                accent = true,
             )
-            BasicTextField(
+            Spacer(Modifier.height(6.dp))
+            Field(
                 value = workspace,
                 onValueChange = {
                     workspace = it
                     onWorkspace(it)
                 },
-                textStyle = TextStyle(color = TextDim, fontSize = 12.sp, fontFamily = FontFamily.Monospace),
-                cursorBrush = SolidColor(Accent),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Surface, RoundedCornerShape(8.dp))
-                    .padding(8.dp),
+                placeholder = "/storage/emulated/0/Antigravity",
             )
         }
         LazyColumn(
@@ -261,76 +260,303 @@ private fun ChatScreen(
                 .weight(1f)
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(bottom = 8.dp),
         ) {
-            if (state.messages.isEmpty()) {
-                item {
-                    Text(
-                        "Как Claude Code, но на телефоне.\nПример: «в Download лежит zip — распакуй и поправь код». Всё делается локально.",
-                        color = TextDim,
-                        modifier = Modifier.padding(12.dp),
-                    )
+            if (state.messages.isEmpty() && !state.busy) {
+                item { EmptyState() }
+            }
+            itemsIndexed(state.messages) { _, message ->
+                AnimatedVisibility(
+                    visible = true,
+                    enter = fadeIn(tween(320, easing = EnterEase)) + slideInVertically(
+                        tween(320, easing = EnterEase),
+                        initialOffsetY = { 12 },
+                    ),
+                ) {
+                    when (message.role) {
+                        "user" -> UserBubble(message.text)
+                        "thinking" -> ThinkingBlock(message, live = state.busy && message.durationMs == null)
+                        "tool" -> ToolCard(message.tool ?: "tool", message.text, running = true)
+                        "tool-result" -> ToolCard(message.tool ?: "tool", message.text, running = false)
+                        else -> AssistantBubble(message.text)
+                    }
                 }
             }
-            items(state.messages) { message -> Bubble(message) }
-            if (state.busy) {
-                item { Text("агент работает на устройстве…", color = Accent, fontSize = 13.sp) }
+            if (state.busy && state.messages.none { it.role == "thinking" && it.durationMs == null }) {
+                item { ShimmerLabel("Thinking") }
             }
         }
         state.error?.let {
-            Text(it, color = Danger, modifier = Modifier.padding(horizontal = 16.dp), fontSize = 13.sp)
+            Text(it, color = AgColors.Danger, modifier = Modifier.padding(horizontal = 16.dp), fontSize = 13.sp, lineHeight = 18.sp)
         }
-        Row(
-            modifier = Modifier
-                .padding(12.dp)
-                .background(Surface, RoundedCornerShape(16.dp))
-                .border(1.dp, Color(0xFF243042), RoundedCornerShape(16.dp))
-                .padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            BasicTextField(
-                value = draft,
-                onValueChange = { draft = it },
-                textStyle = TextStyle(color = TextMain, fontSize = 16.sp),
-                cursorBrush = SolidColor(Accent),
+        Composer(draft = draft, busy = state.busy, onDraft = { draft = it }, onSend = {
+            val text = draft
+            draft = ""
+            onSend(text)
+        })
+    }
+}
+
+@Composable
+private fun EmptyState() {
+    Column(Modifier.padding(horizontal = 8.dp, vertical = 20.dp)) {
+        Text("Агент на телефоне", color = AgColors.Text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-0.4).sp)
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Как Claude Code: правки, zip, shell — строго на устройстве.",
+            color = AgColors.Muted,
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+        )
+        Spacer(Modifier.height(16.dp))
+        listOf(
+            "Распакуй zip в Download",
+            "Найди баг в проекте",
+            "Поправь код и сохрани",
+        ).forEach { hint ->
+            Box(
                 modifier = Modifier
-                    .weight(1f)
-                    .padding(8.dp),
-                decorationBox = { inner ->
-                    if (draft.isEmpty()) Text("Задача для телефона…", color = TextDim)
-                    inner()
-                },
-            )
-            Spacer(Modifier.width(8.dp))
-            Button(
-                onClick = {
-                    val text = draft
-                    draft = ""
-                    onSend(text)
-                },
-                enabled = !state.busy && draft.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = Color(0xFF04140C)),
-            ) { Text("▶") }
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
+                    .background(AgColors.Surface, RoundedCornerShape(AgRadius.Chip))
+                    .border(1.dp, AgColors.Border, RoundedCornerShape(AgRadius.Chip))
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+            ) {
+                Text(hint, color = AgColors.Thought, fontSize = 13.sp)
+            }
         }
     }
 }
 
 @Composable
-private fun Bubble(message: ChatMessage) {
-    val (label, color) = when (message.role) {
-        "user" -> "вы" to TextMain
-        "assistant" -> "antigravity" to Accent
-        "tool" -> "tool ${message.tool}" to Color(0xFF8AB4F8)
-        else -> "result ${message.tool}" to TextDim
+private fun UserBubble(text: String) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.86f)
+                .background(AgColors.Accent, RoundedCornerShape(18.dp, 18.dp, 4.dp, 18.dp))
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+        ) {
+            Text(text, color = AgColors.OnAccent, fontSize = 15.sp, lineHeight = 21.sp)
+        }
     }
+}
+
+@Composable
+private fun AssistantBubble(text: String) {
+    Column(Modifier.fillMaxWidth().padding(end = 12.dp)) {
+        Text("ANTIGRAVITY", color = AgColors.AccentDim, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+        Spacer(Modifier.height(6.dp))
+        MarkdownBody(text)
+    }
+}
+
+@Composable
+private fun ThinkingBlock(message: ChatMessage, live: Boolean) {
+    var open by remember(message.durationMs) { mutableStateOf(live) }
+    val seconds = ((message.durationMs ?: 0L) / 1000.0).roundToInt().coerceAtLeast(1)
+    Column(Modifier.fillMaxWidth().padding(end = 20.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(enabled = !live) { open = !open }
+                .padding(vertical = 2.dp),
+        ) {
+            if (live) {
+                ShimmerLabel("Thinking")
+            } else {
+                Text("Thought", color = AgColors.Thought, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                Text(" for ${seconds}s", color = AgColors.Muted, fontSize = 13.sp)
+                Icon(
+                    Icons.Outlined.ExpandMore,
+                    contentDescription = null,
+                    tint = AgColors.Muted,
+                    modifier = Modifier
+                        .size(16.dp)
+                        .graphicsLayer { rotationZ = if (open) 180f else 0f },
+                )
+            }
+        }
+        AnimatedVisibility(visible = live || open) {
+            Column(Modifier.padding(top = 6.dp)) {
+                message.text.split('\n').filter { it.isNotBlank() }.takeLast(6).forEach { line ->
+                    Text(
+                        line,
+                        color = AgColors.Muted,
+                        fontSize = 13.sp,
+                        lineHeight = 18.sp,
+                        modifier = Modifier.padding(bottom = 4.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ToolCard(name: String, body: String, running: Boolean) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Surface, RoundedCornerShape(12.dp))
+            .background(AgColors.Surface, RoundedCornerShape(AgRadius.Chip))
+            .border(1.dp, AgColors.Border, RoundedCornerShape(AgRadius.Chip))
             .padding(12.dp),
     ) {
-        Text(label, color = color, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-        Spacer(Modifier.height(4.dp))
-        Text(message.text, color = TextMain, fontSize = 14.sp, fontFamily = if (message.role.startsWith("tool")) FontFamily.Monospace else FontFamily.Default)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier
+                    .size(7.dp)
+                    .background(if (running) AgColors.Accent else AgColors.AccentDim, CircleShape),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(name, color = AgColors.Accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, fontFamily = FontFamily.Monospace)
+            Spacer(Modifier.weight(1f))
+            Text(if (running) "running" else "done", color = AgColors.Muted, fontSize = 11.sp)
+        }
+        if (body.isNotBlank()) {
+            Spacer(Modifier.height(8.dp))
+            Text(body, color = AgColors.Thought, fontSize = 12.sp, fontFamily = FontFamily.Monospace, lineHeight = 17.sp)
+        }
     }
+}
+
+@Composable
+private fun Composer(draft: String, busy: Boolean, onDraft: (String) -> Unit, onSend: () -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    Row(
+        modifier = Modifier
+            .padding(12.dp)
+            .background(AgColors.Surface, RoundedCornerShape(AgRadius.Outer))
+            .border(1.dp, AgColors.Border, RoundedCornerShape(AgRadius.Outer))
+            .padding(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        BasicTextField(
+            value = draft,
+            onValueChange = onDraft,
+            textStyle = TextStyle(color = AgColors.Text, fontSize = 16.sp, lineHeight = 22.sp),
+            cursorBrush = SolidColor(AgColors.Accent),
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            decorationBox = { inner ->
+                if (draft.isEmpty()) Text("Задача для телефона…", color = AgColors.Muted, fontSize = 16.sp)
+                inner()
+            },
+        )
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .scale(if (pressed) 0.96f else 1f)
+                .clip(CircleShape)
+                .background(if (!busy && draft.isNotBlank()) AgColors.Accent else AgColors.SurfaceRaised)
+                .clickable(
+                    enabled = !busy && draft.isNotBlank(),
+                    interactionSource = interaction,
+                    indication = null,
+                    onClick = onSend,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                Icons.AutoMirrored.Outlined.Send,
+                contentDescription = "Отправить",
+                tint = if (!busy && draft.isNotBlank()) AgColors.OnAccent else AgColors.Muted,
+                modifier = Modifier.size(18.dp).padding(start = 1.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun Field(value: String, onValueChange: (String) -> Unit, placeholder: String, accent: Boolean = false) {
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        textStyle = TextStyle(
+            color = if (accent) AgColors.Accent else AgColors.Muted,
+            fontSize = 12.sp,
+            fontFamily = FontFamily.Monospace,
+        ),
+        cursorBrush = SolidColor(AgColors.Accent),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(AgColors.Surface, RoundedCornerShape(AgRadius.Chip))
+            .border(1.dp, AgColors.Border, RoundedCornerShape(AgRadius.Chip))
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        decorationBox = { inner ->
+            if (value.isEmpty()) Text(placeholder, color = AgColors.Muted, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+            inner()
+        },
+    )
+}
+
+@Composable
+private fun BrandMark() {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Outlined.Lock, contentDescription = null, tint = AgColors.Accent, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(8.dp))
+        Text("ANTIGRAVITY", color = AgColors.Accent, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+    }
+}
+
+@Composable
+private fun LiveDot(active: Boolean) {
+    val pulse = rememberInfiniteTransition(label = "live")
+    val alpha by pulse.animateFloat(
+        initialValue = if (active) 0.35f else 1f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
+        label = "dot",
+    )
+    Box(
+        Modifier
+            .size(7.dp)
+            .graphicsLayer { this.alpha = if (active) alpha else 1f }
+            .background(if (active) AgColors.Accent else AgColors.AccentDim, CircleShape),
+    )
+}
+
+@Composable
+fun ShimmerLabel(text: String) {
+    val transition = rememberInfiniteTransition(label = "shimmer")
+    val shift by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(2250, easing = ShineEase)),
+        label = "shine",
+    )
+    val brush = Brush.linearGradient(
+        colors = listOf(AgColors.Muted, AgColors.Accent.copy(alpha = 0.45f), AgColors.Accent, AgColors.Accent.copy(alpha = 0.45f), AgColors.Muted),
+        start = Offset(280f * (1f - shift), 0f),
+        end = Offset(280f * (1f - shift) + 220f, 0f),
+    )
+    Text(
+        text,
+        style = TextStyle(
+            brush = brush,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            letterSpacing = (-0.1).sp,
+        ),
+    )
+}
+
+@Composable
+private fun AccentButton(label: String, onClick: () -> Unit, enabled: Boolean = true) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        shape = RoundedCornerShape(AgRadius.Inner),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = AgColors.Accent,
+            contentColor = AgColors.OnAccent,
+            disabledContainerColor = AgColors.SurfaceRaised,
+            disabledContentColor = AgColors.Muted,
+        ),
+        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
+    ) { Text(label, fontWeight = FontWeight.SemiBold) }
 }

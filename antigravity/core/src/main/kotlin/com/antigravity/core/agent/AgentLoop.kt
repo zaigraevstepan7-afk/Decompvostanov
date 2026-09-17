@@ -12,9 +12,12 @@ data class ChatMessage(
     val role: String,
     val text: String,
     val tool: String? = null,
+    val startedAtMs: Long? = null,
+    val durationMs: Long? = null,
 )
 
 interface AgentListener {
+    fun onThinking(text: String) {}
     fun onAssistantText(text: String) {}
     fun onToolStart(name: String, args: JsonObject) {}
     fun onToolResult(name: String, result: String) {}
@@ -39,6 +42,9 @@ class AgentLoop(
         val collected = StringBuilder()
         repeat(maxTurns) {
             val reply = llm.generate(session, model, system, history.toList(), ToolCatalog.declarations)
+            if (reply.thoughts.isNotBlank()) {
+                listener.onThinking(reply.thoughts)
+            }
             if (reply.functionCalls.isEmpty()) {
                 if (reply.text.isNotBlank()) {
                     listener.onAssistantText(reply.text)

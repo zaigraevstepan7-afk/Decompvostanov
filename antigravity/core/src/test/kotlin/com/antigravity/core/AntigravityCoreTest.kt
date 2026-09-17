@@ -251,6 +251,7 @@ class AntigravityCoreTest {
         val thinking = envelope["request"]!!.jsonObject["generationConfig"]!!.jsonObject["thinkingConfig"]!!.jsonObject
         assertEquals("gemini-3.7-flash-tiered", envelope["model"]!!.jsonPrimitive.content)
         assertEquals("high", thinking["thinkingLevel"]!!.jsonPrimitive.content)
+        assertEquals("true", thinking["includeThoughts"]!!.toString())
     }
 
     @Test

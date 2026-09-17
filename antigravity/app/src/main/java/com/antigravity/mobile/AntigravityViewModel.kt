@@ -151,10 +151,28 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
                     history = history,
                     rooted = true,
                     listener = object : AgentListener {
+                        override fun onThinking(text: String) {
+                            if (text.isBlank()) return
+                            _state.update { state ->
+                                val last = state.messages.lastOrNull()
+                                if (last?.role == "thinking") {
+                                    state.copy(messages = state.messages.dropLast(1) + last.copy(text = last.text + "\n" + text))
+                                } else {
+                                    state.copy(
+                                        messages = state.messages + ChatMessage(
+                                            "thinking",
+                                            text,
+                                            startedAtMs = System.currentTimeMillis(),
+                                        ),
+                                    )
+                                }
+                            }
+                        }
+
                         override fun onAssistantText(text: String) {
                             if (text.isBlank()) return
                             _state.update { state ->
-                                state.copy(messages = state.messages + ChatMessage("assistant", text))
+                                state.copy(messages = stampThinking(state.messages) + ChatMessage("assistant", text))
                             }
                         }
 
@@ -184,9 +202,14 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
                     },
                 )
                 if (answer.isNotBlank() && _state.value.messages.none { it.role == "assistant" && it.text == answer }) {
-                    _state.update { it.copy(messages = it.messages + ChatMessage("assistant", answer), busy = false) }
+                    _state.update {
+                        it.copy(
+                            messages = stampThinking(it.messages) + ChatMessage("assistant", answer),
+                            busy = false,
+                        )
+                    }
                 } else {
-                    _state.update { it.copy(busy = false) }
+                    _state.update { it.copy(messages = stampThinking(it.messages), busy = false) }
                 }
             } catch (error: Exception) {
                 val raw = error.message.orEmpty()
@@ -199,10 +222,20 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
                         "404 на ${snapshot.model}: Google не нашёл эту модель. Выберите другую из списка или переустановите APK."
                     else -> raw.ifBlank { "Сбой агента" }
                 }
-                _state.update { it.copy(busy = false, error = message) }
+                _state.update { it.copy(busy = false, error = message, messages = stampThinking(it.messages)) }
             }
         }
     }
+
+    private fun stampThinking(messages: List<ChatMessage>, now: Long = System.currentTimeMillis()): List<ChatMessage> =
+        messages.map { message ->
+            if (message.role == "thinking" && message.durationMs == null) {
+                val started = message.startedAtMs ?: now
+                message.copy(durationMs = (now - started).coerceAtLeast(0))
+            } else {
+                message
+            }
+        }
 
     companion object {
         fun factory(application: Application): ViewModelProvider.Factory =

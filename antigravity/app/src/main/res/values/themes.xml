@@ -1,7 +1,8 @@
 <resources>
     <style name="Theme.Antigravity" parent="android:Theme.Material.NoActionBar">
-        <item name="android:statusBarColor">#0B0F14</item>
-        <item name="android:navigationBarColor">#0B0F14</item>
-        <item name="android:windowBackground">#0B0F14</item>
+        <item name="android:statusBarColor">#050805</item>
+        <item name="android:navigationBarColor">#050805</item>
+        <item name="android:windowBackground">#050805</item>
+        <item name="android:navigationBarDividerColor">#050805</item>
     </style>
 </resources>
