@@ -16,7 +16,7 @@ data class ResolvedModel(
 
 object GeminiModels {
     val ALL = listOf(
-        flashHigh("gemini-3.8-flash", "Gemini 3.8 Flash", "Новейший Flash, квоты Antigravity"),
+        flashHigh("gemini-3.8-flash", "Gemini 3.8 Flash", "Новейший Flash"),
         flashHigh("gemini-3.7-flash", "Gemini 3.7 Flash", "Flash 3.7 High"),
         flashHigh("gemini-3.6-flash", "Gemini 3.6 Flash", "Flash 3.6 High"),
         GeminiModel("gemini-3.5-flash-lite", "Gemini 3.5 Flash Lite", "Лёгкий 3.5"),
@@ -42,9 +42,9 @@ object GeminiModels {
         GeminiModel("gemini-3-flash", "Gemini 3 Flash (старая)", "Часто упирается в лимит 429"),
         GeminiModel("gemini-2.5-pro", "Gemini 2.5 Pro", "Стабильный Pro"),
         GeminiModel("gemini-2.5-flash", "Gemini 2.5 Flash", "Стабильный Flash"),
-        GeminiModel("claude-sonnet-4-6", "Claude Sonnet 4.6", "Через квоты Antigravity"),
-        GeminiModel("claude-opus-4-6-thinking", "Claude Opus 4.6 Thinking", "Через квоты Antigravity"),
-        GeminiModel("gpt-oss-120b-medium", "GPT-OSS 120B", "Через квоты Antigravity"),
+        GeminiModel("claude-sonnet-4-6", "Claude Sonnet 4.6", "Cloud Code Assist"),
+        GeminiModel("claude-opus-4-6-thinking", "Claude Opus 4.6 Thinking", "Cloud Code Assist"),
+        GeminiModel("gpt-oss-120b-medium", "GPT-OSS 120B", "Cloud Code Assist"),
     )
 
     val DEFAULT = "gemini-3.8-flash-high"

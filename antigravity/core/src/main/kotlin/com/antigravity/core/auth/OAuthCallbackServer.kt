@@ -94,7 +94,7 @@ class OAuthCallbackServer(
     }
 
     private fun writeHtml(socket: Socket, ok: Boolean, error: String?) {
-        val title = if (ok) "Antigravity" else "Ошибка входа"
+        val title = if (ok) "Вход выполнен" else "Ошибка входа"
         val body = if (ok) {
             "Вход через Google выполнен. Можно вернуться в приложение."
         } else {
