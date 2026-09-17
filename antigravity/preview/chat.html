@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=390, initial-scale=1" />
+  <title>Chat</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: #111; font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+      display: grid; place-items: center; min-height: 100vh;
+    }
+    .phone {
+      width: 390px; height: 844px; background: #050805; color: #E7F6EC;
+      border-radius: 28px; overflow: hidden; display: flex; flex-direction: column;
+      box-shadow: 0 30px 80px rgba(0,0,0,.55);
+    }
+    .top { display: flex; justify-content: space-between; padding: 8px 12px 0; }
+    .icon { width: 44px; height: 44px; display: grid; place-items: center; color: #7A9A86; font-size: 18px; }
+    main { flex: 1; overflow: auto; padding: 8px 16px 80px; }
+    .user { display: flex; justify-content: flex-end; margin: 10px 0; }
+    .user p {
+      max-width: 86%; background: #3DFF9A; color: #03140A;
+      border-radius: 18px 18px 4px 18px; padding: 10px 14px; margin: 0; font-size: 15px;
+    }
+    .think {
+      color: #8FB89C; font-size: 13px; font-weight: 500; margin: 12px 0 6px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .think .live {
+      background: linear-gradient(90deg, #7A9A86 0%, #7A9A86 20%, #3DFF9A 50%, #7A9A86 80%, #7A9A86 100%);
+      background-size: 220% 100%;
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      animation: shine 1.6s linear infinite;
+    }
+    .think span { color: #7A9A86; font-weight: 400; }
+    @keyframes shine {
+      0% { background-position: 120% 0; }
+      100% { background-position: -120% 0; }
+    }
+    .plan {
+      margin: 10px 0; padding: 12px; border-radius: 12px; border: 1px solid #1C3326; background: #0C140F;
+    }
+    .plan-head { display: flex; align-items: center; gap: 6px; }
+    .plan b { color: #3DFF9A; }
+    .plan small { color: #7A9A86; flex: 1; }
+    .plan ol { margin: 10px 0 0; padding-left: 18px; color: #E7F6EC; font-size: 14px; line-height: 20px; }
+    .ok {
+      margin-top: 10px; display: inline-block; padding: 10px 16px; border-radius: 16px;
+      background: #3DFF9A; color: #03140A; font-weight: 600;
+    }
+    footer { padding: 8px 12px 12px; }
+    .composer {
+      display: flex; align-items: center; gap: 4px; padding: 6px;
+      border: 1px solid #1C3326; background: #0C140F; border-radius: 22px;
+    }
+    .model {
+      height: 44px; max-width: 118px; padding: 0 10px;
+      display: grid; place-items: center; border-radius: 16px;
+      background: rgba(61,255,154,.13); color: #3DFF9A; font-size: 12px; font-weight: 600;
+      white-space: nowrap;
+    }
+    .clip { width: 40px; height: 44px; display: grid; place-items: center; color: #7A9A86; font-size: 18px; }
+    .composer input {
+      flex: 1; border: 0; background: transparent; color: #E7F6EC;
+      font-size: 16px; padding: 8px 4px; outline: none; min-width: 0;
+    }
+    .modes { display: flex; gap: 6px; margin: 0 0 8px; }
+    .mode {
+      padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+      border: 1px solid #1C3326; color: #7A9A86; background: #0C140F;
+    }
+    .mode.on { color: #3DFF9A; background: rgba(61,255,154,.13); border-color: #178A4E; }
+    .stop {
+      width: 44px; height: 44px; border-radius: 99px;
+      display: grid; place-items: center; background: #FF6B6B; color: #03140A; font-size: 16px;
+    }
+    .send {
+      width: 44px; height: 44px; border-radius: 99px;
+      display: grid; place-items: center; background: #3DFF9A; color: #03140A; font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="phone">
+    <div class="top"><div class="icon">💬</div><div class="icon">⚙</div></div>
+    <main>
+      <div class="user"><p>поправь проект</p></div>
+      <div class="think"><span class="live">Thinking</span> <span>4s</span> ▾</div>
+      <div class="plan">
+        <div class="plan-head"><b>План</b> <small>нажми чтобы прочитать</small> ▾</div>
+        <ol>
+          <li>Прочитать файлы проекта</li>
+          <li>Поправить UI скролла и стоп</li>
+        </ol>
+        <div class="ok">Подтвердить</div>
+      </div>
+    </main>
+    <footer>
+      <div class="modes"><div class="mode">Авто</div><div class="mode on">План</div></div>
+      <div class="composer">
+        <div class="model">3.8 Flash</div>
+        <div class="clip">📎</div>
+        <input placeholder="Задача для телефона…" />
+        <div class="stop">■</div>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>
