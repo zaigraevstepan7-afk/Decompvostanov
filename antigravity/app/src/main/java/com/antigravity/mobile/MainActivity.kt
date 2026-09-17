@@ -36,6 +36,12 @@ class MainActivity : ComponentActivity() {
         viewModel.cancelGoogleLogin(error)
     }
 
+    private val pickFiles = registerForActivityResult(
+        ActivityResultContracts.OpenMultipleDocuments(),
+    ) { uris ->
+        if (uris.isNotEmpty()) viewModel.addAttachments(uris)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -59,6 +65,8 @@ class MainActivity : ComponentActivity() {
                         onModel = viewModel::setModel,
                         onWorkspace = viewModel::setWorkspace,
                         onRetryRoot = viewModel::refreshRoot,
+                        onAttach = { pickFiles.launch(arrayOf("*/*")) },
+                        onRemoveAttachment = viewModel::removeAttachment,
                     )
                 }
             }

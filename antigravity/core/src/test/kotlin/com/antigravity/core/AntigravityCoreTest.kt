@@ -180,6 +180,8 @@ class AntigravityCoreTest {
             ): ModelReply {
                 assertTrue(systemInstruction.contains("СТРОГО НА ANDROID"))
                 assertTrue(tools.toString().contains("extract_archive"))
+                assertTrue(tools.toString().contains("web_search"))
+                assertTrue(tools.toString().contains("googleSearch"))
                 return script.removeFirst()
             }
         }
@@ -299,5 +301,184 @@ class AntigravityCoreTest {
         } finally {
             server.shutdown()
         }
+    }
+
+    @Test
+    fun attachmentsBecomeInlineDataAndTextParts() {
+        val png = byteArrayOf(
+            0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+            0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
+        )
+        val parts = com.antigravity.core.agent.AttachmentCodec.toGeminiParts(
+            listOf(
+                com.antigravity.core.agent.LoadedAttachment(
+                    name = "shot.png",
+                    mime = "image/png",
+                    bytes = png,
+                    savedPath = "/sdcard/inbox/shot.png",
+                ),
+                com.antigravity.core.agent.LoadedAttachment(
+                    name = "notes.kt",
+                    mime = "text/plain",
+                    bytes = "fun main() {}".toByteArray(),
+                    savedPath = "/sdcard/inbox/notes.kt",
+                ),
+                com.antigravity.core.agent.LoadedAttachment(
+                    name = "blob.bin",
+                    mime = "application/octet-stream",
+                    bytes = byteArrayOf(1, 2, 3, 4),
+                    savedPath = "/sdcard/inbox/blob.bin",
+                ),
+            ),
+        )
+        val blob = parts.toString()
+        assertTrue(blob.contains("inlineData"))
+        assertTrue(blob.contains("image/png"))
+        assertTrue(blob.contains("fun main()"))
+        assertTrue(blob.contains("/sdcard/inbox/blob.bin"))
+        assertTrue(blob.contains("shot.png"))
+    }
+
+    @Test
+    fun duckDuckGoParserExtractsResults() {
+        val html = """
+            <a class="result__a" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.com%2Fpage">Example <b>Title</b></a>
+            <a class="result__snippet">A useful snippet about the page</a>
+        """.trimIndent()
+        val hits = com.antigravity.core.agent.WebSearch.parseDuckDuckGo(html, 5)
+        assertEquals(1, hits.size)
+        assertEquals("https://example.com/page", hits.single().url)
+        assertTrue(hits.single().title.contains("Example"))
+        assertTrue(hits.single().snippet.contains("useful snippet"))
+        val rendered = com.antigravity.core.agent.WebSearch.render("pixel", hits)
+        assertTrue(rendered.contains("https://example.com/page"))
+    }
+
+    @Test
+    fun webSearchToolHitsMockServer() {
+        val server = MockWebServer()
+        server.enqueue(
+            MockResponse().setHeader("Content-Type", "text/html").setBody(
+                """<a class="result__a" href="https://kotlinlang.org">Kotlin</a><a class="result__snippet">Language docs</a>""",
+            ),
+        )
+        server.start()
+        try {
+            val web = com.antigravity.core.agent.WebClient(searchEndpoint = server.url("/").toString().trimEnd('/'))
+            val fs = LocalDeviceFs(tmp)
+            val tools = ToolExecutor(fs, web)
+            val result = tools.execute("web_search", buildJsonObject { put("query", "kotlin") })
+            assertTrue(result.contains("Kotlin"))
+            assertTrue(result.contains("https://kotlinlang.org"))
+            val recorded = server.takeRequest()
+            assertTrue(recorded.path!!.contains("q=kotlin"))
+        } finally {
+            server.shutdown()
+        }
+    }
+
+    @Test
+    fun webFetchReturnsPageText() {
+        val server = MockWebServer()
+        server.enqueue(
+            MockResponse().setHeader("Content-Type", "text/html; charset=utf-8").setBody(
+                "<html><head><title>Hi</title></head><body><h1>Hello</h1><p>World</p></body></html>",
+            ),
+        )
+        server.start()
+        try {
+            val web = com.antigravity.core.agent.WebClient()
+            val fs = LocalDeviceFs(tmp)
+            val tools = ToolExecutor(fs, web)
+            val result = tools.execute("web_fetch", buildJsonObject { put("url", server.url("/page").toString()) })
+            assertTrue(result.contains("Hello"))
+            assertTrue(result.contains("World"))
+        } finally {
+            server.shutdown()
+        }
+    }
+
+    @Test
+    fun generateDropsGoogleSearchOn400ThenSucceeds() {
+        val server = MockWebServer()
+        server.enqueue(
+            MockResponse().setResponseCode(400).setBody(
+                """{"error":{"code":400,"message":"googleSearch is not supported","status":"INVALID_ARGUMENT"}}""",
+            ),
+        )
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                """{"response":{"candidates":[{"content":{"role":"model","parts":[{"text":"ok"}]},"finishReason":"STOP"}]}}""",
+            ),
+        )
+        server.start()
+        try {
+            val client = CloudCodeClient(baseUrl = server.url("/").toString().trimEnd('/'))
+            val session = AntigravitySession(
+                accessToken = "tok",
+                refreshToken = "rt",
+                expiresAtEpochMs = Long.MAX_VALUE,
+                email = "me@gmail.com",
+                projectId = "proj",
+            )
+            val reply = client.generate(
+                session,
+                "gemini-3.5-flash-lite",
+                "sys",
+                listOf(textTurn("user", "hi")),
+                com.antigravity.core.agent.ToolCatalog.declarations,
+            )
+            assertEquals("ok", reply.text)
+            val first = Json.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject
+            val second = Json.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject
+            val firstTools = first["request"]!!.jsonObject["tools"]!!.toString()
+            val secondTools = second["request"]!!.jsonObject["tools"]!!.toString()
+            assertTrue(firstTools.contains("googleSearch"))
+            assertFalse(secondTools.contains("googleSearch"))
+            assertTrue(secondTools.contains("web_search"))
+        } finally {
+            server.shutdown()
+        }
+    }
+
+    @Test
+    fun agentSendsInlineImageInUserTurn() {
+        val fs = LocalDeviceFs(tmp)
+        val session = AntigravitySession(
+            accessToken = "a",
+            refreshToken = "r",
+            expiresAtEpochMs = Long.MAX_VALUE,
+            email = "me@gmail.com",
+            projectId = "p",
+        )
+        val extra = com.antigravity.core.agent.AttachmentCodec.toGeminiParts(
+            listOf(
+                com.antigravity.core.agent.LoadedAttachment(
+                    name = "a.png",
+                    mime = "image/png",
+                    bytes = byteArrayOf(1, 2, 3),
+                    savedPath = "/sdcard/a.png",
+                ),
+            ),
+        )
+        val llm = object : LlmClient {
+            override fun generate(
+                session: AntigravitySession,
+                model: String,
+                systemInstruction: String,
+                contents: List<ContentTurn>,
+                tools: JsonArray,
+            ): ModelReply {
+                val user = contents.first()
+                assertEquals("user", user.role)
+                assertTrue(user.parts.toString().contains("inlineData"))
+                assertTrue(systemInstruction.contains("web_search"))
+                return ModelReply(emptyList(), "STOP", "вижу картинку", emptyList())
+            }
+        }
+        val history = mutableListOf<ContentTurn>()
+        val answer = AgentLoop(llm, fs).run(session, "gemini-3-flash", "что на фото", history, extraParts = extra)
+        assertEquals("вижу картинку", answer)
+        assertTrue(history.first().parts.toString().contains("inlineData"))
     }
 }

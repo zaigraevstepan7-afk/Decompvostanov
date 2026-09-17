@@ -5,8 +5,16 @@ import com.antigravity.core.api.LlmClient
 import com.antigravity.core.api.functionResponseTurn
 import com.antigravity.core.api.modelPartsTurn
 import com.antigravity.core.api.textTurn
+import com.antigravity.core.api.userTurn
 import com.antigravity.core.auth.AntigravitySession
 import kotlinx.serialization.json.JsonObject
+
+data class ChatAttachment(
+    val name: String,
+    val mime: String,
+    val path: String? = null,
+    val isImage: Boolean = false,
+)
 
 data class ChatMessage(
     val role: String,
@@ -14,6 +22,7 @@ data class ChatMessage(
     val tool: String? = null,
     val startedAtMs: Long? = null,
     val durationMs: Long? = null,
+    val attachments: List<ChatAttachment> = emptyList(),
 )
 
 interface AgentListener {
@@ -36,8 +45,9 @@ class AgentLoop(
         history: MutableList<ContentTurn>,
         listener: AgentListener = object : AgentListener {},
         rooted: Boolean = true,
+        extraParts: List<JsonObject> = emptyList(),
     ): String {
-        history.add(textTurn("user", userText))
+        history.add(userTurn(userText, extraParts))
         val system = SystemPrompt.build(fs.workspace, session.email, rooted)
         val collected = StringBuilder()
         repeat(maxTurns) {

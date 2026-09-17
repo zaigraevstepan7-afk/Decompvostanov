@@ -5,7 +5,10 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
-class ToolExecutor(private val fs: DeviceFs) {
+class ToolExecutor(
+    private val fs: DeviceFs,
+    private val web: WebClient = WebClient(),
+) {
     fun execute(name: String, args: JsonObject): String {
         return try {
             when (name) {
@@ -53,6 +56,11 @@ class ToolExecutor(private val fs: DeviceFs) {
                     jsonString(args["working_dir"]),
                     args["timeout_ms"]?.jsonPrimitive?.intOrNull?.toLong() ?: 120_000L,
                 ).render()
+                "web_search" -> web.search(
+                    str(args, "query"),
+                    args["limit"]?.jsonPrimitive?.intOrNull ?: 8,
+                )
+                "web_fetch" -> web.fetch(str(args, "url"))
                 else -> "Неизвестный инструмент: $name"
             }
         } catch (error: Exception) {

@@ -63,31 +63,43 @@ class CloudCodeClient(
         val resolved = GeminiModels.resolve(model)
         var lastError: String? = null
         for (wireId in resolved.wireIds) {
-            val envelope = buildEnvelope(
-                projectId = session.projectId,
-                wireId = wireId,
-                thinkingLevel = resolved.thinkingLevel,
-                systemInstruction = systemInstruction,
-                contents = contents,
-                tools = tools,
-            )
-            val url = "$baseUrl/${AntigravityOAuth.API_VERSION}:generateContent"
-            val request = Request.Builder()
-                .url(url)
-                .header("Authorization", "Bearer ${session.accessToken}")
-                .header("Content-Type", "application/json")
-                .header("User-Agent", AntigravityOAuth.USER_AGENT)
-                .post(envelope.toString().toRequestBody(JSON))
-                .build()
-            http.newCall(request).execute().use { response ->
-                val text = response.body?.string().orEmpty()
-                if (response.isSuccessful) {
+            var currentTools = tools
+            var strippedGrounding = false
+            while (true) {
+                val envelope = buildEnvelope(
+                    projectId = session.projectId,
+                    wireId = wireId,
+                    thinkingLevel = resolved.thinkingLevel,
+                    systemInstruction = systemInstruction,
+                    contents = contents,
+                    tools = currentTools,
+                )
+                val url = "$baseUrl/${AntigravityOAuth.API_VERSION}:generateContent"
+                val request = Request.Builder()
+                    .url(url)
+                    .header("Authorization", "Bearer ${session.accessToken}")
+                    .header("Content-Type", "application/json")
+                    .header("User-Agent", AntigravityOAuth.USER_AGENT)
+                    .post(envelope.toString().toRequestBody(JSON))
+                    .build()
+                val outcome = http.newCall(request).execute().use { response ->
+                    val text = response.body?.string().orEmpty()
+                    Triple(response.isSuccessful, response.code, text)
+                }
+                val (ok, code, text) = outcome
+                if (ok) {
                     return parseReply(text)
                 }
-                lastError = "Antigravity ${response.code}: $text"
-                if (!isNotFound(response.code, text)) {
+                lastError = "Antigravity $code: $text"
+                if (!strippedGrounding && shouldDropGrounding(code, text) && hasGrounding(currentTools)) {
+                    currentTools = stripGrounding(currentTools)
+                    strippedGrounding = true
+                    continue
+                }
+                if (!isNotFound(code, text)) {
                     error(lastError!!)
                 }
+                break
             }
         }
         error(lastError ?: "Antigravity 404: модель ${resolved.pickerId} не найдена")
@@ -138,6 +150,31 @@ class CloudCodeClient(
 
     private fun isNotFound(code: Int, body: String): Boolean =
         code == 404 || body.contains("NOT_FOUND") || body.contains("Requested entity was not found")
+
+    fun hasGrounding(tools: JsonArray): Boolean =
+        tools.any { item ->
+            val obj = item as? JsonObject ?: return@any false
+            obj.containsKey("googleSearch") || obj.containsKey("urlContext") || obj.containsKey("googleSearchRetrieval")
+        }
+
+    fun stripGrounding(tools: JsonArray): JsonArray =
+        JsonArray(
+            tools.filterNot { item ->
+                val obj = item as? JsonObject ?: return@filterNot false
+                obj.containsKey("googleSearch") || obj.containsKey("urlContext") || obj.containsKey("googleSearchRetrieval")
+            },
+        )
+
+    private fun shouldDropGrounding(code: Int, body: String): Boolean {
+        if (code != 400 && !body.contains("INVALID_ARGUMENT")) return false
+        val lower = body.lowercase()
+        return lower.contains("googlesearch") ||
+            lower.contains("urlcontext") ||
+            lower.contains("google_search") ||
+            lower.contains("url_context") ||
+            lower.contains("tool") ||
+            lower.contains("grounding")
+    }
 
     fun parseReply(raw: String): ModelReply {
         val root = json.parseToJsonElement(raw).jsonObject
@@ -197,6 +234,15 @@ class CloudCodeClient(
 
 fun textTurn(role: String, text: String): ContentTurn =
     ContentTurn(role, listOf(buildJsonObject { put("text", text) }))
+
+fun userTurn(text: String, extraParts: List<JsonObject> = emptyList()): ContentTurn {
+    val parts = buildList {
+        if (text.isNotBlank()) add(buildJsonObject { put("text", text) })
+        addAll(extraParts)
+        if (isEmpty()) add(buildJsonObject { put("text", "(пустое сообщение)") })
+    }
+    return ContentTurn("user", parts)
+}
 
 fun modelPartsTurn(parts: List<JsonObject>): ContentTurn = ContentTurn("model", parts)
 

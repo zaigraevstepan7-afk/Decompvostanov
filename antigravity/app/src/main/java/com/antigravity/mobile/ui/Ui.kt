@@ -16,9 +16,11 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -41,13 +43,17 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Send
+import androidx.compose.material.icons.outlined.AttachFile
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material.icons.outlined.InsertDriveFile
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -68,14 +74,20 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.graphics.BitmapFactory
 import com.antigravity.core.agent.ChatMessage
 import com.antigravity.core.api.GeminiModels
+import com.antigravity.mobile.PendingAttachment
 import com.antigravity.mobile.UiState
 import com.antigravity.mobile.root.RootState
 import kotlinx.coroutines.delay
@@ -93,6 +105,8 @@ fun AntigravityAppUi(
     onModel: (String) -> Unit,
     onWorkspace: (String) -> Unit,
     onRetryRoot: () -> Unit,
+    onAttach: () -> Unit = {},
+    onRemoveAttachment: (String) -> Unit = {},
 ) {
     val screen = when {
         state.root != RootState.Granted -> "root"
@@ -117,7 +131,7 @@ fun AntigravityAppUi(
             when (current) {
                 "root" -> RootGate(state.root, onRetryRoot)
                 "login" -> LoginScreen(state, onLogin)
-                else -> ChatScreen(state, onSend, onModel, onWorkspace, onLogout)
+                else -> ChatScreen(state, onSend, onModel, onWorkspace, onLogout, onAttach, onRemoveAttachment)
             }
         }
     }
@@ -204,6 +218,8 @@ private fun ChatScreen(
     onModel: (String) -> Unit,
     onWorkspace: (String) -> Unit,
     onLogout: () -> Unit,
+    onAttach: () -> Unit,
+    onRemoveAttachment: (String) -> Unit,
 ) {
     var draft by remember { mutableStateOf("") }
     var settings by remember { mutableStateOf(false) }
@@ -239,6 +255,8 @@ private fun ChatScreen(
                 onSend = onSend,
                 onModel = onModel,
                 onSettings = { settings = true },
+                onAttach = onAttach,
+                onRemoveAttachment = onRemoveAttachment,
             )
         }
     }
@@ -252,6 +270,8 @@ private fun ChatPane(
     onSend: (String) -> Unit,
     onModel: (String) -> Unit,
     onSettings: () -> Unit,
+    onAttach: () -> Unit,
+    onRemoveAttachment: (String) -> Unit,
 ) {
     val listState = rememberLazyListState()
     LaunchedEffect(state.messages.size, state.busy) {
@@ -285,7 +305,7 @@ private fun ChatPane(
             itemsIndexed(state.messages, key = { index, message -> "$index-${message.role}-${message.text.hashCode()}" }) { _, message ->
                 Appear(fromUser = message.role == "user") {
                     when (message.role) {
-                        "user" -> UserBubble(message.text)
+                        "user" -> UserBubble(message)
                         "thinking" -> ThinkingBlock(message, live = state.busy && message.durationMs == null)
                         "tool" -> ToolCard(message.tool ?: "tool", message.text, running = true)
                         "tool-result" -> ToolCard(message.tool ?: "tool", message.text, running = false)
@@ -306,8 +326,11 @@ private fun ChatPane(
             draft = draft,
             busy = state.busy,
             model = state.model,
+            pending = state.pending,
             onDraft = onDraft,
             onModel = onModel,
+            onAttach = onAttach,
+            onRemove = onRemoveAttachment,
             onSend = {
                 val text = draft
                 onDraft("")
@@ -394,7 +417,7 @@ private fun EmptyState() {
         Spacer(Modifier.height(8.dp))
         Appear(80) {
             Text(
-                "Правки, zip, shell — строго на устройстве.",
+                "Правки, zip, картинки, поиск в сети — строго на устройстве.",
                 color = AgColors.Muted,
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
@@ -402,9 +425,9 @@ private fun EmptyState() {
         }
         Spacer(Modifier.height(16.dp))
         listOf(
+            "Что на этом скриншоте?",
+            "Найди в интернете и скажи кратко",
             "Распакуй zip в Download",
-            "Найди баг в проекте",
-            "Поправь код и сохрани",
         ).forEachIndexed { index, hint ->
             Appear(140 + index * 90) {
                 Box(
@@ -423,15 +446,38 @@ private fun EmptyState() {
 }
 
 @Composable
-private fun UserBubble(text: String) {
+private fun UserBubble(message: ChatMessage) {
+    val images = message.attachments.filter { it.isImage && !it.path.isNullOrBlank() }
+    val files = message.attachments.filter { !it.isImage }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(0.86f)
-                .background(AgColors.Accent, RoundedCornerShape(18.dp, 18.dp, 4.dp, 18.dp))
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-        ) {
-            Text(text, color = AgColors.OnAccent, fontSize = 15.sp, lineHeight = 21.sp)
+        Column(horizontalAlignment = Alignment.End, modifier = Modifier.fillMaxWidth(0.86f)) {
+            if (images.isNotEmpty()) {
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    images.forEach { item ->
+                        AttachmentThumb(path = item.path!!, isImage = true, modifier = Modifier.size(148.dp, 110.dp))
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
+            }
+            if (files.isNotEmpty()) {
+                files.forEach { item ->
+                    FileChip(item.name)
+                    Spacer(Modifier.height(6.dp))
+                }
+            }
+            if (message.text.isNotBlank()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(AgColors.Accent, RoundedCornerShape(18.dp, 18.dp, 4.dp, 18.dp))
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                ) {
+                    Text(message.text, color = AgColors.OnAccent, fontSize = 15.sp, lineHeight = 21.sp)
+                }
+            }
         }
     }
 }
@@ -521,98 +567,192 @@ private fun Composer(
     draft: String,
     busy: Boolean,
     model: String,
+    pending: List<PendingAttachment>,
     onDraft: (String) -> Unit,
     onModel: (String) -> Unit,
+    onAttach: () -> Unit,
+    onRemove: (String) -> Unit,
     onSend: () -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     var menu by remember { mutableStateOf(false) }
+    val canSend = !busy && (draft.isNotBlank() || pending.isNotEmpty())
     Appear(fromBottom = true) {
-        Row(
-            modifier = Modifier
-                .padding(12.dp)
-                .background(AgColors.Surface, RoundedCornerShape(AgRadius.Outer))
-                .border(1.dp, AgColors.Border, RoundedCornerShape(AgRadius.Outer))
-                .padding(6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box {
-                Box(
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+            if (pending.isNotEmpty()) {
+                Row(
                     modifier = Modifier
-                        .widthIn(max = 118.dp)
-                        .height(44.dp)
-                        .clip(RoundedCornerShape(AgRadius.Inner))
-                        .background(AgColors.AccentSoft)
-                        .clickable { menu = true }
-                        .padding(horizontal = 10.dp),
-                    contentAlignment = Alignment.CenterStart,
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Text(
-                        GeminiModels.shortTitle(model),
-                        color = AgColors.Accent,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                    )
-                }
-                DropdownMenu(
-                    expanded = menu,
-                    onDismissRequest = { menu = false },
-                    modifier = Modifier
-                        .heightIn(max = 420.dp)
-                        .background(AgColors.SurfaceRaised),
-                ) {
-                    GeminiModels.ALL.forEach { item ->
-                        DropdownMenuItem(
-                            text = {
-                                Column {
-                                    Text(item.title, fontWeight = FontWeight.SemiBold, color = AgColors.Text)
-                                    Text(item.id, fontSize = 11.sp, color = AgColors.Muted, fontFamily = FontFamily.Monospace)
-                                }
-                            },
-                            onClick = {
-                                onModel(item.id)
-                                menu = false
-                            },
-                        )
+                    pending.forEach { item ->
+                        PendingChip(item, enabled = !busy, onRemove = { onRemove(item.id) })
                     }
                 }
             }
-            BasicTextField(
-                value = draft,
-                onValueChange = onDraft,
-                textStyle = TextStyle(color = AgColors.Text, fontSize = 16.sp, lineHeight = 22.sp),
-                cursorBrush = SolidColor(AgColors.Accent),
+            Row(
                 modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 8.dp, vertical = 8.dp),
-                decorationBox = { inner ->
-                    if (draft.isEmpty()) Text("Задача для телефона…", color = AgColors.Muted, fontSize = 16.sp)
-                    inner()
-                },
-            )
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .scale(if (pressed) 0.96f else 1f)
-                    .clip(CircleShape)
-                    .background(if (!busy && draft.isNotBlank()) AgColors.Accent else AgColors.SurfaceRaised)
-                    .clickable(
-                        enabled = !busy && draft.isNotBlank(),
-                        interactionSource = interaction,
-                        indication = null,
-                        onClick = onSend,
-                    ),
-                contentAlignment = Alignment.Center,
+                    .background(AgColors.Surface, RoundedCornerShape(AgRadius.Outer))
+                    .border(1.dp, AgColors.Border, RoundedCornerShape(AgRadius.Outer))
+                    .padding(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(
-                    Icons.AutoMirrored.Outlined.Send,
-                    contentDescription = "Отправить",
-                    tint = if (!busy && draft.isNotBlank()) AgColors.OnAccent else AgColors.Muted,
-                    modifier = Modifier.size(18.dp).padding(start = 1.dp),
+                Box {
+                    Box(
+                        modifier = Modifier
+                            .widthIn(max = 118.dp)
+                            .height(44.dp)
+                            .clip(RoundedCornerShape(AgRadius.Inner))
+                            .background(AgColors.AccentSoft)
+                            .clickable { menu = true }
+                            .padding(horizontal = 10.dp),
+                        contentAlignment = Alignment.CenterStart,
+                    ) {
+                        Text(
+                            GeminiModels.shortTitle(model),
+                            color = AgColors.Accent,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = menu,
+                        onDismissRequest = { menu = false },
+                        modifier = Modifier
+                            .heightIn(max = 420.dp)
+                            .background(AgColors.SurfaceRaised),
+                    ) {
+                        GeminiModels.ALL.forEach { item ->
+                            DropdownMenuItem(
+                                text = {
+                                    Column {
+                                        Text(item.title, fontWeight = FontWeight.SemiBold, color = AgColors.Text)
+                                        Text(item.id, fontSize = 11.sp, color = AgColors.Muted, fontFamily = FontFamily.Monospace)
+                                    }
+                                },
+                                onClick = {
+                                    onModel(item.id)
+                                    menu = false
+                                },
+                            )
+                        }
+                    }
+                }
+                IconPress(onClick = onAttach, enabled = !busy, size = 40.dp) {
+                    Icon(Icons.Outlined.AttachFile, contentDescription = "Вложить", tint = AgColors.Muted, modifier = Modifier.size(20.dp))
+                }
+                BasicTextField(
+                    value = draft,
+                    onValueChange = onDraft,
+                    textStyle = TextStyle(color = AgColors.Text, fontSize = 16.sp, lineHeight = 22.sp),
+                    cursorBrush = SolidColor(AgColors.Accent),
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 4.dp, vertical = 8.dp),
+                    decorationBox = { inner ->
+                        if (draft.isEmpty()) Text("Задача для телефона…", color = AgColors.Muted, fontSize = 16.sp)
+                        inner()
+                    },
                 )
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .scale(if (pressed) 0.96f else 1f)
+                        .clip(CircleShape)
+                        .background(if (canSend) AgColors.Accent else AgColors.SurfaceRaised)
+                        .clickable(
+                            enabled = canSend,
+                            interactionSource = interaction,
+                            indication = null,
+                            onClick = onSend,
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Outlined.Send,
+                        contentDescription = "Отправить",
+                        tint = if (canSend) AgColors.OnAccent else AgColors.Muted,
+                        modifier = Modifier.size(18.dp).padding(start = 1.dp),
+                    )
+                }
             }
+        }
+    }
+}
+
+@Composable
+private fun PendingChip(item: PendingAttachment, enabled: Boolean, onRemove: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(AgColors.SurfaceRaised)
+            .border(1.dp, AgColors.Border, RoundedCornerShape(14.dp))
+            .padding(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        AttachmentThumb(path = item.path, isImage = item.isImage, modifier = Modifier.size(36.dp))
+        Spacer(Modifier.width(8.dp))
+        Column(Modifier.widthIn(max = 120.dp)) {
+            Text(item.name, color = AgColors.Text, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                if (item.isImage) "картинка" else "файл",
+                color = AgColors.Muted,
+                fontSize = 10.sp,
+            )
+        }
+        IconPress(onClick = onRemove, enabled = enabled, size = 28.dp) {
+            Icon(Icons.Outlined.Close, contentDescription = "Убрать", tint = AgColors.Muted, modifier = Modifier.size(16.dp))
+        }
+    }
+}
+
+@Composable
+private fun FileChip(name: String) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(AgColors.SurfaceRaised)
+            .border(1.dp, AgColors.Border, RoundedCornerShape(12.dp))
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Outlined.InsertDriveFile, contentDescription = null, tint = AgColors.Accent, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(6.dp))
+        Text(name, color = AgColors.Text, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+@Composable
+private fun AttachmentThumb(path: String, isImage: Boolean, modifier: Modifier) {
+    val bitmap = remember(path, isImage) {
+        if (!isImage) null else runCatching {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(path, bounds)
+            var sample = 1
+            val longest = maxOf(bounds.outWidth, bounds.outHeight).coerceAtLeast(1)
+            while (longest / sample > 512) sample *= 2
+            BitmapFactory.decodeFile(path, BitmapFactory.Options().apply { inSampleSize = sample })
+        }.getOrNull()
+    }
+    if (bitmap != null) {
+        Image(
+            bitmap.asImageBitmap(),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = modifier.clip(RoundedCornerShape(12.dp)),
+        )
+    } else {
+        Box(
+            modifier = modifier
+                .clip(RoundedCornerShape(12.dp))
+                .background(AgColors.SurfaceRaised),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Outlined.InsertDriveFile, contentDescription = null, tint = AgColors.Accent, modifier = Modifier.size(18.dp))
         }
     }
 }
@@ -665,15 +805,20 @@ private fun Appear(
 }
 
 @Composable
-private fun IconPress(onClick: () -> Unit, content: @Composable () -> Unit) {
+private fun IconPress(
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    size: Dp = 44.dp,
+    content: @Composable () -> Unit,
+) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     Box(
         modifier = Modifier
-            .size(44.dp)
+            .size(size)
             .scale(if (pressed) 0.96f else 1f)
             .clip(CircleShape)
-            .clickable(interactionSource = interaction, indication = null, onClick = onClick),
+            .clickable(enabled = enabled, interactionSource = interaction, indication = null, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) { content() }
 }

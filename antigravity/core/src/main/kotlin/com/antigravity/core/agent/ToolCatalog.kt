@@ -8,12 +8,18 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 object ToolCatalog {
-    val declarations: JsonArray = buildJsonArray {
-        add(
-            buildJsonObject {
-                put(
-                    "functionDeclarations",
-                    buildJsonArray {
+    val googleSearch: JsonObject = buildJsonObject {
+        put("googleSearch", buildJsonObject { })
+    }
+
+    val urlContext: JsonObject = buildJsonObject {
+        put("urlContext", buildJsonObject { })
+    }
+
+    val functionTool: JsonObject = buildJsonObject {
+        put(
+            "functionDeclarations",
+            buildJsonArray {
                         add(fn("read_file", "Прочитать текстовый файл на телефоне. Путь абсолютный или относительно workspace.", props {
                             req("path", "string", "Путь к файлу")
                             opt("offset", "integer", "Первая строка (с 1)")
@@ -81,10 +87,39 @@ object ToolCatalog {
                                 listOf("command"),
                             ),
                         )
+                        add(
+                            fn(
+                                "web_search",
+                                "Искать в интернете (свежие факты, документация, ошибки). Вернёт заголовки, URL и сниппеты.",
+                                props {
+                                    req("query", "string", "Поисковый запрос")
+                                    opt("limit", "integer", "Сколько результатов, по умолчанию 8")
+                                },
+                                listOf("query"),
+                            ),
+                        )
+                        add(
+                            fn(
+                                "web_fetch",
+                                "Открыть HTTP(S) страницу и вернуть текст. Для бинарников используй download на телефон.",
+                                props {
+                                    req("url", "string", "Полный URL")
+                                },
+                                listOf("url"),
+                            ),
+                        )
                     },
                 )
-            },
-        )
+    }
+
+    val declarations: JsonArray = buildJsonArray {
+        add(googleSearch)
+        add(urlContext)
+        add(functionTool)
+    }
+
+    val withoutGrounding: JsonArray = buildJsonArray {
+        add(functionTool)
     }
 
     private fun fn(name: String, description: String, parameters: JsonObject, required: List<String>) =

@@ -1,6 +1,7 @@
 package com.antigravity.mobile
 
 import android.app.Application
+import android.net.Uri
 import android.os.Environment
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
@@ -8,7 +9,10 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.antigravity.core.agent.AgentListener
 import com.antigravity.core.agent.AgentLoop
+import com.antigravity.core.agent.AttachmentCodec
+import com.antigravity.core.agent.ChatAttachment
 import com.antigravity.core.agent.ChatMessage
+import com.antigravity.core.agent.LoadedAttachment
 import com.antigravity.core.api.CloudCodeClient
 import com.antigravity.core.api.ContentTurn
 import com.antigravity.core.api.GeminiModels
@@ -16,6 +20,7 @@ import com.antigravity.core.auth.AntigravityAuthClient
 import com.antigravity.core.auth.AntigravityOAuth
 import com.antigravity.core.auth.AntigravitySession
 import com.antigravity.mobile.auth.SessionStore
+import com.antigravity.mobile.fs.AttachmentIo
 import com.antigravity.mobile.fs.RootDeviceFs
 import com.antigravity.mobile.root.RootAccess
 import com.antigravity.mobile.root.RootState
@@ -27,6 +32,17 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
 import java.io.File
 
+data class PendingAttachment(
+    val id: String,
+    val name: String,
+    val mime: String,
+    val path: String,
+    val size: Long,
+    val isImage: Boolean,
+) {
+    fun toChat(): ChatAttachment = ChatAttachment(name = name, mime = mime, path = path, isImage = isImage)
+}
+
 data class UiState(
     val root: RootState = RootState.Checking,
     val session: AntigravitySession? = null,
@@ -37,6 +53,7 @@ data class UiState(
     val input: String = "",
     val error: String? = null,
     val messages: List<ChatMessage> = emptyList(),
+    val pending: List<PendingAttachment> = emptyList(),
 )
 
 data class GoogleLoginRequest(val url: String, val state: String)
@@ -86,7 +103,7 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
     fun logout() {
         store.clear()
         history.clear()
-        _state.update { it.copy(session = null, messages = emptyList(), error = null) }
+        _state.update { it.copy(session = null, messages = emptyList(), pending = emptyList(), error = null) }
     }
 
     fun createGoogleLogin(): GoogleLoginRequest? {
@@ -122,10 +139,37 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
+    fun addAttachments(uris: List<Uri>) {
+        if (uris.isEmpty()) return
+        viewModelScope.launch(Dispatchers.IO) {
+            val inbox = File(_state.value.workspace, "inbox").also { it.mkdirs() }
+            val imported = mutableListOf<PendingAttachment>()
+            var lastError: String? = null
+            uris.take(12).forEach { uri ->
+                try {
+                    imported += AttachmentIo.import(getApplication(), uri, inbox)
+                } catch (error: Exception) {
+                    lastError = error.message ?: "Не удалось прикрепить файл"
+                }
+            }
+            _state.update {
+                it.copy(
+                    pending = (it.pending + imported).distinctBy { item -> item.path }.take(12),
+                    error = if (imported.isEmpty()) lastError else it.error,
+                )
+            }
+        }
+    }
+
+    fun removeAttachment(id: String) {
+        _state.update { it.copy(pending = it.pending.filterNot { item -> item.id == id }) }
+    }
+
     fun send(text: String) {
         val trimmed = text.trim()
-        if (trimmed.isEmpty()) return
         val snapshot = _state.value
+        val pending = snapshot.pending
+        if (trimmed.isEmpty() && pending.isEmpty()) return
         if (snapshot.root != RootState.Granted) {
             _state.update { it.copy(error = "Нужен root") }
             return
@@ -134,11 +178,13 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
             _state.update { it.copy(error = "Сначала войдите через Google") }
             return
         }
+        val display = trimmed.ifBlank { pending.joinToString(", ") { it.name } }
         _state.update {
             it.copy(
                 busy = true,
                 error = null,
-                messages = it.messages + ChatMessage("user", trimmed),
+                pending = emptyList(),
+                messages = it.messages + ChatMessage("user", display, attachments = pending.map { item -> item.toChat() }),
             )
         }
         viewModelScope.launch(Dispatchers.IO) {
@@ -148,12 +194,24 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
                 _state.update { it.copy(session = live) }
                 val fs = RootDeviceFs(getApplication(), File(snapshot.workspace))
                 fs.workspace = snapshot.workspace
+                val extraParts = AttachmentCodec.toGeminiParts(
+                    pending.map { item ->
+                        LoadedAttachment(
+                            name = item.name,
+                            mime = item.mime,
+                            bytes = File(item.path).readBytes(),
+                            savedPath = item.path,
+                        )
+                    },
+                )
                 val loop = AgentLoop(llm, fs)
+                val prompt = trimmed.ifBlank { "Смотри вложения. Ответь по картинкам и файлам." }
                 val answer = loop.run(
                     session = live,
                     model = snapshot.model,
-                    userText = trimmed,
+                    userText = prompt,
                     history = history,
+                    extraParts = extraParts,
                     rooted = true,
                     listener = object : AgentListener {
                         override fun onThinking(text: String) {

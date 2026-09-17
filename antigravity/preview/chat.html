@@ -20,22 +20,38 @@
     .gear { width: 44px; height: 44px; display: grid; place-items: center; color: #7A9A86; font-size: 18px; }
     main { flex: 1; overflow: auto; padding: 8px 16px 12px; }
     .user { display: flex; justify-content: flex-end; margin: 10px 0; }
+    .user-col { max-width: 86%; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+    .thumb {
+      width: 148px; height: 110px; border-radius: 12px;
+      background: linear-gradient(135deg, #178A4E, #3DFF9A);
+    }
     .user p {
-      max-width: 86%; background: #3DFF9A; color: #03140A;
+      background: #3DFF9A; color: #03140A;
       border-radius: 18px 18px 4px 18px; padding: 10px 14px; margin: 0; font-size: 15px;
     }
     .think { color: #8FB89C; font-size: 13px; font-weight: 500; margin: 8px 0 4px; }
     .think span { color: #7A9A86; font-weight: 400; }
     .reason { color: #7A9A86; font-size: 13px; line-height: 18px; max-height: 72px; overflow: hidden; }
+    .tool {
+      border: 1px solid #1C3326; background: #0C140F; border-radius: 12px; padding: 12px; margin: 10px 0;
+      font: 12px ui-monospace, monospace; color: #8FB89C;
+    }
+    .tool b { color: #3DFF9A; }
     h3 { color: #3DFF9A; font-size: 15px; margin: 12px 0 8px; }
     ul { margin: 0; padding: 0; list-style: none; }
     li { display: flex; gap: 8px; font-size: 15px; line-height: 22px; margin: 0 0 8px; }
     li:before { content: "•"; color: #3DFF9A; width: 14px; }
     strong { font-weight: 600; }
     code { font: 12.5px ui-monospace, monospace; background: #0A160F; color: #3DFF9A; padding: 1px 5px; border-radius: 5px; }
-    footer { padding: 12px; }
+    footer { padding: 8px 12px 12px; }
+    .chips { display: flex; gap: 8px; margin-bottom: 8px; }
+    .chip {
+      display: flex; align-items: center; gap: 8px; padding: 4px 8px 4px 4px;
+      border: 1px solid #1C3326; background: #121C16; border-radius: 14px; font-size: 12px;
+    }
+    .chip i { width: 36px; height: 36px; border-radius: 10px; background: #178A4E; display: grid; place-items: center; }
     .composer {
-      display: flex; align-items: center; gap: 6px; padding: 6px;
+      display: flex; align-items: center; gap: 4px; padding: 6px;
       border: 1px solid #1C3326; background: #0C140F; border-radius: 22px;
     }
     .model {
@@ -44,6 +60,7 @@
       background: rgba(61,255,154,.13); color: #3DFF9A; font-size: 12px; font-weight: 600;
       white-space: nowrap;
     }
+    .clip { width: 40px; height: 44px; display: grid; place-items: center; color: #7A9A86; font-size: 18px; }
     .composer input {
       flex: 1; border: 0; background: transparent; color: #E7F6EC;
       font-size: 16px; padding: 8px 4px; outline: none; min-width: 0;
@@ -58,22 +75,29 @@
   <div class="phone">
     <div class="top"><div class="gear">⚙</div></div>
     <main>
-      <div class="user"><p>что умеешь</p></div>
+      <div class="user">
+        <div class="user-col">
+          <div class="thumb"></div>
+          <p>что на скрине? найди это в интернете</p>
+        </div>
+      </div>
       <div class="think">Thought <span>for 2s</span></div>
-      <div class="reason">Соберу ответ по возможностям агента на устройстве: код, файлы, архивы, shell.</div>
-      <h3>1. Программирование и код</h3>
+      <div class="reason">Сначала опишу картинку, затем web_search по объекту.</div>
+      <div class="tool"><b>web_search</b> · done<br/>Поиск «pixel 9 pro» (3)</div>
+      <h3>На скрине</h3>
       <ul>
-        <li><span><strong>Писать, читать и редактировать код</strong> на любых языках.</span></li>
-        <li><span>Искать по файлам проекта (regex через <code>grep</code>, маски через <code>glob</code>).</span></li>
-      </ul>
-      <h3>2. Файлы и архивы</h3>
-      <ul>
-        <li><span><strong>Распаковывать архивы</strong>: <code>.zip</code>, <code>.rar</code>, <code>.7z</code>.</span></li>
+        <li><span>Это <strong>Pixel 9 Pro</strong> — зелёная рамка, камера-остров.</span></li>
+        <li><span>Актуальные факты взял через <code>web_search</code>.</span></li>
       </ul>
     </main>
     <footer>
+      <div class="chips">
+        <div class="chip"><i>🖼</i> shot.jpg ×</div>
+        <div class="chip"><i>📄</i> notes.md ×</div>
+      </div>
       <div class="composer">
         <div class="model">3.8 Flash</div>
+        <div class="clip">📎</div>
         <input placeholder="Задача для телефона…" />
         <div class="send">➤</div>
       </div>
