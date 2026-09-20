@@ -393,6 +393,8 @@ public class ChatActivity extends BaseFragment implements
     protected TLRPC.User currentUser;
     protected TLRPC.EncryptedChat currentEncryptedChat;
     private boolean userBlocked;
+    private boolean plusSecretLockPending;
+    private boolean plusDidAutoplayVoice;
 
     private long chatInviterId;
 
@@ -1247,6 +1249,12 @@ public class ChatActivity extends BaseFragment implements
 
     public final static int OPTION_VIEW_STATISTICS = 115;
     public final static int OPTION_WELCOME_REVERT = 116;
+    public final static int OPTION_PLUS_COPY_PHOTO = 900;
+    public final static int OPTION_PLUS_SAVE_ORIGINAL = 901;
+    public final static int OPTION_PLUS_MENTION = 902;
+    public final static int OPTION_PLUS_MSG_ID = 903;
+    public final static int OPTION_PLUS_MSG_JSON = 904;
+    public final static int OPTION_PLUS_GEMINI = 910;
 
     private final static int[] allowedNotificationsDuringChatListAnimations = new int[]{
             NotificationCenter.messagesRead,
@@ -1672,6 +1680,7 @@ public class ChatActivity extends BaseFragment implements
     private final static int open_forum = 61;
 
     private final static int translate = 62;
+    private final static int plus_gemini = 82;
     private final static int scheduled = 63;
     private final static int edit_quick_reply = 64;
 
@@ -3972,6 +3981,13 @@ public class ChatActivity extends BaseFragment implements
                     if (!getMessagesController().getTranslateController().toggleTranslatingDialog(getDialogId(), true)) {
                         updateTopPanel(true);
                     }
+                } else if (id == plus_gemini) {
+                    CharSequence draft = chatActivityEnterView != null ? chatActivityEnterView.getFieldText() : null;
+                    org.telegram.ui.plus.GeminiHelper.showModes(ChatActivity.this, draft != null ? draft.toString() : null, text -> {
+                        if (chatActivityEnterView != null) {
+                            chatActivityEnterView.setFieldText(text);
+                        }
+                    });
                 } else if (id == call || id == video_call) {
                     if (currentUser != null && getParentActivity() != null) {
                         VoIPHelper.startCall(currentUser, id == video_call, userInfo != null && userInfo.video_calls_available, getParentActivity(), getMessagesController().getUserFull(currentUser.id), getAccountInstance());
@@ -4423,6 +4439,7 @@ public class ChatActivity extends BaseFragment implements
                 headerItem.lazilyAddSubItem(boost_group, drawable, LocaleController.getString(ChatObject.isChannelAndNotMegaGroup(currentChat) ? R.string.BoostingBoostChannelMenu : R.string.BoostingBoostGroupMenu));
             }
             translateItem = headerItem.lazilyAddSubItem(translate, R.drawable.msg_translate, LocaleController.getString(R.string.TranslateMessage));
+            headerItem.lazilyAddSubItem(plus_gemini, R.drawable.msg_translate, "Gemini");
             updateTranslateItemVisibility();
             if (currentChat != null && !currentChat.creator && !ChatObject.hasAdminRights(currentChat)) {
                 headerItem.lazilyAddSubItem(report, R.drawable.msg_report, LocaleController.getString(R.string.ReportChat));
@@ -5083,7 +5100,7 @@ public class ChatActivity extends BaseFragment implements
                             fragment.setDelegate(ChatActivity.this);
                             presentFragment(fragment);
                         } else {
-                            showFieldPanelForReply(getSlidingMessageObject());
+                            plusHandleSwipe(getSlidingMessageObject());
                         }
                     }
                     endTrackingX = slidingViewGetOffsetX();
@@ -6879,6 +6896,11 @@ public class ChatActivity extends BaseFragment implements
                     invalidateMergedVisibleBlurredPositionsAndSources(BLUR_INVALIDATE_FLAG_SCROLL);
                     contentView.invalidateBlur();
                     hideHints(true);
+                    org.telegram.ui.plus.PlusConfig.load();
+                    if (org.telegram.ui.plus.PlusConfig.hideKeyboardOnScroll && Math.abs(dy) > AndroidUtilities.dp(6) && chatActivityEnterView != null && (chatActivityEnterView.isKeyboardVisible() || chatActivityEnterView.isPopupShowing())) {
+                        chatActivityEnterView.closeKeyboard();
+                        chatActivityEnterView.hidePopup(true);
+                    }
                 }
                 if (dy != 0 && scrollingFloatingDate && !currentFloatingTopIsNotMessage) {
                     if (highlightMessageId != Integer.MAX_VALUE) {
@@ -29892,6 +29914,32 @@ public class ChatActivity extends BaseFragment implements
         if (starReactionsOverlay != null) {
             starReactionsOverlay.bringToFront();
         }
+
+        org.telegram.ui.plus.PlusConfig.load();
+        if (org.telegram.ui.plus.PlusConfig.lockSecretChats && currentEncryptedChat != null) {
+            String lockKey = "secret:" + currentEncryptedChat.id;
+            if (!org.telegram.ui.plus.PlusBiometric.isUnlocked(lockKey) && !plusSecretLockPending) {
+                plusSecretLockPending = true;
+                org.telegram.ui.plus.PlusBiometric.authenticate(this, "Секретный чат", lockKey, () -> {
+                    plusSecretLockPending = false;
+                    plusMaybeAutoplayVoice();
+                }, () -> {
+                    plusSecretLockPending = false;
+                    finishFragment();
+                });
+            } else if (org.telegram.ui.plus.PlusBiometric.isUnlocked(lockKey)) {
+                plusMaybeAutoplayVoice();
+            }
+        } else {
+            plusMaybeAutoplayVoice();
+        }
+    }
+
+    private void plusMaybeAutoplayVoice() {
+        org.telegram.ui.plus.PlusConfig.load();
+        if (!plusDidAutoplayVoice && org.telegram.ui.plus.PlusConfig.autoplayVoice) {
+            plusDidAutoplayVoice = playFirstUnreadVoiceMessage();
+        }
     }
 
     public float getPullingDownOffset() {
@@ -33285,6 +33333,150 @@ public class ChatActivity extends BaseFragment implements
         MediaController.saveFile(path, getParentActivity(), messageObject.isVideo() ? 1 : 0, null, null);
     }
 
+    private void plusHandleSwipe(MessageObject message) {
+        if (message == null) {
+            return;
+        }
+        org.telegram.ui.plus.PlusConfig.load();
+        int action = org.telegram.ui.plus.PlusConfig.swipeAction;
+        if (action == org.telegram.ui.plus.PlusConfig.SWIPE_DELETE) {
+            createDeleteMessagesAlert(message, message.getGroupId() != 0 ? getGroup(message.getGroupId()) : null);
+        } else if (action == org.telegram.ui.plus.PlusConfig.SWIPE_PIN) {
+            selectedObject = message;
+            processSelectedOption(OPTION_PIN);
+        } else {
+            showFieldPanelForReply(message);
+        }
+    }
+
+    private File plusMessageFile(MessageObject messageObject) {
+        if (messageObject == null || messageObject.messageOwner == null) {
+            return null;
+        }
+        if (!TextUtils.isEmpty(messageObject.messageOwner.attachPath)) {
+            File f = new File(messageObject.messageOwner.attachPath);
+            if (f.exists()) {
+                return f;
+            }
+        }
+        File f = getFileLoader().getPathToMessage(messageObject.messageOwner);
+        if (f != null && f.exists()) {
+            return f;
+        }
+        f = getFileLoader().getPathToAttach(messageObject.getDocument(), true);
+        if (f != null && f.exists()) {
+            return f;
+        }
+        return null;
+    }
+
+    private void plusCopyPhoto(MessageObject messageObject) {
+        File file = plusMessageFile(messageObject);
+        if (file == null || getParentActivity() == null) {
+            BulletinFactory.of(this).createErrorBulletin("Файл ещё не скачан").show();
+            return;
+        }
+        try {
+            android.net.Uri uri = androidx.core.content.FileProvider.getUriForFile(getParentActivity(), org.telegram.messenger.ApplicationLoader.getApplicationId() + ".provider", file);
+            android.content.ClipboardManager clipboard = (android.content.ClipboardManager) getParentActivity().getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+            android.content.ClipData clip = android.content.ClipData.newUri(getParentActivity().getContentResolver(), "image", uri);
+            clipboard.setPrimaryClip(clip);
+            BulletinFactory.of(this).createCopyBulletin("Фото скопировано").show();
+        } catch (Exception e) {
+            FileLog.e(e);
+            AndroidUtilities.addToClipboard(file.getAbsolutePath());
+            BulletinFactory.of(this).createCopyBulletin("Путь скопирован").show();
+        }
+    }
+
+    private void plusSaveOriginal(MessageObject messageObject) {
+        if (messageObject == null) {
+            return;
+        }
+        File file = plusMessageFile(messageObject);
+        if (file == null) {
+            BulletinFactory.of(this).createErrorBulletin("Файл ещё не скачан").show();
+            return;
+        }
+        saveMessageToGallery(messageObject);
+        BulletinFactory.of(this).createDownloadBulletin(messageObject.isVideo() ? BulletinFactory.FileType.VIDEO : BulletinFactory.FileType.PHOTO, themeDelegate).show();
+    }
+
+    private void plusMention(MessageObject messageObject) {
+        if (chatActivityEnterView == null || messageObject == null) {
+            return;
+        }
+        long fromId = messageObject.getFromChatId();
+        String mention = null;
+        if (fromId > 0) {
+            TLRPC.User user = getMessagesController().getUser(fromId);
+            mention = UserObject.getPublicUsername(user);
+            if (TextUtils.isEmpty(mention)) {
+                mention = UserObject.getFirstName(user);
+            } else {
+                mention = "@" + mention;
+            }
+        } else if (fromId < 0) {
+            TLRPC.Chat chat = getMessagesController().getChat(-fromId);
+            if (chat != null) {
+                mention = ChatObject.getPublicUsername(chat);
+                if (TextUtils.isEmpty(mention)) {
+                    mention = chat.title;
+                } else {
+                    mention = "@" + mention;
+                }
+            }
+        }
+        if (TextUtils.isEmpty(mention)) {
+            BulletinFactory.of(this).createErrorBulletin("Некого упоминать").show();
+            return;
+        }
+        CharSequence current = chatActivityEnterView.getFieldText();
+        String next = TextUtils.isEmpty(current) ? mention + " " : current.toString() + " " + mention + " ";
+        chatActivityEnterView.setFieldText(next);
+        chatActivityEnterView.requestFocus();
+    }
+
+    private void plusCopyId(MessageObject messageObject) {
+        if (messageObject == null) {
+            return;
+        }
+        String text = "msg=" + messageObject.getId() + " chat=" + messageObject.getDialogId();
+        AndroidUtilities.addToClipboard(text);
+        BulletinFactory.of(this).createCopyBulletin(text).show();
+    }
+
+    private void plusCopyJson(MessageObject messageObject) {
+        if (messageObject == null || messageObject.messageOwner == null) {
+            return;
+        }
+        try {
+            org.json.JSONObject json = new org.json.JSONObject();
+            json.put("id", messageObject.getId());
+            json.put("dialog_id", messageObject.getDialogId());
+            json.put("from_id", messageObject.getFromChatId());
+            json.put("date", messageObject.messageOwner.date);
+            json.put("out", messageObject.isOut());
+            json.put("type", messageObject.type);
+            CharSequence text = messageObject.messageText;
+            if (text != null) {
+                json.put("text", text.toString());
+            }
+            AndroidUtilities.addToClipboard(json.toString(2));
+            BulletinFactory.of(this).createCopyBulletin("JSON скопирован").show();
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+    }
+
+    private void plusGemini(MessageObject messageObject, MessageObject.GroupedMessages group) {
+        CharSequence text = getMessageCaption(messageObject, group);
+        if (text == null && messageObject != null) {
+            text = messageObject.messageText;
+        }
+        org.telegram.ui.plus.GeminiHelper.showModes(this, text != null ? text.toString() : null, null);
+    }
+
     private void processSelectedOption(int option) {
         if (selectedObject == null || getParentActivity() == null) {
             return;
@@ -34281,6 +34473,30 @@ public class ChatActivity extends BaseFragment implements
                         }
                     }
                 }, getResourceProvider(), AlertsCreator.SUGGEST_DATE_PICKER_MODE_EDIT).show(), AmountUtils.Amount.of(suggestedPost != null ? suggestedPost.price : null), !ChatObject.canManageMonoForum(currentAccount, getDialogId()));
+                break;
+            }
+            case OPTION_PLUS_COPY_PHOTO: {
+                plusCopyPhoto(selectedObject);
+                break;
+            }
+            case OPTION_PLUS_SAVE_ORIGINAL: {
+                plusSaveOriginal(selectedObject);
+                break;
+            }
+            case OPTION_PLUS_MENTION: {
+                plusMention(selectedObject);
+                break;
+            }
+            case OPTION_PLUS_MSG_ID: {
+                plusCopyId(selectedObject);
+                break;
+            }
+            case OPTION_PLUS_MSG_JSON: {
+                plusCopyJson(selectedObject);
+                break;
+            }
+            case OPTION_PLUS_GEMINI: {
+                plusGemini(selectedObject, selectedObjectGroup);
                 break;
             }
         }
@@ -46285,6 +46501,35 @@ public class ChatActivity extends BaseFragment implements
             items.add(getString(R.string.WelcomeMessageRevert));
             options.add(OPTION_WELCOME_REVERT);
             icons.add(R.drawable.outline_revert_24);
+        }
+
+        if (message != null && !message.isSponsored()) {
+            if (message.isPhoto() || message.isVideo()) {
+                items.add("Копировать фото");
+                options.add(OPTION_PLUS_COPY_PHOTO);
+                icons.add(R.drawable.msg_copy);
+                items.add("Сохранить оригинал");
+                options.add(OPTION_PLUS_SAVE_ORIGINAL);
+                icons.add(R.drawable.msg_gallery);
+            }
+            items.add("Упомянуть");
+            options.add(OPTION_PLUS_MENTION);
+            icons.add(R.drawable.msg_mention);
+            items.add("ID сообщения");
+            options.add(OPTION_PLUS_MSG_ID);
+            icons.add(R.drawable.msg_info);
+            items.add("JSON сообщения");
+            options.add(OPTION_PLUS_MSG_JSON);
+            icons.add(R.drawable.msg_info);
+            CharSequence plusText = getMessageCaption(message, groupedMessages);
+            if (plusText == null) {
+                plusText = message.messageText;
+            }
+            if (!TextUtils.isEmpty(plusText)) {
+                items.add("Gemini");
+                options.add(OPTION_PLUS_GEMINI);
+                icons.add(R.drawable.msg_translate);
+            }
         }
     }
 

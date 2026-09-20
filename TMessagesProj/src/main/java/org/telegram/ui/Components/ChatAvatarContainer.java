@@ -274,6 +274,21 @@ public class ChatAvatarContainer extends FrameLayout implements FactorAnimator.T
                     openProfile(true);
                 }
             });
+            avatarImageView.setOnLongClickListener(v -> {
+                if (parentFragment == null) {
+                    return false;
+                }
+                Bundle args = new Bundle();
+                args.putLong("dialog_id", parentFragment.getDialogId());
+                args.putInt("type", MediaActivity.TYPE_MEDIA);
+                if (parentFragment.getTopicId() != 0) {
+                    args.putLong("topic_id", parentFragment.getTopicId());
+                }
+                MediaActivity fragment = new MediaActivity(args, sharedMediaPreloader);
+                fragment.setChatInfo(parentFragment.getCurrentChatInfo());
+                parentFragment.presentFragment(fragment);
+                return true;
+            });
         }
 
         titleTextView = new SimpleTextConnectedView(context, titleTextLargerCopyView);

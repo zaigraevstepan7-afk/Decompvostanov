@@ -3631,12 +3631,20 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                     if (!tab.isDefault && (tab.id < 0 || tab.id >= dialogFilters.size())) {
                         return;
                     }
-                    viewPages[1].selectedType = tab.id;
-                    viewPages[1].setVisibility(View.VISIBLE);
-                    viewPages[1].setTranslationX(viewPages[0].getMeasuredWidth());
-                    showScrollbars(false);
-                    switchToCurrentSelectedMode(true);
-                    animatingForward = forward;
+                    if (!tab.isDefault && tab.id >= 0 && tab.id < dialogFilters.size()) {
+                        MessagesController.DialogFilter lockedFilter = dialogFilters.get(tab.id);
+                        org.telegram.ui.plus.PlusConfig.load();
+                        if (org.telegram.ui.plus.PlusConfig.isFolderLocked(lockedFilter.id)) {
+                            final int previous = viewPages[0].selectedType;
+                            org.telegram.ui.plus.PlusBiometric.authenticate(DialogsActivity.this, "Папка " + lockedFilter.name, "folder:" + lockedFilter.id, () -> switchFilterTab(tab, forward), () -> {
+                                if (filterTabsView != null) {
+                                    filterTabsView.selectTabWithId(previous, 1f);
+                                }
+                            });
+                            return;
+                        }
+                    }
+                    switchFilterTab(tab, forward);
                 }
 
                 @Override
@@ -6801,6 +6809,15 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         } else {
             filterTabsView.selectLastTab();
         }
+    }
+
+    private void switchFilterTab(FilterTabsView.Tab tab, boolean forward) {
+        viewPages[1].selectedType = tab.id;
+        viewPages[1].setVisibility(View.VISIBLE);
+        viewPages[1].setTranslationX(viewPages[0].getMeasuredWidth());
+        showScrollbars(false);
+        switchToCurrentSelectedMode(true);
+        animatingForward = forward;
     }
 
     public void switchToCurrentSelectedMode(boolean animated) {
@@ -13732,6 +13749,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             Bundle args = new Bundle();
             args.putLong("user_id", UserConfig.getInstance(currentAccount).getClientUserId());
             presentFragment(new ChatActivity(args));
+        });
+        io.add(R.drawable.settings_features, "Плюшки", () -> {
+            presentFragment(new org.telegram.ui.plus.PlusSettingsActivity());
         });
         if (ApplicationLoader.applicationLoaderInstance != null) {
             ApplicationLoader.applicationLoaderInstance.addItemOptions(io);

@@ -11383,6 +11383,10 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public boolean sendTyping(long dialogId, long threadMsgId, int action, String emojicon, int classGuid) {
+        org.telegram.ui.plus.PlusConfig.load();
+        if (org.telegram.ui.plus.PlusConfig.stealthTyping) {
+            return false;
+        }
         if (action < 0 || action >= sendingTypings.length || dialogId == 0) {
             return false;
         }
@@ -14549,7 +14553,10 @@ public class MessagesController extends BaseController implements NotificationCe
         }
         ArrayList<Long> randomIds = new ArrayList<>();
         randomIds.add(randomId);
-        getSecretChatHelper().sendMessagesReadMessage(chat, randomIds, null);
+        org.telegram.ui.plus.PlusConfig.load();
+        if (!org.telegram.ui.plus.PlusConfig.stealthRead) {
+            getSecretChatHelper().sendMessagesReadMessage(chat, randomIds, null);
+        }
         if (ttl > 0) {
             int time = getConnectionsManager().getCurrentTime();
             getMessagesStorage().createTaskForSecretChat(chat.id, time, time, 0, randomIds);
@@ -14557,6 +14564,10 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     private void completeReadTask(ReadTask task) {
+        org.telegram.ui.plus.PlusConfig.load();
+        if (org.telegram.ui.plus.PlusConfig.stealthRead) {
+            return;
+        }
         if (task.replyId != 0 && task.monoForumPeerId == 0) {
             TLRPC.TL_messages_readDiscussion req = new TLRPC.TL_messages_readDiscussion();
             req.msg_id = (int) task.replyId;
