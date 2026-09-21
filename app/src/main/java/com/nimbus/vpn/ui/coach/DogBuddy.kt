@@ -151,7 +151,7 @@ private fun SpeechBubble(message: String, action: String?, onAction: (() -> Unit
     Column(
         Modifier
             .padding(bottom = 6.dp)
-            .widthIn(max = 240.dp)
+            .widthIn(max = 210.dp)
             .clip(RoundedCornerShape(18.dp))
             .background(Paper)
             .padding(horizontal = 14.dp, vertical = 12.dp),
@@ -209,9 +209,9 @@ private fun DogSprite(mood: DogMood, joyPulse: Int, modifier: Modifier = Modifie
         if (joyPulse == 0 && mood != DogMood.JOY) return@LaunchedEffect
         launch {
             jump.snapTo(0f)
-            jump.animateTo(-42f, spring(dampingRatio = 0.38f, stiffness = 340f))
+            jump.animateTo(-26f, spring(dampingRatio = 0.38f, stiffness = 340f))
             jump.animateTo(0f, spring(dampingRatio = 0.45f, stiffness = 460f))
-            jump.animateTo(-18f, spring(dampingRatio = 0.5f, stiffness = 400f))
+            jump.animateTo(-12f, spring(dampingRatio = 0.5f, stiffness = 400f))
             jump.animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = 380f))
         }
         launch {
@@ -230,7 +230,7 @@ private fun DogSprite(mood: DogMood, joyPulse: Int, modifier: Modifier = Modifie
     }
     Box(
         modifier
-            .size(128.dp)
+            .size(84.dp)
             .graphicsLayer {
                 translationY = (bob - 0.5f) * 10.dp.toPx() + jump.value * density
                 rotationZ = tilt
@@ -256,7 +256,7 @@ private fun DogSprite(mood: DogMood, joyPulse: Int, modifier: Modifier = Modifie
             painter = painterResource(R.drawable.dog_bozya),
             contentDescription = "Пёс",
             contentScale = ContentScale.Fit,
-            modifier = Modifier.size(118.dp),
+            modifier = Modifier.size(76.dp),
         )
         if (shut || mood == DogMood.JOY) {
             Blink(happy = mood == DogMood.JOY)
@@ -266,7 +266,7 @@ private fun DogSprite(mood: DogMood, joyPulse: Int, modifier: Modifier = Modifie
 
 @Composable
 private fun Blink(happy: Boolean) {
-    BoxWithConstraints(Modifier.size(118.dp)) {
+    BoxWithConstraints(Modifier.size(76.dp)) {
         val barW = maxWidth * 0.16f
         val barH = if (happy) maxHeight * 0.045f else maxHeight * 0.028f
         val y = maxHeight * if (happy) 0.33f else 0.345f
