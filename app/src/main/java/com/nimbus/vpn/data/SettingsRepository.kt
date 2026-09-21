@@ -3,6 +3,7 @@ package com.nimbus.vpn.data
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -22,6 +23,8 @@ class SettingsRepository(private val context: Context) {
             coachStep = prefs[COACH_STEP] ?: 0,
             streak = prefs[STREAK] ?: 0,
             streakDay = prefs[STREAK_DAY] ?: 0L,
+            dogX = prefs[DOG_X] ?: -1f,
+            dogY = prefs[DOG_Y] ?: -1f,
         )
     }
 
@@ -44,6 +47,13 @@ class SettingsRepository(private val context: Context) {
         }
     }
 
+    suspend fun setDogAnchor(x: Float, y: Float) {
+        context.settingsStore.edit {
+            it[DOG_X] = x
+            it[DOG_Y] = y
+        }
+    }
+
     private suspend fun set(key: androidx.datastore.preferences.core.Preferences.Key<Boolean>, value: Boolean) {
         context.settingsStore.edit { it[key] = value }
     }
@@ -57,6 +67,8 @@ class SettingsRepository(private val context: Context) {
         val COACH_STEP = intPreferencesKey("coach_step")
         val STREAK = intPreferencesKey("streak")
         val STREAK_DAY = longPreferencesKey("streak_day")
+        val DOG_X = floatPreferencesKey("dog_x")
+        val DOG_Y = floatPreferencesKey("dog_y")
     }
 }
 
@@ -69,4 +81,6 @@ data class AppSettings(
     val coachStep: Int = 0,
     val streak: Int = 0,
     val streakDay: Long = 0L,
+    val dogX: Float = -1f,
+    val dogY: Float = -1f,
 )

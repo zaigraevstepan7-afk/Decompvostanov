@@ -159,6 +159,7 @@ class MainActivity : ComponentActivity() {
                             onCoachAdd = viewModel::onCoachAddTapped,
                             onCoachReady = viewModel::onCoachWarpCreated,
                             onCoachCelebrateNext = viewModel::onCoachCelebrateNext,
+                            onMoveDog = viewModel::moveDog,
                         )
                     }
                     composable("warp") {
@@ -174,6 +175,9 @@ class MainActivity : ComponentActivity() {
                             onConsumed = viewModel::consumeWarpCreated,
                             guide = com.nimbus.vpn.ui.coach.CoachStep.from(settings.coachStep) ==
                                 com.nimbus.vpn.ui.coach.CoachStep.PICK,
+                            dogX = settings.dogX,
+                            dogY = settings.dogY,
+                            onMoveDog = viewModel::moveDog,
                         )
                     }
                     composable("import") {
@@ -214,6 +218,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             },
                             onCoachOpened = viewModel::onEnterSettings,
+                            onMoveDog = viewModel::moveDog,
                         )
                     }
                 }

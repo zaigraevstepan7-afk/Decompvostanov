@@ -44,8 +44,8 @@ import com.nimbus.vpn.data.AppSettings
 import com.nimbus.vpn.tunnel.ConnectionStatus
 import com.nimbus.vpn.tunnel.RootPowerManager
 import com.nimbus.vpn.ui.coach.CoachStep
-import com.nimbus.vpn.ui.coach.CrabDock
-import com.nimbus.vpn.ui.coach.CrabMood
+import com.nimbus.vpn.ui.coach.DogDock
+import com.nimbus.vpn.ui.coach.DogMood
 import com.nimbus.vpn.ui.coach.coachGlow
 import com.nimbus.vpn.ui.components.MeshBackground
 import com.nimbus.vpn.ui.theme.Accent
@@ -72,6 +72,7 @@ fun SettingsScreen(
     onAccessLink: (Int) -> Unit,
     onCoachNext: () -> Unit,
     onCoachOpened: () -> Unit,
+    onMoveDog: (Float, Float) -> Unit,
 ) {
     val context = LocalContext.current
     val crash = remember { CrashLog.summary(context) }
@@ -204,16 +205,16 @@ fun SettingsScreen(
             Spacer(Modifier.height(if (tourLine != null) 210.dp else 16.dp))
         }
         if (tourLine != null) {
-            CrabDock(
-                mood = CrabMood.POINT,
+            DogDock(
+                mood = DogMood.POINT,
                 message = tourLine,
                 action = if (step == CoachStep.TOUR_BATTERY) "Понятно" else "Дальше",
                 onAction = onCoachNext,
                 joyPulse = 0,
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .navigationBarsPadding()
-                    .padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+                anchorX = settings.dogX,
+                anchorY = settings.dogY,
+                onAnchor = onMoveDog,
+                modifier = Modifier.fillMaxSize(),
             )
         }
     }

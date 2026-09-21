@@ -287,6 +287,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onCoachTourNext(step: CoachStep) = advanceCoach(step.nextTour())
 
+    fun moveDog(x: Float, y: Float) = viewModelScope.launch {
+        app.container.settings.setDogAnchor(x.coerceIn(0f, 0.92f), y.coerceIn(0f, 0.92f))
+    }
+
     init {
         viewModelScope.launch {
             var seen = false

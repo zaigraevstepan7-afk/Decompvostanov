@@ -55,8 +55,8 @@ import com.nimbus.vpn.ui.AccessStatus
 import com.nimbus.vpn.ui.AccessUiState
 import com.nimbus.vpn.ui.ServerPingState
 import com.nimbus.vpn.ui.coach.CoachStep
-import com.nimbus.vpn.ui.coach.CrabDock
-import com.nimbus.vpn.ui.coach.CrabMood
+import com.nimbus.vpn.ui.coach.DogDock
+import com.nimbus.vpn.ui.coach.DogMood
 import com.nimbus.vpn.ui.coach.coachGlow
 import com.nimbus.vpn.ui.components.ConfirmDeleteDialog
 import com.nimbus.vpn.ui.components.DeleteServerButton
@@ -96,6 +96,7 @@ fun HomeScreen(
     onCoachAdd: () -> Unit,
     onCoachReady: () -> Unit,
     onCoachCelebrateNext: () -> Unit,
+    onMoveDog: (Float, Float) -> Unit,
 ) {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var pendingDelete by remember { mutableStateOf<Pair<String, String>?>(null) }
@@ -123,7 +124,7 @@ fun HomeScreen(
         cheer = null
     }
     val coachMessage = when (step) {
-        CoachStep.OFFER -> "Привет! Я крабик Bozya. Показать, как тут всё устроено?"
+        CoachStep.OFFER -> "Привет! Показать, как тут всё устроено?"
         CoachStep.CREATE, CoachStep.PICK -> "Нажми светящуюся кнопку «+» и создай сервер сам. Я подожду."
         CoachStep.CONNECT -> "Теперь нажми круглую кнопку внизу. Она включит туннель."
         CoachStep.CELEBRATE -> "Получилось! Серия ${settings.streak.coerceAtLeast(1)} дн. Дальше заглянем в настройки."
@@ -141,10 +142,10 @@ fun HomeScreen(
         else -> null
     }
     val mood = when (step) {
-        CoachStep.OFFER -> CrabMood.WAVE
-        CoachStep.CELEBRATE -> CrabMood.JOY
-        CoachStep.DONE -> if (cheer != null) CrabMood.JOY else CrabMood.CALM
-        else -> CrabMood.POINT
+        CoachStep.OFFER -> DogMood.WAVE
+        CoachStep.CELEBRATE -> DogMood.JOY
+        CoachStep.DONE -> if (cheer != null) DogMood.JOY else DogMood.CALM
+        else -> DogMood.POINT
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -261,16 +262,16 @@ fun HomeScreen(
                 }
             },
         )
-        CrabDock(
+        DogDock(
             mood = mood,
             message = coachMessage,
             action = coachAction,
             onAction = coachClick,
             joyPulse = joyPulse,
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .navigationBarsPadding()
-                .padding(start = 12.dp, bottom = 8.dp, end = 72.dp),
+            anchorX = settings.dogX,
+            anchorY = settings.dogY,
+            onAnchor = onMoveDog,
+            modifier = Modifier.fillMaxSize(),
         )
         pendingDelete?.let { (id, name) ->
             ConfirmDeleteDialog(
