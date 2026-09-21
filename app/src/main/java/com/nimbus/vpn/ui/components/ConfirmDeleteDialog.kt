@@ -38,9 +38,11 @@ fun DeleteServerButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val press = rememberPress(0.84f)
     IconButton(
         onClick = onClick,
-        modifier = modifier.size(36.dp),
+        interactionSource = press.interaction,
+        modifier = modifier.size(36.dp).pressScale(press.scale),
         colors = IconButtonDefaults.iconButtonColors(
             containerColor = androidx.compose.ui.graphics.Color.Transparent,
             contentColor = Ink,

@@ -47,6 +47,8 @@ import com.nimbus.vpn.ui.coach.DogDock
 import com.nimbus.vpn.ui.coach.DogMood
 import com.nimbus.vpn.ui.coach.coachGlow
 import com.nimbus.vpn.ui.components.MeshBackground
+import com.nimbus.vpn.ui.components.pressScale
+import com.nimbus.vpn.ui.components.rememberPress
 import com.nimbus.vpn.ui.theme.Accent
 import com.nimbus.vpn.ui.theme.Canvas
 import com.nimbus.vpn.ui.theme.Danger
@@ -176,7 +178,9 @@ fun WarpCreateScreen(
                 Spacer(Modifier.height(16.dp))
             }
             Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
+                val press = rememberPress(0.97f)
                 Button(
+                    interactionSource = press.interaction,
                     onClick = { onCreate(countryId, lte && lteAvailable) },
                     enabled = !warp.generating,
                     colors = ButtonDefaults.buttonColors(
@@ -189,6 +193,7 @@ fun WarpCreateScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(54.dp)
+                        .pressScale(press.scale)
                         .coachGlow(guide && !warp.generating),
                 ) {
                     if (warp.generating) {
@@ -240,13 +245,20 @@ private fun CountryTile(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val press = rememberPress(0.96f)
     Column(
         modifier
+            .pressScale(press.scale)
             .height(108.dp)
             .clip(Tile)
             .background(if (selected) Lift else Paper)
             .border(if (selected) 1.5.dp else 1.dp, if (selected) Accent else Line, Tile)
-            .clickable(enabled = enabled, onClick = onClick)
+            .clickable(
+                interactionSource = press.interaction,
+                indication = androidx.compose.material3.ripple(),
+                enabled = enabled,
+                onClick = onClick,
+            )
             .padding(14.dp),
         verticalArrangement = Arrangement.SpaceBetween,
     ) {

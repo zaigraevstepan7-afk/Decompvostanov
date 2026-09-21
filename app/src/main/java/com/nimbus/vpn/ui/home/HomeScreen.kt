@@ -1,5 +1,14 @@
 package com.nimbus.vpn.ui.home
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -31,6 +40,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -41,6 +51,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -61,12 +72,15 @@ import com.nimbus.vpn.ui.coach.coachGlow
 import com.nimbus.vpn.ui.components.ConfirmDeleteDialog
 import com.nimbus.vpn.ui.components.DeleteServerButton
 import com.nimbus.vpn.ui.components.MeshBackground
+import com.nimbus.vpn.ui.components.pressScale
+import com.nimbus.vpn.ui.components.rememberPress
 import com.nimbus.vpn.ui.theme.Accent
 import com.nimbus.vpn.ui.theme.Canvas
 import com.nimbus.vpn.ui.theme.Danger
 import com.nimbus.vpn.ui.theme.Ink
 import com.nimbus.vpn.ui.theme.InkMuted
 import com.nimbus.vpn.ui.theme.Line
+import com.nimbus.vpn.ui.theme.Motion
 import com.nimbus.vpn.ui.theme.Paper
 import com.nimbus.vpn.ui.theme.Success
 import kotlinx.coroutines.delay
@@ -179,7 +193,7 @@ fun HomeScreen(
                             .padding(horizontal = 8.dp, vertical = 4.dp),
                     )
                 }
-                IconButton(
+                PressIconButton(
                     onClick = {
                         onCoachAdd()
                         onCreateWarp()
@@ -188,10 +202,10 @@ fun HomeScreen(
                 ) {
                     Icon(Icons.Rounded.Add, contentDescription = "Новый сервер", tint = Ink)
                 }
-                IconButton(onClick = onImport) {
+                PressIconButton(onClick = onImport) {
                     Icon(Icons.Rounded.Description, contentDescription = "Импорт", tint = Ink)
                 }
-                IconButton(
+                PressIconButton(
                     onClick = onSettings,
                     modifier = Modifier.coachGlow(step == CoachStep.SETTINGS),
                 ) {
@@ -288,6 +302,7 @@ fun HomeScreen(
 
 @Composable
 private fun AccessChip(access: AccessUiState, onClick: () -> Unit) {
+    val press = rememberPress(0.92f)
     val working = access.status == AccessStatus.WORKING
     val dot = when (access.status) {
         AccessStatus.OK -> Success
@@ -297,11 +312,17 @@ private fun AccessChip(access: AccessUiState, onClick: () -> Unit) {
     }
     Row(
         Modifier
+            .pressScale(press.scale)
             .height(32.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(Paper)
             .border(1.dp, Line, RoundedCornerShape(16.dp))
-            .clickable(enabled = !working, onClick = onClick)
+            .clickable(
+                interactionSource = press.interaction,
+                indication = ripple(),
+                enabled = !working,
+                onClick = onClick,
+            )
             .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -323,6 +344,7 @@ private fun ServerRow(
     onDelete: () -> Unit,
 ) {
     val endpoint = remember(profile.rawConfig) { ConfigParser.endpointOf(profile.rawConfig) }
+    val press = rememberPress(0.97f)
     val proto = if (ConfigParser.isAmneziaHint(profile.rawConfig)) "AmneziaWG" else "WireGuard"
     val pingLabel = when {
         pinging -> "…"
@@ -333,10 +355,15 @@ private fun ServerRow(
     Row(
         Modifier
             .fillMaxWidth()
+            .pressScale(press.scale)
             .clip(CardShape)
             .background(Paper)
             .border(1.dp, if (active) Accent.copy(alpha = 0.55f) else Line, CardShape)
-            .clickable(onClick = onSelect)
+            .clickable(
+                interactionSource = press.interaction,
+                indication = ripple(),
+                onClick = onSelect,
+            )
             .padding(start = 12.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -361,7 +388,7 @@ private fun ServerRow(
         }
         Column(horizontalAlignment = Alignment.End) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onPing, modifier = Modifier.size(36.dp), enabled = !pinging) {
+                PressIconButton(onClick = onPing, modifier = Modifier.size(36.dp), enabled = !pinging) {
                     Icon(Icons.Rounded.Timer, contentDescription = "Пинг", tint = Ink, modifier = Modifier.size(18.dp))
                 }
                 DeleteServerButton(onClick = onDelete, modifier = Modifier.size(36.dp))
@@ -387,33 +414,77 @@ private fun ConnectFab(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val press = rememberPress(0.88f)
+    val breathe by rememberInfiniteTransition(label = "fab").animateFloat(
+        initialValue = 1f,
+        targetValue = if (connected) 1.04f else 1.07f,
+        animationSpec = infiniteRepeatable(
+            tween(if (enabled) 1400 else 700),
+            RepeatMode.Reverse,
+        ),
+        label = "fab-breathe",
+    )
+    val icon = when {
+        !hasProfile -> Icons.Rounded.Add
+        connected -> Icons.Rounded.Close
+        else -> Icons.Rounded.NearMe
+    }
     Box(
         modifier
+            .graphicsLayer {
+                val s = press.scale * if (enabled) breathe else 1f
+                scaleX = s
+                scaleY = s
+            }
             .size(58.dp)
             .clip(CircleShape)
             .background(if (enabled) Accent else Accent.copy(alpha = 0.45f))
-            .clickable(enabled = enabled, onClick = onClick),
+            .clickable(
+                interactionSource = press.interaction,
+                indication = ripple(),
+                enabled = enabled,
+                onClick = onClick,
+            ),
         contentAlignment = Alignment.Center,
     ) {
         if (!enabled) {
             CircularProgressIndicator(color = Canvas, strokeWidth = 2.dp, modifier = Modifier.size(22.dp))
         } else {
-            Icon(
-                imageVector = when {
-                    !hasProfile -> Icons.Rounded.Add
-                    connected -> Icons.Rounded.Close
-                    else -> Icons.Rounded.NearMe
-                },
-                contentDescription = when {
-                    !hasProfile -> "Создать сервер"
-                    connected -> "Отключить"
-                    else -> "Подключить"
-                },
-                tint = Canvas,
-                modifier = Modifier.size(26.dp),
-            )
+            AnimatedContent(
+                targetState = icon,
+                transitionSpec = { scaleIn(Motion.float(220)) togetherWith scaleOut(Motion.fade(140)) },
+                label = "fab-icon",
+            ) { image ->
+                Icon(
+                    imageVector = image,
+                    contentDescription = when {
+                        !hasProfile -> "Создать сервер"
+                        connected -> "Отключить"
+                        else -> "Подключить"
+                    },
+                    tint = Canvas,
+                    modifier = Modifier.size(26.dp),
+                )
+            }
         }
     }
+}
+
+@Composable
+private fun PressIconButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    content: @Composable () -> Unit,
+) {
+    val press = rememberPress(0.84f)
+    IconButton(
+        onClick = onClick,
+        enabled = enabled,
+        interactionSource = press.interaction,
+        modifier = modifier.pressScale(press.scale),
+        content = content,
+    )
 }
 
 private fun formatRate(bytesPerSec: Long): String = formatBytes(bytesPerSec) + "/с"

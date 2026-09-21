@@ -48,6 +48,8 @@ import com.nimbus.vpn.ui.coach.DogDock
 import com.nimbus.vpn.ui.coach.DogMood
 import com.nimbus.vpn.ui.coach.coachGlow
 import com.nimbus.vpn.ui.components.MeshBackground
+import com.nimbus.vpn.ui.components.pressScale
+import com.nimbus.vpn.ui.components.rememberPress
 import com.nimbus.vpn.ui.theme.Accent
 import com.nimbus.vpn.ui.theme.Canvas
 import com.nimbus.vpn.ui.theme.Ink
@@ -189,11 +191,13 @@ fun SettingsScreen(
                 }
             }
             Spacer(Modifier.height(22.dp))
+            val createPress = rememberPress(0.97f)
             Button(
                 onClick = onCreateWarp,
+                interactionSource = createPress.interaction,
                 colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = Canvas),
                 shape = Pill,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
+                modifier = Modifier.fillMaxWidth().height(52.dp).pressScale(createPress.scale),
             ) {
                 Text("Создать WARP", fontWeight = FontWeight.SemiBold)
             }
