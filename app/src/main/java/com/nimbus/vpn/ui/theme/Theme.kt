@@ -1,10 +1,10 @@
 package com.nimbus.vpn.ui.theme
 
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 
-private val Scheme = darkColorScheme(
+private val Scheme = lightColorScheme(
     primary = Accent,
     onPrimary = Canvas,
     secondary = Mist,

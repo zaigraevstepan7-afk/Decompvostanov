@@ -31,7 +31,6 @@ import androidx.compose.ui.window.DialogProperties
 import com.nimbus.vpn.ui.theme.Canvas
 import com.nimbus.vpn.ui.theme.Ink
 import com.nimbus.vpn.ui.theme.InkMuted
-import com.nimbus.vpn.ui.theme.Lift
 import com.nimbus.vpn.ui.theme.Paper
 
 @Composable
@@ -41,9 +40,9 @@ fun DeleteServerButton(
 ) {
     IconButton(
         onClick = onClick,
-        modifier = modifier.size(40.dp),
+        modifier = modifier.size(36.dp),
         colors = IconButtonDefaults.iconButtonColors(
-            containerColor = Lift,
+            containerColor = androidx.compose.ui.graphics.Color.Transparent,
             contentColor = Ink,
         ),
     ) {
