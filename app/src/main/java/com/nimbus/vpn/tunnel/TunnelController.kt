@@ -10,6 +10,8 @@ import com.nimbus.vpn.data.ConfigParser
 import com.nimbus.vpn.data.ProfileStore
 import com.nimbus.vpn.data.SettingsRepository
 import com.nimbus.vpn.data.VpnProfile
+import com.nimbus.vpn.CrashLog
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -40,7 +42,12 @@ class TunnelController(
     private val profiles: ProfileStore,
     private val settings: SettingsRepository,
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val scope = CoroutineScope(
+        SupervisorJob() + Dispatchers.Default + CoroutineExceptionHandler { _, error ->
+            Log.e(TAG, "Tunnel coroutine failed", error)
+            CrashLog.write(context, Thread.currentThread(), error)
+        },
+    )
     private val mutex = Mutex()
     private val rootShell = RootShell(context)
     private val rootPower = RootPowerManager(rootShell)
@@ -62,6 +69,8 @@ class TunnelController(
 
     private var statsJob: Job? = null
     private var reconnectJob: Job? = null
+    @Volatile private var userStopped = false
+    @Volatile private var stateToken = 0
     private var connectedSince: Long? = null
     private var lastRx = 0L
     private var lastTx = 0L
@@ -70,7 +79,11 @@ class TunnelController(
     private var uiVisible = false
 
     private val tunnel = BozyaTunnel { state ->
-        scope.launch { onNativeState(state) }
+        val token = stateToken
+        scope.launch {
+            if (token != stateToken) return@launch
+            onNativeState(state)
+        }
     }
 
     init {
@@ -122,8 +135,26 @@ class TunnelController(
         connect(profile)
     }
 
-    suspend fun connect(profile: VpnProfile) = mutex.withLock {
-        reconnectJob?.cancel()
+    fun applyVpnPolicy(autoConnect: Boolean, killSwitch: Boolean) {
+        scope.launch {
+            if (!_rootStatus.value.rooted) return@launch
+            runCatching {
+                if (autoConnect || killSwitch) {
+                    rootPower.setAlwaysOn(context.packageName, lockdown = killSwitch)
+                } else {
+                    rootPower.clearAlwaysOn()
+                }
+            }.onFailure { Log.w(TAG, "VPN policy update failed", it) }
+        }
+    }
+
+    suspend fun connect(profile: VpnProfile, userInitiated: Boolean = true) = mutex.withLock {
+        if (userInitiated) {
+            userStopped = false
+            reconnectJob?.cancel()
+        } else if (userStopped) {
+            return@withLock
+        }
         _ui.update {
             it.copy(
                 status = ConnectionStatus.CONNECTING,
@@ -138,22 +169,35 @@ class TunnelController(
                 rootPower.applyLowDrainKeepAlive(
                     packageName = context.packageName,
                     uid = android.os.Process.myUid(),
-                    enableAlwaysOn = appSettings.autoConnect,
+                    enableAlwaysOn = appSettings.autoConnect || appSettings.killSwitch,
                     lockdown = appSettings.killSwitch,
                 )
             }
         }
 
+        val gate = backendOnMain()
         val result = withContext(Dispatchers.IO) {
             runCatching {
+                if (userStopped && !userInitiated) error("Остановлено")
                 val prepared = ConfigParser.withKeepaliveIfMissing(profile.rawConfig)
                 val preview = ConfigParser.parse(prepared)
                 if (!preview.canConnect) {
                     error(preview.issues.joinToString("\n"))
                 }
                 val config = Config.parse(BufferedReader(StringReader(prepared)))
-                backend.setState(tunnel, Tunnel.State.UP, config)
+                stateToken++
+                gate.setState(tunnel, Tunnel.State.UP, config)
             }
+        }
+
+        if (userStopped && !userInitiated) {
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    stateToken++
+                    gate.setState(tunnel, Tunnel.State.DOWN, null)
+                }
+            }
+            return@withLock
         }
 
         result.onSuccess {
@@ -181,16 +225,20 @@ class TunnelController(
                 )
             }
             BozyaKeepAliveService.stop(context)
-            scheduleReconnect()
+            if (userInitiated) scheduleReconnect()
         }
     }
 
-    suspend fun disconnect() = mutex.withLock {
+    suspend fun disconnect() {
+        userStopped = true
         reconnectJob?.cancel()
+        mutex.withLock {
         statsJob?.cancel()
+        val gate = runCatching { backendOnMain() }.getOrNull()
         runCatching {
             withContext(Dispatchers.IO) {
-                backend.setState(tunnel, Tunnel.State.DOWN, null)
+                stateToken++
+                gate?.setState(tunnel, Tunnel.State.DOWN, null)
             }
         }
         connectedSince = null
@@ -207,9 +255,13 @@ class TunnelController(
             )
         }
         BozyaKeepAliveService.stop(context)
+        }
     }
 
+    private suspend fun backendOnMain(): Backend = withContext(Dispatchers.Main.immediate) { backend }
+
     private suspend fun onNativeState(state: Tunnel.State) {
+        if (userStopped) return
         if (state == Tunnel.State.DOWN && _ui.value.status == ConnectionStatus.CONNECTED) {
             _ui.update { it.copy(status = ConnectionStatus.DISCONNECTED, connectedSince = null) }
             BozyaKeepAliveService.stop(context)
@@ -253,18 +305,19 @@ class TunnelController(
     }
 
     private fun scheduleReconnect() {
-        if (!appSettings.autoConnect) return
+        if (!appSettings.autoConnect || userStopped) return
         reconnectJob?.cancel()
         reconnectJob = scope.launch {
             var attempt = 0
-            while (isActive) {
+            while (isActive && !userStopped) {
                 attempt++
-                val wait = min(30_000L, 1_500L * (1L shl (attempt - 1).coerceAtMost(4)))
+                val shift = (attempt - 1).coerceAtMost(4)
+                val wait = min(30_000L, 1_500L * (1L shl shift))
                 delay(wait)
-                if (_ui.value.status == ConnectionStatus.CONNECTED) return@launch
+                if (userStopped || _ui.value.status == ConnectionStatus.CONNECTED) return@launch
                 val profile = profiles.active ?: return@launch
-                connect(profile)
-                if (_ui.value.status == ConnectionStatus.CONNECTED) return@launch
+                connect(profile, userInitiated = false)
+                if (userStopped || _ui.value.status == ConnectionStatus.CONNECTED) return@launch
             }
         }
     }

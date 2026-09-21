@@ -83,6 +83,13 @@ class RootPowerManager(private val shell: RootShell) {
         return ok
     }
 
+    fun setAlwaysOn(packageName: String, lockdown: Boolean) {
+        runCatching { shell.run(null, "settings put global always_on_vpn_app $packageName") }
+        runCatching {
+            shell.run(null, "settings put global always_on_vpn_lockdown ${if (lockdown) 1 else 0}")
+        }
+    }
+
     fun clearAlwaysOn() {
         runCatching { shell.run(null, "settings put global always_on_vpn_app none") }
         runCatching { shell.run(null, "settings put global always_on_vpn_lockdown 0") }

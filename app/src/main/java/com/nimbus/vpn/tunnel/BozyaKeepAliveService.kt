@@ -23,7 +23,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 class BozyaKeepAliveService : Service() {
-    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val serviceJob = SupervisorJob()
+    private val serviceScope = CoroutineScope(serviceJob + Dispatchers.Default)
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -39,16 +40,19 @@ class BozyaKeepAliveService : Service() {
         }
         val title = intent?.getStringExtra(EXTRA_TITLE) ?: getString(R.string.notification_idle)
         ensureChannel()
-        if (!goForeground(title)) {
+        // Promote before any bitmap work. A late startForeground kills the process.
+        if (!goForeground(buildNotification(title, withLargeIcon = false))) {
             stopSelf()
             return START_NOT_STICKY
+        }
+        serviceScope.launch(Dispatchers.IO) {
+            val decorated = runCatching { buildNotification(title, withLargeIcon = true) }.getOrNull() ?: return@launch
+            runCatching { getSystemService(NotificationManager::class.java)?.notify(NOTIF_ID, decorated) }
         }
         return START_STICKY
     }
 
-    private fun goForeground(title: String): Boolean {
-        val notification = runCatching { buildNotification(title, withLargeIcon = true) }
-            .getOrElse { buildNotification(title, withLargeIcon = false) }
+    private fun goForeground(notification: Notification): Boolean {
         return try {
             if (Build.VERSION.SDK_INT >= 34) {
                 startForeground(NOTIF_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
@@ -58,7 +62,7 @@ class BozyaKeepAliveService : Service() {
             true
         } catch (t: Throwable) {
             Log.e(TAG, "startForeground failed", t)
-            runCatching { startForeground(NOTIF_ID, buildNotification(title, withLargeIcon = false)) }.isSuccess
+            false
         }
     }
 
@@ -87,7 +91,7 @@ class BozyaKeepAliveService : Service() {
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-            .addAction(0, getString(R.string.action_disconnect), stop)
+            .addAction(R.drawable.ic_bozya, getString(R.string.action_disconnect), stop)
         if (withLargeIcon) {
             largeIcon(this)?.let { builder.setLargeIcon(it) }
         }

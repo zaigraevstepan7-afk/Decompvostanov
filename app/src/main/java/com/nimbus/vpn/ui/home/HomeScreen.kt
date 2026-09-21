@@ -44,6 +44,7 @@ import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,15 +60,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nimbus.vpn.data.ConfigParser
 import com.nimbus.vpn.data.ProfileIndex
+import com.nimbus.vpn.data.VpnProfile
 import com.nimbus.vpn.tunnel.ConnectionStatus
 import com.nimbus.vpn.tunnel.TunnelUiState
 import com.nimbus.vpn.ui.AccessStatus
 import com.nimbus.vpn.ui.AccessUiState
+import com.nimbus.vpn.ui.ServerPingState
 import com.nimbus.vpn.ui.components.ConfirmDeleteDialog
 import com.nimbus.vpn.ui.components.DeleteServerButton
 import com.nimbus.vpn.ui.components.MeshBackground
 import com.nimbus.vpn.ui.components.PowerOrb
 import com.nimbus.vpn.ui.theme.Canvas
+import com.nimbus.vpn.ui.theme.Danger
 import com.nimbus.vpn.ui.theme.Ink
 import com.nimbus.vpn.ui.theme.InkMuted
 import com.nimbus.vpn.ui.theme.Lift
@@ -92,6 +96,8 @@ fun HomeScreen(
     onDelete: (String) -> Unit,
     onSettings: () -> Unit,
     onConfirmAccess: () -> Unit,
+    ping: ServerPingState,
+    onPing: () -> Unit,
 ) {
     val screenHeight = LocalConfiguration.current.screenHeightDp.dp
     val peek = minOf(228.dp, screenHeight * 0.30f).coerceAtLeast(156.dp)
@@ -131,6 +137,8 @@ fun HomeScreen(
                     val name = profiles.profiles.firstOrNull { it.id == id }?.name ?: "сервер"
                     pendingDelete = id to name
                 },
+                ping = ping,
+                onPing = onPing,
             )
         },
     ) { padding ->
@@ -201,7 +209,7 @@ fun HomeScreen(
                     ) {
                         Text(
                             state.error ?: "",
-                            color = Ink,
+                            color = Danger,
                             fontSize = 13.sp,
                             modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
                         )
@@ -270,6 +278,8 @@ private fun ServerSheet(
     onImport: () -> Unit,
     onSelect: (String) -> Unit,
     onDelete: (String) -> Unit,
+    ping: ServerPingState,
+    onPing: () -> Unit,
 ) {
     Column(
         Modifier
@@ -280,7 +290,6 @@ private fun ServerSheet(
         Row(
             Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onCreateWarp)
                 .padding(horizontal = 18.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -289,9 +298,21 @@ private fun ServerSheet(
                 color = Ink,
                 fontSize = 17.sp,
                 fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable(onClick = onCreateWarp),
             )
             Text("${profiles.profiles.size}", color = InkMuted, fontSize = 13.sp)
+            val pinging = ping.runningIds.isNotEmpty()
+            Text(
+                if (pinging) "Пинг…" else "Пинг",
+                color = if (profiles.profiles.isEmpty() || pinging) InkMuted else Ink,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier
+                    .padding(start = 12.dp)
+                    .clickable(enabled = profiles.profiles.isNotEmpty() && !pinging, onClick = onPing),
+            )
         }
         HorizontalDivider(color = Line, modifier = Modifier.padding(top = 8.dp))
         if (profiles.profiles.isEmpty()) {
@@ -331,43 +352,80 @@ private fun ServerSheet(
                     .verticalScroll(rememberScrollState()),
             ) {
                 profiles.profiles.forEach { profile ->
-                    val endpoint = remember(profile.rawConfig) { ConfigParser.endpointOf(profile.rawConfig) }
-                    val subtitle = remember(profile.rawConfig) { subtitleForConfig(profile.rawConfig) }
-                    val active = profile.id == profiles.activeId
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .clickable { onSelect(profile.id) }
-                            .background(if (active) Lift else Color.Transparent)
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        FlagBadge(endpoint, Modifier.padding(end = 12.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                profile.name,
-                                color = Ink,
-                                fontSize = 16.sp,
-                                fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            Text(
-                                subtitle,
-                                color = InkMuted,
-                                fontSize = 12.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                        if (active) {
-                            Text("●", color = Ink, fontSize = 12.sp, modifier = Modifier.padding(end = 4.dp))
-                        }
-                        DeleteServerButton(onClick = { onDelete(profile.id) })
+                    key(profile.id) {
+                        ServerRow(
+                            profile = profile,
+                            active = profile.id == profiles.activeId,
+                            pingMs = ping.millis[profile.id],
+                            pingKnown = ping.millis.containsKey(profile.id),
+                            pinging = profile.id in ping.runningIds,
+                            onSelect = { onSelect(profile.id) },
+                            onDelete = { onDelete(profile.id) },
+                        )
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ServerRow(
+    profile: VpnProfile,
+    active: Boolean,
+    pingMs: Int?,
+    pingKnown: Boolean,
+    pinging: Boolean,
+    onSelect: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    val endpoint = remember(profile.rawConfig) { ConfigParser.endpointOf(profile.rawConfig) }
+    val subtitle = remember(profile.rawConfig) { subtitleForConfig(profile.rawConfig) }
+    val pingLabel = when {
+        pinging -> "…"
+        pingMs != null -> "$pingMs мс"
+        pingKnown -> "н/д"
+        else -> ""
+    }
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onSelect)
+            .background(if (active) Lift else Color.Transparent)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        FlagBadge(endpoint, Modifier.padding(end = 12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                profile.name,
+                color = Ink,
+                fontSize = 16.sp,
+                fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                subtitle,
+                color = InkMuted,
+                fontSize = 12.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        if (pingLabel.isNotEmpty()) {
+            Text(
+                pingLabel,
+                color = InkMuted,
+                fontSize = 12.sp,
+                maxLines = 1,
+                modifier = Modifier.padding(end = 6.dp),
+            )
+        }
+        if (active) {
+            Text("●", color = Ink, fontSize = 12.sp, modifier = Modifier.padding(end = 4.dp))
+        }
+        DeleteServerButton(onClick = onDelete)
     }
 }
 

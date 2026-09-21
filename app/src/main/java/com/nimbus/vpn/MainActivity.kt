@@ -2,6 +2,7 @@ package com.nimbus.vpn
 
 import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -59,6 +60,7 @@ class MainActivity : ComponentActivity() {
                 val settings by viewModel.settings.collectAsStateWithLifecycle()
                 val warp by viewModel.warp.collectAsStateWithLifecycle()
                 val access by viewModel.access.collectAsStateWithLifecycle()
+                val ping by viewModel.ping.collectAsStateWithLifecycle()
                 val lifecycleState by androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
                 val animate = lifecycleState.isAtLeast(Lifecycle.State.STARTED)
 
@@ -81,7 +83,9 @@ class MainActivity : ComponentActivity() {
                 ) {}
 
                 LaunchedEffect(Unit) {
-                    if (Build.VERSION.SDK_INT >= 33) {
+                    if (Build.VERSION.SDK_INT >= 33 &&
+                        checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                    ) {
                         notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
                     }
                     handleIncoming(intent)
@@ -136,6 +140,8 @@ class MainActivity : ComponentActivity() {
                             onDelete = viewModel::deleteProfile,
                             onSettings = { go("settings") },
                             onConfirmAccess = viewModel::activateAccess,
+                            ping = ping,
+                            onPing = viewModel::pingServers,
                         )
                     }
                     composable("warp") {

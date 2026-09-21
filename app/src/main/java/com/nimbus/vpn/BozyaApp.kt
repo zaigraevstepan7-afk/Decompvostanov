@@ -1,6 +1,7 @@
 package com.nimbus.vpn
 
 import android.app.Application
+import android.os.UserManager
 import android.util.Log
 import com.nimbus.vpn.data.ProfileStore
 import com.nimbus.vpn.data.SettingsRepository
@@ -20,6 +21,7 @@ class BozyaApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        CrashLog.install(this)
         instance = this
         container = runCatching { AppContainer(this) }.getOrElse { first ->
             Log.e(TAG, "AppContainer failed, retrying after prefs reset", first)
@@ -29,6 +31,8 @@ class BozyaApp : Application() {
         AbstractBackend.setAlwaysOnCallback {
             appScope.launch {
                 runCatching {
+                    val user = getSystemService(UserManager::class.java)
+                    if (user != null && !user.isUserUnlocked) return@runCatching
                     if (container.settings.settings.first().autoConnect) {
                         container.tunnel.connectActive()
                     }

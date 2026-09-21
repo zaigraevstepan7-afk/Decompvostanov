@@ -27,12 +27,15 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nimbus.vpn.CrashLog
 import com.nimbus.vpn.data.AppSettings
 import com.nimbus.vpn.tunnel.ConnectionStatus
 import com.nimbus.vpn.tunnel.RootPowerManager
@@ -56,6 +59,13 @@ fun SettingsScreen(
     onCreateWarp: () -> Unit,
     onAccessLink: (Int) -> Unit,
 ) {
+    val context = LocalContext.current
+    val crash = remember { CrashLog.summary(context) }
+    val killSubtitle = if (root.rooted) {
+        "Блокирует трафик, пока VPN выключен"
+    } else {
+        "Нужен root. Без него переключатель только запоминается"
+    }
     Box(Modifier.fillMaxSize()) {
         MeshBackground(ConnectionStatus.DISCONNECTED, animate = true, modifier = Modifier.fillMaxSize())
         Column(
@@ -87,7 +97,7 @@ fun SettingsScreen(
             Spacer(Modifier.height(12.dp))
             ToggleRow("Автоподключение", "После перезагрузки и обрыва", settings.autoConnect, onAutoConnect)
             Spacer(Modifier.height(10.dp))
-            ToggleRow("Kill switch", "Always-on lockdown через root, если доступен", settings.killSwitch, onKillSwitch)
+            ToggleRow("Kill switch", killSubtitle, settings.killSwitch, onKillSwitch)
             Spacer(Modifier.height(10.dp))
             ToggleRow("Root-защита батареи", "Whitelist, appops, без разгона CPU", settings.rootBatteryGuard, onRootBattery)
             Spacer(Modifier.height(16.dp))
@@ -154,6 +164,11 @@ fun SettingsScreen(
                         Text("Запросить исключение", color = Ink)
                     }
                 }
+            }
+            if (crash != null) {
+                Spacer(Modifier.height(16.dp))
+                Text("Последний сбой", color = InkMuted, fontSize = 12.sp)
+                Text(crash, color = InkMuted, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
             }
         }
     }

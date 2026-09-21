@@ -10,8 +10,8 @@ val Line = Color(0xFF2C2C2E)
 val Ring = Color(0xFF3A3A3C)
 val Lift = Color(0xFF2C2C2E)
 val Disc = Color(0xFF141416)
-val Danger = Color(0xFFFFFFFF)
-val Success = Color(0xFFFFFFFF)
+val Danger = Color(0xFFFF6B6B)
+val Success = Color(0xFF9BE7B5)
 
 @Deprecated("Use Ink")
 val Night = Ink

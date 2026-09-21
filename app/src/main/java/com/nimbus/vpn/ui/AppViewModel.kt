@@ -6,14 +6,18 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.nimbus.vpn.BozyaApp
+import com.nimbus.vpn.data.AccessApi
 import com.nimbus.vpn.data.AppSettings
 import com.nimbus.vpn.data.ConfigParser
+import com.nimbus.vpn.data.ServerPing
 import com.nimbus.vpn.data.VpnProfile
 import com.nimbus.vpn.data.WarpGenerator
-import com.nimbus.vpn.data.AccessApi
 import com.nimbus.vpn.tunnel.ConnectionStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,9 +25,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
@@ -42,6 +49,11 @@ data class WarpUiState(
     val created: Boolean = false,
 )
 
+data class ServerPingState(
+    val runningIds: Set<String> = emptySet(),
+    val millis: Map<String, Int?> = emptyMap(),
+)
+
 class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val app = application as BozyaApp
     val tunnel = app.container.tunnel.ui
@@ -58,6 +70,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _access = MutableStateFlow(AccessUiState())
     val access: StateFlow<AccessUiState> = _access.asStateFlow()
+
+    private val _ping = MutableStateFlow(ServerPingState())
+    val ping: StateFlow<ServerPingState> = _ping.asStateFlow()
     private val opMutex = Mutex()
     private val toggleGate = AtomicBoolean(false)
     private var switchJob: Job? = null
@@ -119,6 +134,32 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun consumeWarpCreated() {
         if (_warp.value.created) {
             _warp.value = _warp.value.copy(created = false)
+        }
+    }
+
+    fun pingServers() {
+        if (_ping.value.runningIds.isNotEmpty()) return
+        val snapshot = app.container.profiles.profiles
+        if (snapshot.isEmpty()) return
+        _ping.update { it.copy(runningIds = snapshot.map { profile -> profile.id }.toSet()) }
+        viewModelScope.launch {
+            val gate = Semaphore(4)
+            coroutineScope {
+                snapshot.map { profile ->
+                    async(Dispatchers.IO) {
+                        gate.withPermit {
+                            val host = ServerPing.hostOf(ConfigParser.endpointOf(profile.rawConfig))
+                            val ms = if (host == null) null else ServerPing.ping(host)
+                            _ping.update { state ->
+                                state.copy(
+                                    runningIds = state.runningIds - profile.id,
+                                    millis = state.millis + (profile.id to ms),
+                                )
+                            }
+                        }
+                    }
+                }.awaitAll()
+            }
         }
     }
 
@@ -205,8 +246,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { importUri(uri, uri.lastPathSegment ?: "imported") }
     }
 
-    fun setAutoConnect(value: Boolean) = viewModelScope.launch { app.container.settings.setAutoConnect(value) }
-    fun setKillSwitch(value: Boolean) = viewModelScope.launch { app.container.settings.setKillSwitch(value) }
+    fun setAutoConnect(value: Boolean) = viewModelScope.launch {
+        app.container.settings.setAutoConnect(value)
+        val killSwitch = app.container.settings.settings.first().killSwitch
+        app.container.tunnel.applyVpnPolicy(value, killSwitch)
+    }
+
+    fun setKillSwitch(value: Boolean) = viewModelScope.launch {
+        app.container.settings.setKillSwitch(value)
+        val auto = app.container.settings.settings.first().autoConnect
+        app.container.tunnel.applyVpnPolicy(auto, value)
+    }
     fun setRootBattery(value: Boolean) = viewModelScope.launch { app.container.settings.setRootBatteryGuard(value) }
     fun setAccessLink(value: Int) = viewModelScope.launch {
         app.container.settings.setAccessLink(value)
