@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -18,6 +19,9 @@ class SettingsRepository(private val context: Context) {
             rootBatteryGuard = prefs[ROOT_BATTERY] ?: true,
             preferRoot = prefs[PREFER_ROOT] ?: true,
             accessLink = (prefs[ACCESS_LINK] ?: 1).coerceIn(1, 2),
+            coachStep = prefs[COACH_STEP] ?: 0,
+            streak = prefs[STREAK] ?: 0,
+            streakDay = prefs[STREAK_DAY] ?: 0L,
         )
     }
 
@@ -27,6 +31,17 @@ class SettingsRepository(private val context: Context) {
     suspend fun setPreferRoot(value: Boolean) = set(PREFER_ROOT, value)
     suspend fun setAccessLink(value: Int) {
         context.settingsStore.edit { it[ACCESS_LINK] = value.coerceIn(1, 2) }
+    }
+
+    suspend fun setCoachStep(step: Int) {
+        context.settingsStore.edit { it[COACH_STEP] = step }
+    }
+
+    suspend fun setStreak(count: Int, day: Long) {
+        context.settingsStore.edit {
+            it[STREAK] = count
+            it[STREAK_DAY] = day
+        }
     }
 
     private suspend fun set(key: androidx.datastore.preferences.core.Preferences.Key<Boolean>, value: Boolean) {
@@ -39,6 +54,9 @@ class SettingsRepository(private val context: Context) {
         val ROOT_BATTERY = booleanPreferencesKey("root_battery")
         val PREFER_ROOT = booleanPreferencesKey("prefer_root")
         val ACCESS_LINK = intPreferencesKey("access_link")
+        val COACH_STEP = intPreferencesKey("coach_step")
+        val STREAK = intPreferencesKey("streak")
+        val STREAK_DAY = longPreferencesKey("streak_day")
     }
 }
 
@@ -48,4 +66,7 @@ data class AppSettings(
     val rootBatteryGuard: Boolean = true,
     val preferRoot: Boolean = true,
     val accessLink: Int = 1,
+    val coachStep: Int = 0,
+    val streak: Int = 0,
+    val streakDay: Long = 0L,
 )

@@ -63,6 +63,7 @@ class MainActivity : ComponentActivity() {
                 val warp by viewModel.warp.collectAsStateWithLifecycle()
                 val access by viewModel.access.collectAsStateWithLifecycle()
                 val ping by viewModel.ping.collectAsStateWithLifecycle()
+                val joy by viewModel.joy.collectAsStateWithLifecycle()
                 val lifecycleState by androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
                 val animate = lifecycleState.isAtLeast(Lifecycle.State.STARTED)
 
@@ -140,10 +141,24 @@ class MainActivity : ComponentActivity() {
                             onImport = { go("import") },
                             onSelect = viewModel::selectProfile,
                             onDelete = viewModel::deleteProfile,
-                            onSettings = { go("settings") },
+                            onSettings = {
+                                viewModel.onEnterSettings()
+                                go("settings")
+                            },
                             onConfirmAccess = viewModel::activateAccess,
                             ping = ping,
                             onPing = viewModel::pingServers,
+                            settings = settings,
+                            joyPulse = joy,
+                            onCoachYes = {
+                                viewModel.coachYes(
+                                    hasProfiles = profiles.profiles.isNotEmpty(),
+                                    connected = tunnel.status == com.nimbus.vpn.tunnel.ConnectionStatus.CONNECTED,
+                                )
+                            },
+                            onCoachAdd = viewModel::onCoachAddTapped,
+                            onCoachReady = viewModel::onCoachWarpCreated,
+                            onCoachCelebrateNext = viewModel::onCoachCelebrateNext,
                         )
                     }
                     composable("warp") {
@@ -152,8 +167,13 @@ class MainActivity : ComponentActivity() {
                             onBack = { nav.popBackStack() },
                             onCreate = viewModel::createWarp,
                             onImport = { go("import") },
-                            onCreated = { nav.popBackStack("home", inclusive = false) },
+                            onCreated = {
+                                viewModel.onCoachWarpCreated()
+                                nav.popBackStack("home", inclusive = false)
+                            },
                             onConsumed = viewModel::consumeWarpCreated,
+                            guide = com.nimbus.vpn.ui.coach.CoachStep.from(settings.coachStep) ==
+                                com.nimbus.vpn.ui.coach.CoachStep.PICK,
                         )
                     }
                     composable("import") {
@@ -188,6 +208,12 @@ class MainActivity : ComponentActivity() {
                             },
                             onCreateWarp = { go("warp") },
                             onAccessLink = viewModel::setAccessLink,
+                            onCoachNext = {
+                                viewModel.onCoachTourNext(
+                                    com.nimbus.vpn.ui.coach.CoachStep.from(settings.coachStep),
+                                )
+                            },
+                            onCoachOpened = viewModel::onEnterSettings,
                         )
                     }
                 }

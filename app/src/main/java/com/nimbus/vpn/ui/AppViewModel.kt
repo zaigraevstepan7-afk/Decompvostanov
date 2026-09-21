@@ -9,10 +9,13 @@ import com.nimbus.vpn.BozyaApp
 import com.nimbus.vpn.data.AccessApi
 import com.nimbus.vpn.data.AppSettings
 import com.nimbus.vpn.data.ConfigParser
+import com.nimbus.vpn.data.DayStreak
 import com.nimbus.vpn.data.ServerPing
 import com.nimbus.vpn.data.VpnProfile
 import com.nimbus.vpn.data.WarpGenerator
 import com.nimbus.vpn.tunnel.ConnectionStatus
+import com.nimbus.vpn.ui.coach.CoachStep
+import java.time.LocalDate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -73,6 +76,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _ping = MutableStateFlow(ServerPingState())
     val ping: StateFlow<ServerPingState> = _ping.asStateFlow()
+    private val _joy = MutableStateFlow(0)
+    val joy: StateFlow<Int> = _joy.asStateFlow()
     private val opMutex = Mutex()
     private val toggleGate = AtomicBoolean(false)
     private var switchJob: Job? = null
@@ -261,5 +266,68 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun setAccessLink(value: Int) = viewModelScope.launch {
         app.container.settings.setAccessLink(value)
         _access.value = AccessUiState()
+    }
+
+    fun coachYes(hasProfiles: Boolean, connected: Boolean) {
+        val target = when {
+            connected -> CoachStep.CELEBRATE
+            hasProfiles -> CoachStep.CONNECT
+            else -> CoachStep.CREATE
+        }
+        advanceCoach(target)
+    }
+
+    fun onCoachAddTapped() = advanceCoach(CoachStep.PICK)
+
+    fun onCoachWarpCreated() = advanceCoach(CoachStep.CONNECT)
+
+    fun onCoachCelebrateNext() = advanceCoach(CoachStep.SETTINGS)
+
+    fun onEnterSettings() = advanceCoach(CoachStep.TOUR_AUTO, onlyFrom = CoachStep.SETTINGS)
+
+    fun onCoachTourNext(step: CoachStep) = advanceCoach(step.nextTour())
+
+    init {
+        viewModelScope.launch {
+            var seen = false
+            var wasConnected = false
+            tunnel.collect { state ->
+                val connected = state.status == ConnectionStatus.CONNECTED
+                if (!seen) {
+                    seen = true
+                    wasConnected = connected
+                    if (connected) recordStreak()
+                    return@collect
+                }
+                if (connected && !wasConnected) {
+                    recordStreak()
+                    _joy.update { it + 1 }
+                    val step = CoachStep.from(app.container.settings.settings.first().coachStep)
+                    if (step != CoachStep.OFFER && step.id <= CoachStep.CONNECT.id) {
+                        advanceCoach(CoachStep.CELEBRATE)
+                    }
+                }
+                wasConnected = connected
+            }
+        }
+    }
+
+    private fun advanceCoach(target: CoachStep, onlyFrom: CoachStep? = null) {
+        viewModelScope.launch {
+            val current = CoachStep.from(app.container.settings.settings.first().coachStep)
+            if (onlyFrom != null && current != onlyFrom) return@launch
+            if (target.id > current.id) {
+                app.container.settings.setCoachStep(target.id)
+            }
+        }
+    }
+
+    private suspend fun recordStreak() {
+        val today = LocalDate.now().toEpochDay()
+        val current = app.container.settings.settings.first()
+        val streak = DayStreak.next(current.streak, current.streakDay, today)
+        if (streak != current.streak || current.streakDay != today) {
+            app.container.settings.setStreak(streak, today)
+        }
     }
 }

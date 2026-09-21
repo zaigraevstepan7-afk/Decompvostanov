@@ -30,6 +30,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,6 +43,10 @@ import com.nimbus.vpn.CrashLog
 import com.nimbus.vpn.data.AppSettings
 import com.nimbus.vpn.tunnel.ConnectionStatus
 import com.nimbus.vpn.tunnel.RootPowerManager
+import com.nimbus.vpn.ui.coach.CoachStep
+import com.nimbus.vpn.ui.coach.CrabDock
+import com.nimbus.vpn.ui.coach.CrabMood
+import com.nimbus.vpn.ui.coach.coachGlow
 import com.nimbus.vpn.ui.components.MeshBackground
 import com.nimbus.vpn.ui.theme.Accent
 import com.nimbus.vpn.ui.theme.Canvas
@@ -65,9 +70,22 @@ fun SettingsScreen(
     onBatteryExemption: () -> Unit,
     onCreateWarp: () -> Unit,
     onAccessLink: (Int) -> Unit,
+    onCoachNext: () -> Unit,
+    onCoachOpened: () -> Unit,
 ) {
     val context = LocalContext.current
     val crash = remember { CrashLog.summary(context) }
+    val step = CoachStep.from(settings.coachStep)
+    LaunchedEffect(step) {
+        if (step == CoachStep.SETTINGS) onCoachOpened()
+    }
+    val tourLine = when (step) {
+        CoachStep.TOUR_AUTO -> "Автоподключение само поднимает туннель после перезагрузки и если связь оборвалась."
+        CoachStep.TOUR_KILL -> "Kill switch не пускает трафик мимо VPN. Без root переключатель только запоминается."
+        CoachStep.TOUR_LINK -> "Кнопка «Доступ» на главной открывает ссылку, которую выберешь здесь. Их две."
+        CoachStep.TOUR_BATTERY -> "Исключение из батареи не даёт Android усыпить туннель. С root Bozya делает это сама."
+        else -> null
+    }
     val killSubtitle = if (root.rooted) {
         "Блокирует трафик, пока VPN выключен"
     } else {
@@ -97,6 +115,7 @@ fun SettingsScreen(
             Column(
                 Modifier
                     .fillMaxWidth()
+                    .coachGlow(step == CoachStep.TOUR_AUTO || step == CoachStep.TOUR_KILL)
                     .clip(Card)
                     .background(Paper)
                     .border(1.dp, Line, Card),
@@ -117,6 +136,7 @@ fun SettingsScreen(
             Column(
                 Modifier
                     .fillMaxWidth()
+                    .coachGlow(step == CoachStep.TOUR_LINK)
                     .clip(Card)
                     .background(Paper)
                     .border(1.dp, Line, Card)
@@ -149,6 +169,7 @@ fun SettingsScreen(
             Column(
                 Modifier
                     .fillMaxWidth()
+                    .coachGlow(step == CoachStep.TOUR_BATTERY)
                     .clip(Card)
                     .background(Paper)
                     .border(1.dp, Line, Card)
@@ -180,7 +201,20 @@ fun SettingsScreen(
                 SectionLabel("Последний сбой")
                 Text(crash, color = InkMuted, fontSize = 12.sp)
             }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(if (tourLine != null) 210.dp else 16.dp))
+        }
+        if (tourLine != null) {
+            CrabDock(
+                mood = CrabMood.POINT,
+                message = tourLine,
+                action = if (step == CoachStep.TOUR_BATTERY) "Понятно" else "Дальше",
+                onAction = onCoachNext,
+                joyPulse = 0,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .navigationBarsPadding()
+                    .padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+            )
         }
     }
 }

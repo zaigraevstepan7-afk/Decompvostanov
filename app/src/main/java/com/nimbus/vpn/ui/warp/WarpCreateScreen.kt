@@ -43,6 +43,9 @@ import androidx.compose.ui.unit.sp
 import com.nimbus.vpn.data.WarpConfigBuilder
 import com.nimbus.vpn.tunnel.ConnectionStatus
 import com.nimbus.vpn.ui.WarpUiState
+import com.nimbus.vpn.ui.coach.CrabDock
+import com.nimbus.vpn.ui.coach.CrabMood
+import com.nimbus.vpn.ui.coach.coachGlow
 import com.nimbus.vpn.ui.components.MeshBackground
 import com.nimbus.vpn.ui.theme.Accent
 import com.nimbus.vpn.ui.theme.Canvas
@@ -63,6 +66,7 @@ fun WarpCreateScreen(
     onImport: () -> Unit,
     onCreated: () -> Unit,
     onConsumed: () -> Unit,
+    guide: Boolean = false,
 ) {
     var countryId by remember { mutableStateOf("de") }
     var lte by remember { mutableStateOf(false) }
@@ -106,6 +110,16 @@ fun WarpCreateScreen(
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp),
             ) {
+                if (guide) {
+                    CrabDock(
+                        mood = CrabMood.POINT,
+                        message = "Выбери страну и нажми светящуюся кнопку «Создать» внизу.",
+                        action = null,
+                        onAction = null,
+                        joyPulse = 0,
+                        modifier = Modifier.padding(bottom = 12.dp),
+                    )
+                }
                 Spacer(Modifier.height(8.dp))
                 WarpConfigBuilder.countries.chunked(2).forEach { row ->
                     Row(
@@ -179,7 +193,10 @@ fun WarpCreateScreen(
                         disabledContentColor = InkMuted,
                     ),
                     shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth().height(54.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(54.dp)
+                        .coachGlow(guide && !warp.generating),
                 ) {
                     if (warp.generating) {
                         CircularProgressIndicator(

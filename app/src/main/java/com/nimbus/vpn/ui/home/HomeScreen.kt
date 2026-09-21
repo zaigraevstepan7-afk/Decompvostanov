@@ -45,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nimbus.vpn.data.AppSettings
 import com.nimbus.vpn.data.ConfigParser
 import com.nimbus.vpn.data.ProfileIndex
 import com.nimbus.vpn.data.VpnProfile
@@ -53,6 +54,10 @@ import com.nimbus.vpn.tunnel.TunnelUiState
 import com.nimbus.vpn.ui.AccessStatus
 import com.nimbus.vpn.ui.AccessUiState
 import com.nimbus.vpn.ui.ServerPingState
+import com.nimbus.vpn.ui.coach.CoachStep
+import com.nimbus.vpn.ui.coach.CrabDock
+import com.nimbus.vpn.ui.coach.CrabMood
+import com.nimbus.vpn.ui.coach.coachGlow
 import com.nimbus.vpn.ui.components.ConfirmDeleteDialog
 import com.nimbus.vpn.ui.components.DeleteServerButton
 import com.nimbus.vpn.ui.components.MeshBackground
@@ -85,6 +90,12 @@ fun HomeScreen(
     onConfirmAccess: () -> Unit,
     ping: ServerPingState,
     onPing: () -> Unit,
+    settings: AppSettings,
+    joyPulse: Int,
+    onCoachYes: () -> Unit,
+    onCoachAdd: () -> Unit,
+    onCoachReady: () -> Unit,
+    onCoachCelebrateNext: () -> Unit,
 ) {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var pendingDelete by remember { mutableStateOf<Pair<String, String>?>(null) }
@@ -98,6 +109,43 @@ fun HomeScreen(
     val active = profiles.profiles.firstOrNull { it.id == profiles.activeId } ?: state.profile
     val busy = state.status == ConnectionStatus.CONNECTING
     val connected = state.status == ConnectionStatus.CONNECTED
+    val step = CoachStep.from(settings.coachStep)
+    var cheer by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(profiles.profiles.size, step) {
+        if (profiles.profiles.isNotEmpty() && (step == CoachStep.CREATE || step == CoachStep.PICK)) {
+            onCoachReady()
+        }
+    }
+    LaunchedEffect(joyPulse) {
+        if (joyPulse == 0 || step != CoachStep.DONE) return@LaunchedEffect
+        cheer = "Ура, мы в сети! Серия ${settings.streak.coerceAtLeast(1)}."
+        delay(4200)
+        cheer = null
+    }
+    val coachMessage = when (step) {
+        CoachStep.OFFER -> "Привет! Я крабик Bozya. Показать, как тут всё устроено?"
+        CoachStep.CREATE, CoachStep.PICK -> "Нажми светящуюся кнопку «+» и создай сервер сам. Я подожду."
+        CoachStep.CONNECT -> "Теперь нажми круглую кнопку внизу. Она включит туннель."
+        CoachStep.CELEBRATE -> "Получилось! Серия ${settings.streak.coerceAtLeast(1)} дн. Дальше заглянем в настройки."
+        CoachStep.SETTINGS -> "Открой шестерёнку справа. Там расскажу про каждый переключатель."
+        else -> cheer
+    }
+    val coachAction = when (step) {
+        CoachStep.OFFER -> "Да"
+        CoachStep.CELEBRATE -> "Дальше"
+        else -> null
+    }
+    val coachClick: (() -> Unit)? = when (step) {
+        CoachStep.OFFER -> onCoachYes
+        CoachStep.CELEBRATE -> onCoachCelebrateNext
+        else -> null
+    }
+    val mood = when (step) {
+        CoachStep.OFFER -> CrabMood.WAVE
+        CoachStep.CELEBRATE -> CrabMood.JOY
+        CoachStep.DONE -> if (cheer != null) CrabMood.JOY else CrabMood.CALM
+        else -> CrabMood.POINT
+    }
 
     Box(Modifier.fillMaxSize()) {
         MeshBackground(state.status, animate, Modifier.fillMaxSize())
@@ -117,13 +165,35 @@ fun HomeScreen(
                     modifier = Modifier.padding(start = 12.dp).weight(1f),
                     maxLines = 1,
                 )
-                IconButton(onClick = onCreateWarp) {
+                if (settings.streak > 0) {
+                    Text(
+                        "${settings.streak} дн.",
+                        color = Accent,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Paper)
+                            .border(1.dp, Line, RoundedCornerShape(12.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                    )
+                }
+                IconButton(
+                    onClick = {
+                        onCoachAdd()
+                        onCreateWarp()
+                    },
+                    modifier = Modifier.coachGlow(step == CoachStep.CREATE || step == CoachStep.PICK),
+                ) {
                     Icon(Icons.Rounded.Add, contentDescription = "Новый сервер", tint = Ink)
                 }
                 IconButton(onClick = onImport) {
                     Icon(Icons.Rounded.Description, contentDescription = "Импорт", tint = Ink)
                 }
-                IconButton(onClick = onSettings) {
+                IconButton(
+                    onClick = onSettings,
+                    modifier = Modifier.coachGlow(step == CoachStep.SETTINGS),
+                ) {
                     Icon(Icons.Rounded.Settings, contentDescription = "Настройки", tint = Ink)
                 }
             }
@@ -155,7 +225,7 @@ fun HomeScreen(
                         start = 16.dp,
                         end = 16.dp,
                         top = 8.dp,
-                        bottom = 108.dp,
+                        bottom = if (coachMessage != null) 230.dp else 120.dp,
                     ),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
@@ -181,7 +251,8 @@ fun HomeScreen(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
-                .padding(bottom = 18.dp),
+                .padding(bottom = 18.dp)
+                .coachGlow(step == CoachStep.CONNECT),
             onClick = {
                 when {
                     busy -> Unit
@@ -189,6 +260,17 @@ fun HomeScreen(
                     else -> onToggle()
                 }
             },
+        )
+        CrabDock(
+            mood = mood,
+            message = coachMessage,
+            action = coachAction,
+            onAction = coachClick,
+            joyPulse = joyPulse,
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .navigationBarsPadding()
+                .padding(start = 12.dp, bottom = 8.dp, end = 72.dp),
         )
         pendingDelete?.let { (id, name) ->
             ConfirmDeleteDialog(
