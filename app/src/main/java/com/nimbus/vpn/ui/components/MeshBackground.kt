@@ -20,7 +20,6 @@ import com.nimbus.vpn.tunnel.ConnectionStatus
 import com.nimbus.vpn.ui.theme.Accent
 import com.nimbus.vpn.ui.theme.Canvas
 import com.nimbus.vpn.ui.theme.Mist
-import com.nimbus.vpn.ui.theme.Motion
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
