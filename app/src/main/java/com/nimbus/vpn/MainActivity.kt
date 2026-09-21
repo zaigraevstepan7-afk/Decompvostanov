@@ -14,8 +14,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -115,16 +115,16 @@ class MainActivity : ComponentActivity() {
                     startDestination = "home",
                     modifier = Modifier.fillMaxSize(),
                     enterTransition = {
-                        fadeIn(Motion.fade(380)) + slideInHorizontally(Motion.offset(420)) { it / 10 }
+                        fadeIn(Motion.fade(380)) + slideInVertically(Motion.offset(420)) { it / 8 }
                     },
                     exitTransition = {
-                        fadeOut(Motion.fade(220)) + slideOutHorizontally(Motion.offset(280)) { -it / 12 }
+                        fadeOut(Motion.fade(220)) + slideOutVertically(Motion.offset(280)) { -it / 16 }
                     },
                     popEnterTransition = {
-                        fadeIn(Motion.fade(320)) + slideInHorizontally(Motion.offset(360)) { -it / 12 }
+                        fadeIn(Motion.fade(320)) + slideInVertically(Motion.offset(360)) { -it / 16 }
                     },
                     popExitTransition = {
-                        fadeOut(Motion.fade(200)) + slideOutHorizontally(Motion.offset(280)) { it / 10 }
+                        fadeOut(Motion.fade(200)) + slideOutVertically(Motion.offset(280)) { it / 8 }
                     },
                 ) {
                     composable("home") {

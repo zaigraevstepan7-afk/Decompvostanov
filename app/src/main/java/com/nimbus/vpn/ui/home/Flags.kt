@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nimbus.vpn.R
@@ -53,14 +54,14 @@ fun subtitleForConfig(raw: String): String {
 }
 
 @Composable
-fun FlagBadge(endpoint: String?, modifier: Modifier = Modifier) {
+fun FlagBadge(endpoint: String?, modifier: Modifier = Modifier, badge: Dp = 36.dp) {
     val res = flagResForEndpoint(endpoint)
     if (res != null) {
         Image(
             painter = painterResource(res),
             contentDescription = null,
             contentScale = ContentScale.Crop,
-            modifier = modifier.size(36.dp).clip(CircleShape),
+            modifier = modifier.size(badge).clip(CircleShape),
         )
     } else {
         Text(flagForEndpoint(endpoint), fontSize = 22.sp, modifier = modifier)
