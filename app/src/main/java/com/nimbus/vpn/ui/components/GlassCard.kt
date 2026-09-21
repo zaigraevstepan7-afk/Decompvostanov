@@ -19,7 +19,7 @@ fun GlassCard(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit,
 ) {
-    val shape = RoundedCornerShape(18.dp)
+    val shape = RoundedCornerShape(22.dp)
     Box(
         modifier
             .shadow(2.dp, shape, ambientColor = Color(0x14000000), spotColor = Color(0x14000000))

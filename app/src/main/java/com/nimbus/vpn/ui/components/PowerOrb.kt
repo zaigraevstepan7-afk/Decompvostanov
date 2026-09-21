@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -34,8 +35,10 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.nimbus.vpn.tunnel.ConnectionStatus
+import com.nimbus.vpn.ui.theme.Accent
 import com.nimbus.vpn.ui.theme.Disc
 import com.nimbus.vpn.ui.theme.Ink
+import com.nimbus.vpn.ui.theme.Mist
 import com.nimbus.vpn.ui.theme.Motion
 import com.nimbus.vpn.ui.theme.Ring
 
@@ -57,29 +60,27 @@ fun PowerOrb(
     val discScale by animateFloatAsState(
         targetValue = when (status) {
             ConnectionStatus.CONNECTING -> 0.96f
-            ConnectionStatus.CONNECTED -> 1.02f
+            ConnectionStatus.CONNECTED -> 1.03f
             else -> 1f
         },
         animationSpec = Motion.Soft,
         label = "disc",
     )
-    val fill by animateColorAsState(
-        targetValue = if (status == ConnectionStatus.CONNECTED) Color(0xFF242428) else Disc,
-        animationSpec = Motion.color(480),
-        label = "fill",
+    val connected = status == ConnectionStatus.CONNECTED
+    val discColor by animateColorAsState(
+        targetValue = if (connected) Color(0xFF2A2416) else Disc,
+        animationSpec = Motion.color(640),
+        label = "disc-color",
     )
     val iconTint by animateColorAsState(
-        targetValue = when (status) {
-            ConnectionStatus.DISCONNECTED -> Color(0xFFD0D0D4)
-            else -> Ink
-        },
-        animationSpec = Motion.color(360),
+        targetValue = if (connected) Accent else Ink,
+        animationSpec = Motion.color(420),
         label = "icon",
     )
 
     Box(
         modifier
-            .size(220.dp)
+            .size(236.dp)
             .graphicsLayer {
                 scaleX = pressScale
                 scaleY = pressScale
@@ -97,23 +98,32 @@ fun PowerOrb(
             val center = Offset(size.width / 2f, size.height / 2f)
             val outer = size.minDimension / 2f
             drawCircle(
-                color = Ring.copy(alpha = 0.55f),
-                radius = outer * 0.92f,
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        (if (connected) Accent else Mist).copy(alpha = 0.16f),
+                        Color.Transparent,
+                    ),
+                    center = center,
+                    radius = outer,
+                ),
+                radius = outer,
                 center = center,
-                style = Stroke(width = 1.dp.toPx()),
             )
             drawCircle(
                 color = Ring.copy(alpha = 0.9f),
                 radius = outer * 0.78f,
                 center = center,
-                style = Stroke(width = 1.2.dp.toPx()),
+                style = Stroke(width = 1.4.dp.toPx()),
             )
         }
         if (animate && status == ConnectionStatus.CONNECTING) {
             ConnectingSweep()
         }
-        if (animate && status == ConnectionStatus.CONNECTED) {
+        if (animate && connected) {
             ConnectedRipples()
+        }
+        if (animate && status == ConnectionStatus.DISCONNECTED) {
+            IdleBreath()
         }
         Box(
             Modifier
@@ -122,16 +132,36 @@ fun PowerOrb(
                     scaleX = discScale
                     scaleY = discScale
                 }
-                .background(fill, CircleShape),
+                .background(discColor, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 Icons.Rounded.PowerSettingsNew,
                 contentDescription = "Подключить",
                 tint = iconTint,
-                modifier = Modifier.size(56.dp),
+                modifier = Modifier.size(54.dp),
             )
         }
+    }
+}
+
+@Composable
+private fun IdleBreath() {
+    val infinite = rememberInfiniteTransition(label = "idle")
+    val alpha by infinite.animateFloat(
+        initialValue = 0.18f,
+        targetValue = 0.45f,
+        animationSpec = infiniteRepeatable(tween(2400, easing = Motion.EaseInOut), RepeatMode.Reverse),
+        label = "idle-a",
+    )
+    Canvas(Modifier.size(236.dp)) {
+        val center = Offset(size.width / 2f, size.height / 2f)
+        drawCircle(
+            color = Mist.copy(alpha = alpha),
+            radius = size.minDimension / 2f * 0.9f,
+            center = center,
+            style = Stroke(width = 1.6.dp.toPx()),
+        )
     }
 }
 
@@ -141,44 +171,31 @@ private fun ConnectingSweep() {
     val spin by infinite.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            tween(1400, easing = LinearEasing),
-            RepeatMode.Restart,
-        ),
+        animationSpec = infiniteRepeatable(tween(1600, easing = LinearEasing), RepeatMode.Restart),
         label = "spin",
     )
-    val breath by infinite.animateFloat(
-        initialValue = 0.12f,
-        targetValue = 0.28f,
-        animationSpec = infiniteRepeatable(
-            tween(900, easing = Motion.EaseInOut),
-            RepeatMode.Reverse,
-        ),
-        label = "breath",
-    )
-    Canvas(Modifier.size(220.dp)) {
+    Canvas(Modifier.size(236.dp)) {
         val center = Offset(size.width / 2f, size.height / 2f)
         val outer = size.minDimension / 2f
-        val diameter = outer * 1.84f
-        val topLeft = Offset(center.x - outer * 0.92f, center.y - outer * 0.92f)
-        val arcSize = Size(diameter, diameter)
+        val topLeft = Offset(center.x - outer * 0.9f, center.y - outer * 0.9f)
+        val arc = Size(outer * 1.8f, outer * 1.8f)
         drawArc(
-            color = Ink.copy(alpha = breath),
-            startAngle = spin - 70f,
-            sweepAngle = 110f,
+            color = Accent.copy(alpha = 0.35f),
+            startAngle = spin - 40f,
+            sweepAngle = 150f,
             useCenter = false,
             topLeft = topLeft,
-            size = arcSize,
+            size = arc,
             style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round),
         )
         drawArc(
-            color = Ink,
+            color = Accent,
             startAngle = spin,
-            sweepAngle = 72f,
+            sweepAngle = 70f,
             useCenter = false,
             topLeft = topLeft,
-            size = arcSize,
-            style = Stroke(width = 3.4.dp.toPx(), cap = StrokeCap.Round),
+            size = arc,
+            style = Stroke(width = 3.6.dp.toPx(), cap = StrokeCap.Round),
         )
     }
 }
@@ -187,61 +204,55 @@ private fun ConnectingSweep() {
 private fun ConnectedRipples() {
     val infinite = rememberInfiniteTransition(label = "connected-ripple")
     val ripple by infinite.animateFloat(
-        initialValue = 0.78f,
-        targetValue = 1.14f,
-        animationSpec = infiniteRepeatable(
-            tween(2200, easing = Motion.EaseOut),
-            RepeatMode.Restart,
-        ),
+        initialValue = 0.8f,
+        targetValue = 1.12f,
+        animationSpec = infiniteRepeatable(tween(2600, easing = Motion.EaseOut), RepeatMode.Restart),
         label = "ripple",
     )
     val alpha by infinite.animateFloat(
-        initialValue = 0.34f,
+        initialValue = 0.55f,
         targetValue = 0f,
-        animationSpec = infiniteRepeatable(
-            tween(2200, easing = LinearEasing),
-            RepeatMode.Restart,
-        ),
+        animationSpec = infiniteRepeatable(tween(2600, easing = LinearEasing), RepeatMode.Restart),
         label = "rippleA",
     )
     val ripple2 by infinite.animateFloat(
-        initialValue = 0.78f,
-        targetValue = 1.14f,
+        initialValue = 0.8f,
+        targetValue = 1.12f,
         animationSpec = infiniteRepeatable(
-            tween(2200, delayMillis = 900, easing = Motion.EaseOut),
+            tween(2600, delayMillis = 1100, easing = Motion.EaseOut),
             RepeatMode.Restart,
         ),
         label = "ripple2",
     )
     val alpha2 by infinite.animateFloat(
-        initialValue = 0.22f,
+        initialValue = 0.35f,
         targetValue = 0f,
         animationSpec = infiniteRepeatable(
-            tween(2200, delayMillis = 900, easing = LinearEasing),
+            tween(2600, delayMillis = 1100, easing = LinearEasing),
             RepeatMode.Restart,
         ),
         label = "rippleA2",
     )
-    Canvas(Modifier.size(220.dp)) {
+    Canvas(Modifier.size(236.dp)) {
         val center = Offset(size.width / 2f, size.height / 2f)
         val outer = size.minDimension / 2f
         drawCircle(
-            color = Ink.copy(alpha = 0.95f),
+            color = Accent.copy(alpha = 0.9f),
             radius = outer * 0.78f,
             center = center,
-            style = Stroke(width = 2.2.dp.toPx()),
+            style = Stroke(width = 2.dp.toPx()),
         )
         drawCircle(
-            color = Ink.copy(alpha = alpha),
+            color = Accent.copy(alpha = alpha),
             radius = outer * ripple,
             center = center,
-            style = Stroke(width = 1.8.dp.toPx()),
+            style = Stroke(width = 1.6.dp.toPx()),
         )
         drawCircle(
-            color = Ink.copy(alpha = alpha2),
+            color = Mist.copy(alpha = alpha2),
             radius = outer * ripple2,
             center = center,
-            style = Stroke(width = 1.4.dp.toPx()),
+            style = Stroke(width = 1.3.dp.toPx()),
         )
     }
 }

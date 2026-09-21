@@ -5,9 +5,9 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 
 private val Scheme = darkColorScheme(
-    primary = Ink,
+    primary = Accent,
     onPrimary = Canvas,
-    secondary = InkMuted,
+    secondary = Mist,
     onSecondary = Canvas,
     background = Canvas,
     onBackground = Ink,
@@ -15,7 +15,7 @@ private val Scheme = darkColorScheme(
     onSurface = Ink,
     surfaceVariant = Lift,
     onSurfaceVariant = InkMuted,
-    error = Ink,
+    error = Danger,
     onError = Canvas,
     outline = Line,
 )

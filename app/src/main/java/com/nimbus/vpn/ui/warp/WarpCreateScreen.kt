@@ -43,6 +43,8 @@ import com.nimbus.vpn.data.WarpConfigBuilder
 import com.nimbus.vpn.tunnel.ConnectionStatus
 import com.nimbus.vpn.ui.WarpUiState
 import com.nimbus.vpn.ui.components.MeshBackground
+import com.nimbus.vpn.ui.theme.Accent
+import com.nimbus.vpn.ui.theme.Canvas
 import com.nimbus.vpn.ui.theme.Ink
 import com.nimbus.vpn.ui.theme.InkMuted
 import com.nimbus.vpn.ui.theme.Lift
@@ -110,7 +112,7 @@ fun WarpCreateScreen(
                             .padding(bottom = 8.dp)
                             .fillMaxWidth()
                             .clip(CardShape)
-                            .border(if (selected) 2.dp else 1.dp, if (selected) Ink else Line, CardShape)
+                            .border(if (selected) 2.dp else 1.dp, if (selected) Accent else Line, CardShape)
                             .background(if (selected) Lift else Paper)
                             .clickable(enabled = !warp.generating) { countryId = item.id }
                             .padding(horizontal = 16.dp, vertical = 14.dp),
@@ -130,7 +132,7 @@ fun WarpCreateScreen(
                                 fontSize = 12.sp,
                             )
                         }
-                        if (selected) Text("•", color = Ink, fontSize = 22.sp)
+                        if (selected) Text("•", color = Accent, fontSize = 22.sp)
                     }
                 }
                 Spacer(Modifier.height(8.dp))
@@ -160,8 +162,8 @@ fun WarpCreateScreen(
                         onCheckedChange = { lte = it },
                         enabled = lteAvailable && !warp.generating,
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor = Paper,
-                            checkedTrackColor = Ink,
+                            checkedThumbColor = Canvas,
+                            checkedTrackColor = Accent,
                             uncheckedThumbColor = Paper,
                             uncheckedTrackColor = Line,
                             uncheckedBorderColor = Line,

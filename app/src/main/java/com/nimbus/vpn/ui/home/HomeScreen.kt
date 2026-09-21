@@ -70,6 +70,7 @@ import com.nimbus.vpn.ui.components.ConfirmDeleteDialog
 import com.nimbus.vpn.ui.components.DeleteServerButton
 import com.nimbus.vpn.ui.components.MeshBackground
 import com.nimbus.vpn.ui.components.PowerOrb
+import com.nimbus.vpn.ui.theme.Accent
 import com.nimbus.vpn.ui.theme.Canvas
 import com.nimbus.vpn.ui.theme.Danger
 import com.nimbus.vpn.ui.theme.Ink
@@ -123,9 +124,9 @@ fun HomeScreen(
         sheetContentColor = Ink,
         sheetTonalElevation = 0.dp,
         sheetShadowElevation = 16.dp,
-        sheetShape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+        sheetShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         sheetPeekHeight = peek,
-        sheetDragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFF5A5A5E)) },
+        sheetDragHandle = { BottomSheetDefaults.DragHandle(color = Accent.copy(alpha = 0.7f)) },
         sheetContent = {
             ServerSheet(
                 profiles = profiles,
@@ -185,8 +186,13 @@ fun HomeScreen(
                     ) { label ->
                         Text(
                             label,
-                            color = if (state.status == ConnectionStatus.DISCONNECTED) InkMuted else Ink,
-                            fontSize = 15.sp,
+                            color = when (state.status) {
+                                ConnectionStatus.CONNECTED -> Accent
+                                ConnectionStatus.CONNECTING -> Ink
+                                ConnectionStatus.ERROR -> Danger
+                                ConnectionStatus.DISCONNECTED -> InkMuted
+                            },
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.Medium,
                         )
                     }
@@ -235,7 +241,7 @@ private fun AccessChip(access: AccessUiState, onClick: () -> Unit) {
     val working = access.status == AccessStatus.WORKING
     val ok = access.status == AccessStatus.OK
     val bg by animateColorAsState(
-        targetValue = if (ok) Ink else Color.Transparent,
+        targetValue = if (ok) Accent else Color.Transparent,
         animationSpec = Motion.color(280),
         label = "chip-bg",
     )

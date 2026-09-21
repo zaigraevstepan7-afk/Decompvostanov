@@ -41,6 +41,7 @@ import com.nimbus.vpn.tunnel.ConnectionStatus
 import com.nimbus.vpn.tunnel.RootPowerManager
 import com.nimbus.vpn.ui.components.GlassCard
 import com.nimbus.vpn.ui.components.MeshBackground
+import com.nimbus.vpn.ui.theme.Accent
 import com.nimbus.vpn.ui.theme.Canvas
 import com.nimbus.vpn.ui.theme.Ink
 import com.nimbus.vpn.ui.theme.InkMuted
@@ -189,8 +190,8 @@ private fun ToggleRow(title: String, subtitle: String, checked: Boolean, onChang
                 checked = checked,
                 onCheckedChange = onChange,
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = Paper,
-                    checkedTrackColor = Ink,
+                    checkedThumbColor = Canvas,
+                    checkedTrackColor = Accent,
                     uncheckedThumbColor = Paper,
                     uncheckedTrackColor = Line,
                     uncheckedBorderColor = Line,
