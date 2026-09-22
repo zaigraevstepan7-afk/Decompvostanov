@@ -311,16 +311,20 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 if (!seen) {
                     seen = true
                     wasConnected = connected
-                    if (connected) recordStreak()
+                    if (connected) {
+                        recordStreak()
+                        app.container.settings.setHeardAccess(true)
+                    }
                     return@collect
                 }
                 if (connected && !wasConnected) {
                     recordStreak()
                     _joy.update { it + 1 }
                     val step = CoachStep.from(app.container.settings.settings.first().coachStep)
-                    if (step == CoachStep.CONNECT) {
-                        advanceCoach(CoachStep.CELEBRATE)
+                    if (step == CoachStep.CONNECT || step == CoachStep.ACCESS) {
+                        app.container.settings.setCoachStep(CoachStep.CELEBRATE.id)
                     }
+                    app.container.settings.setHeardAccess(true)
                 }
                 wasConnected = connected
             }

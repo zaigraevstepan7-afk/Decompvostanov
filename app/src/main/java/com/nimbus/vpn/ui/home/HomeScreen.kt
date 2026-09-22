@@ -137,18 +137,7 @@ fun HomeScreen(
         delay(4200)
         cheer = null
     }
-    val teachAccess = step == CoachStep.ACCESS || (
-        !settings.heardAccess &&
-            step != CoachStep.OFFER &&
-            step != CoachStep.CREATE &&
-            step != CoachStep.PICK &&
-            step != CoachStep.CELEBRATE &&
-            step != CoachStep.SETTINGS &&
-            !step.explaining
-        )
-    val broken = state.status == ConnectionStatus.ERROR && !teachAccess &&
-        step != CoachStep.OFFER && step != CoachStep.CREATE && step != CoachStep.PICK &&
-        step != CoachStep.CELEBRATE && step != CoachStep.SETTINGS && !step.explaining
+    val teachAccess = !settings.heardAccess && (step == CoachStep.ACCESS || step == CoachStep.CONNECT)
     val coachMessage = when {
         step == CoachStep.OFFER -> "Привет! Показать, как тут всё устроено?"
         step == CoachStep.CREATE || step == CoachStep.PICK -> "Нажми светящуюся кнопку «+» и создай сервер сам. Я подожду."
@@ -156,7 +145,6 @@ fun HomeScreen(
         step == CoachStep.CONNECT -> "Теперь нажми круглую кнопку внизу. Она включит туннель."
         step == CoachStep.CELEBRATE -> "Получилось! Серия ${settings.streak.coerceAtLeast(1)} дн. Дальше заглянем в настройки."
         step == CoachStep.SETTINGS -> "Открой шестерёнку справа. Там расскажу про каждый переключатель."
-        broken -> "Перестало работать. Отключи VPN и нажми «Доступ» ещё раз."
         else -> cheer
     }
     val coachAction = when (step) {
@@ -172,7 +160,7 @@ fun HomeScreen(
     val mood = when {
         step == CoachStep.OFFER -> DogMood.WAVE
         step == CoachStep.CELEBRATE -> DogMood.JOY
-        teachAccess || broken -> DogMood.POINT
+        teachAccess -> DogMood.POINT
         step == CoachStep.DONE && cheer != null -> DogMood.JOY
         step == CoachStep.DONE -> DogMood.CALM
         else -> DogMood.POINT
@@ -190,7 +178,7 @@ fun HomeScreen(
                 AccessChip(
                     access = access,
                     onClick = onConfirmAccess,
-                    glow = teachAccess || broken,
+                    glow = teachAccess,
                 )
                 Text(
                     "Bozya",
