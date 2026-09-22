@@ -1,0 +1,660 @@
+package com.antigravity.core
+
+import com.antigravity.core.agent.AgentListener
+import com.antigravity.core.agent.AgentLoop
+import com.antigravity.core.agent.LocalDeviceFs
+import com.antigravity.core.agent.ToolExecutor
+import com.antigravity.core.api.CloudCodeClient
+import com.antigravity.core.api.GeminiModels
+import com.antigravity.core.api.ContentTurn
+import com.antigravity.core.api.FunctionCall
+import com.antigravity.core.api.LlmClient
+import com.antigravity.core.api.ModelReply
+import com.antigravity.core.auth.AntigravityOAuth
+import com.antigravity.core.auth.AntigravitySession
+import com.antigravity.core.auth.decodeSession
+import com.antigravity.core.auth.encodeSession
+import com.antigravity.core.api.textTurn
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.io.File
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
+import kotlin.test.assertContains
+
+class AntigravityCoreTest {
+
+    @TempDir
+    lateinit var tmp: File
+
+    @Test
+    fun oauthUrlUsesAntigravityGoogleClientAndLoopback() {
+        val state = "abc123"
+        val url = AntigravityOAuth.buildAuthUrl(state)
+        assertTrue(url.startsWith("https://accounts.google.com/o/oauth2/v2/auth?"))
+        assertContains(url, "client_id=${AntigravityOAuth.CLIENT_ID}")
+        assertContains(url, "redirect_uri=http%3A%2F%2F127.0.0.1%3A51121%2Foauth-callback")
+        assertContains(url, "access_type=offline")
+        assertContains(url, "prompt=consent")
+        assertContains(url, "cloud-platform")
+        assertContains(url, "state=abc123")
+        assertFalse(url.contains("generativelanguage.googleapis.com"))
+    }
+
+    @Test
+    fun sessionRoundTrip() {
+        val session = AntigravitySession(
+            accessToken = "at",
+            refreshToken = "rt",
+            expiresAtEpochMs = 42L,
+            email = "user@gmail.com",
+            projectId = "proj-1",
+        )
+        val restored = decodeSession(encodeSession(session))
+        assertEquals("antigravity", restored.type)
+        assertEquals("user@gmail.com", restored.email)
+        assertEquals("proj-1", restored.projectId)
+        assertTrue(session.isExpired(nowMs = 100_000))
+        assertFalse(session.isExpired(nowMs = 1L, skewMs = 0))
+    }
+
+    @Test
+    fun extractZipOnLocalFilesystem() {
+        val zip = File(tmp, "project.zip")
+        ZipOutputStream(zip.outputStream()).use { out ->
+            out.putNextEntry(ZipEntry("src/Main.kt"))
+            out.write("fun main() = println(\"hi\")".toByteArray())
+            out.closeEntry()
+            out.putNextEntry(ZipEntry("readme.txt"))
+            out.write("hello phone".toByteArray())
+            out.closeEntry()
+        }
+        val fs = LocalDeviceFs(tmp)
+        val result = fs.extract(zip.absolutePath, File(tmp, "out").absolutePath)
+        assertEquals(2, result.files.size)
+        assertEquals("hello phone", File(tmp, "out/readme.txt").readText())
+        assertTrue(File(tmp, "out/src/Main.kt").exists())
+    }
+
+    @Test
+    fun editAndReadWorkspaceFiles() {
+        val fs = LocalDeviceFs(tmp)
+        fs.writeText("app.txt", "alpha")
+        fs.editText("app.txt", "alpha", "beta")
+        val text = File(tmp, "app.txt").readText()
+        assertEquals("beta", text)
+        val listed = fs.list(".").map { it.name }
+        assertTrue("app.txt" in listed)
+    }
+
+    @Test
+    fun toolExecutorExtractsThenEdits() {
+        val zip = File(tmp, "pkg.zip")
+        ZipOutputStream(zip.outputStream()).use { out ->
+            out.putNextEntry(ZipEntry("secret.txt"))
+            out.write("OLD".toByteArray())
+            out.closeEntry()
+        }
+        val fs = LocalDeviceFs(tmp)
+        val tools = ToolExecutor(fs)
+        val unpacked = tools.execute(
+            "extract_archive",
+            buildJsonObject {
+                put("archive", zip.absolutePath)
+                put("dest", File(tmp, "unpacked").absolutePath)
+            },
+        )
+        assertTrue(unpacked.contains("Распаковано"))
+        val edited = tools.execute(
+            "edit_file",
+            buildJsonObject {
+                put("path", File(tmp, "unpacked/secret.txt").absolutePath)
+                put("old_text", "OLD")
+                put("new_text", "NEW")
+            },
+        )
+        assertTrue(edited.contains("Заменено"))
+        assertEquals("NEW", File(tmp, "unpacked/secret.txt").readText())
+    }
+
+    @Test
+    fun agentUnzipsOnDeviceThenAnswers() {
+        val zip = File(tmp, "task.zip")
+        ZipOutputStream(zip.outputStream()).use { out ->
+            out.putNextEntry(ZipEntry("note.txt"))
+            out.write("from-zip".toByteArray())
+            out.closeEntry()
+        }
+        val fs = LocalDeviceFs(tmp)
+        val session = AntigravitySession(
+            accessToken = "a",
+            refreshToken = "r",
+            expiresAtEpochMs = Long.MAX_VALUE,
+            email = "me@gmail.com",
+            projectId = "p",
+        )
+        val script = ArrayDeque(
+            listOf(
+                ModelReply(
+                    parts = emptyList(),
+                    finishReason = "TOOL",
+                    text = "",
+                    functionCalls = listOf(
+                        FunctionCall(
+                            "extract_archive",
+                            buildJsonObject {
+                                put("archive", zip.absolutePath)
+                                put("dest", File(tmp, "done").absolutePath)
+                            },
+                            id = "call1",
+                        ),
+                    ),
+                ),
+                ModelReply(
+                    parts = emptyList(),
+                    finishReason = "STOP",
+                    text = "Архив распакован на телефоне в done/note.txt",
+                    functionCalls = emptyList(),
+                ),
+            ),
+        )
+        val llm = object : LlmClient {
+            override fun generate(
+                session: AntigravitySession,
+                model: String,
+                systemInstruction: String,
+                contents: List<ContentTurn>,
+                tools: JsonArray,
+            ): ModelReply {
+                assertTrue(systemInstruction.contains("СТРОГО НА ANDROID"))
+                assertTrue(tools.toString().contains("extract_archive"))
+                assertTrue(tools.toString().contains("web_search"))
+                assertTrue(tools.toString().contains("googleSearch"))
+                return script.removeFirst()
+            }
+        }
+        val toolsUsed = mutableListOf<String>()
+        val answer = AgentLoop(llm, fs).run(
+            session,
+            "gemini-3-flash",
+            "Разархивируй task.zip",
+            mutableListOf(),
+            object : AgentListener {
+                override fun onToolStart(name: String, args: JsonObject) {
+                    toolsUsed += name
+                }
+            },
+        )
+        assertEquals(listOf("extract_archive"), toolsUsed)
+        assertTrue(File(tmp, "done/note.txt").readText() == "from-zip")
+        assertTrue(answer.contains("распакован"))
+    }
+
+    @Test
+    fun parseFunctionCallFromAntigravityEnvelope() {
+        val raw = """
+            {"response":{"candidates":[{"content":{"role":"model","parts":[
+              {"functionCall":{"name":"extract_archive","args":{"archive":"/sdcard/a.zip"},"id":"1"}}
+            ]},"finishReason":"OTHER"}]}}
+        """.trimIndent()
+        val reply = CloudCodeClient().parseReply(raw)
+        assertEquals("extract_archive", reply.functionCalls.single().name)
+        assertEquals("/sdcard/a.zip", reply.functionCalls.single().args["archive"]?.toString()?.trim('"'))
+    }
+
+    @Test
+    fun defaultModelIsCurrentFlashNotLegacyGemini3() {
+        assertEquals("gemini-3.8-flash-high", GeminiModels.DEFAULT)
+        assertTrue(GeminiModels.ids().contains("gemini-3.7-flash-high"))
+        assertTrue(GeminiModels.ids().contains("gemini-pro-agent"))
+        assertTrue(GeminiModels.ALL.first().id != "gemini-3-flash")
+        assertEquals("3.8 Flash", GeminiModels.shortTitle("gemini-3.8-flash-high"))
+        val flash37 = GeminiModels.resolve("gemini-3.7-flash-high")
+        assertEquals(listOf("gemini-3.7-flash-high", "gemini-3.7-flash-tiered"), flash37.wireIds)
+        assertEquals("high", flash37.thinkingLevel)
+        val customTiered = GeminiModels.resolve("gemini-3.7-flash-tiered")
+        assertEquals(listOf("gemini-3.7-flash-tiered"), customTiered.wireIds)
+    }
+
+    @Test
+    fun consumerGenerateUsesDailyEndpointNotProd() {
+        assertEquals("https://daily-cloudcode-pa.googleapis.com", AntigravityOAuth.GENERATE_ENDPOINT)
+        assertEquals(AntigravityOAuth.DAILY_API_ENDPOINT, AntigravityOAuth.GENERATE_ENDPOINT)
+        assertTrue(AntigravityOAuth.API_ENDPOINT.contains("cloudcode-pa.googleapis.com"))
+        assertTrue(AntigravityOAuth.USER_AGENT.startsWith("antigravity/hub/"))
+        assertTrue(AntigravityOAuth.USER_AGENT.contains("darwin"))
+        assertFalse(AntigravityOAuth.USER_AGENT.contains("/cli/"))
+        assertFalse(AntigravityOAuth.GENERATE_ENDPOINT.contains("://cloudcode-pa."))
+        val version = AntigravityOAuth.CLIENT_VERSION.split(".").map { it.toInt() }
+        assertTrue(version[0] > 2 || (version[0] == 2 && version[1] >= 9))
+    }
+
+    @Test
+    fun envelopeUsesThinkingLevelForFlashHigh() {
+        val envelope = CloudCodeClient().buildEnvelope(
+            projectId = "proj",
+            wireId = "gemini-3.7-flash-tiered",
+            thinkingLevel = "high",
+            systemInstruction = "sys",
+            contents = listOf(textTurn("user", "hi")),
+            tools = JsonArray(emptyList()),
+        )
+        val thinking = envelope["request"]!!.jsonObject["generationConfig"]!!.jsonObject["thinkingConfig"]!!.jsonObject
+        assertEquals("gemini-3.7-flash-tiered", envelope["model"]!!.jsonPrimitive.content)
+        assertEquals("high", thinking["thinkingLevel"]!!.jsonPrimitive.content)
+        assertEquals("true", thinking["includeThoughts"]!!.toString())
+    }
+
+    @Test
+    fun generateRetriesTieredWireIdOn404() {
+        val server = MockWebServer()
+        server.enqueue(
+            MockResponse().setResponseCode(404).setBody(
+                """{"error":{"code":404,"message":"Requested entity was not found.","status":"NOT_FOUND"}}""",
+            ),
+        )
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                """{"response":{"candidates":[{"content":{"role":"model","parts":[{"text":"ok"}]},"finishReason":"STOP"}]}}""",
+            ),
+        )
+        server.start()
+        try {
+            val client = CloudCodeClient(baseUrl = server.url("/").toString().trimEnd('/'))
+            val session = AntigravitySession(
+                accessToken = "tok",
+                refreshToken = "rt",
+                expiresAtEpochMs = Long.MAX_VALUE,
+                email = "me@gmail.com",
+                projectId = "proj",
+            )
+            val reply = client.generate(
+                session,
+                "gemini-3.7-flash-high",
+                "sys",
+                listOf(textTurn("user", "hi")),
+                JsonArray(emptyList()),
+            )
+            assertEquals("ok", reply.text)
+            val first = Json.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject
+            val secondRequest = server.takeRequest()
+            val second = Json.parseToJsonElement(secondRequest.body.readUtf8()).jsonObject
+            assertEquals("gemini-3.7-flash-high", first["model"]!!.jsonPrimitive.content)
+            assertEquals("gemini-3.7-flash-tiered", second["model"]!!.jsonPrimitive.content)
+            assertEquals(AntigravityOAuth.USER_AGENT, secondRequest.getHeader("User-Agent"))
+            assertEquals(
+                "high",
+                second["request"]!!.jsonObject["generationConfig"]!!.jsonObject["thinkingConfig"]!!.jsonObject["thinkingLevel"]!!.jsonPrimitive.content,
+            )
+        } finally {
+            server.shutdown()
+        }
+    }
+
+    @Test
+    fun attachmentsBecomeInlineDataAndTextParts() {
+        val png = byteArrayOf(
+            0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+            0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
+        )
+        val parts = com.antigravity.core.agent.AttachmentCodec.toGeminiParts(
+            listOf(
+                com.antigravity.core.agent.LoadedAttachment(
+                    name = "shot.png",
+                    mime = "image/png",
+                    bytes = png,
+                    savedPath = "/sdcard/inbox/shot.png",
+                ),
+                com.antigravity.core.agent.LoadedAttachment(
+                    name = "notes.kt",
+                    mime = "text/plain",
+                    bytes = "fun main() {}".toByteArray(),
+                    savedPath = "/sdcard/inbox/notes.kt",
+                ),
+                com.antigravity.core.agent.LoadedAttachment(
+                    name = "blob.bin",
+                    mime = "application/octet-stream",
+                    bytes = byteArrayOf(1, 2, 3, 4),
+                    savedPath = "/sdcard/inbox/blob.bin",
+                ),
+            ),
+        )
+        val blob = parts.toString()
+        assertTrue(blob.contains("inlineData"))
+        assertTrue(blob.contains("image/png"))
+        assertTrue(blob.contains("fun main()"))
+        assertTrue(blob.contains("/sdcard/inbox/blob.bin"))
+        assertTrue(blob.contains("shot.png"))
+    }
+
+    @Test
+    fun duckDuckGoParserExtractsResults() {
+        val html = """
+            <a class="result__a" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.com%2Fpage">Example <b>Title</b></a>
+            <a class="result__snippet">A useful snippet about the page</a>
+        """.trimIndent()
+        val hits = com.antigravity.core.agent.WebSearch.parseDuckDuckGo(html, 5)
+        assertEquals(1, hits.size)
+        assertEquals("https://example.com/page", hits.single().url)
+        assertTrue(hits.single().title.contains("Example"))
+        assertTrue(hits.single().snippet.contains("useful snippet"))
+        val rendered = com.antigravity.core.agent.WebSearch.render("pixel", hits)
+        assertTrue(rendered.contains("https://example.com/page"))
+    }
+
+    @Test
+    fun webSearchToolHitsMockServer() {
+        val server = MockWebServer()
+        server.enqueue(
+            MockResponse().setHeader("Content-Type", "text/html").setBody(
+                """<a class="result__a" href="https://kotlinlang.org">Kotlin</a><a class="result__snippet">Language docs</a>""",
+            ),
+        )
+        server.start()
+        try {
+            val web = com.antigravity.core.agent.WebClient(searchEndpoint = server.url("/").toString().trimEnd('/'))
+            val fs = LocalDeviceFs(tmp)
+            val tools = ToolExecutor(fs, web)
+            val result = tools.execute("web_search", buildJsonObject { put("query", "kotlin") })
+            assertTrue(result.contains("Kotlin"))
+            assertTrue(result.contains("https://kotlinlang.org"))
+            val recorded = server.takeRequest()
+            assertTrue(recorded.path!!.contains("q=kotlin"))
+        } finally {
+            server.shutdown()
+        }
+    }
+
+    @Test
+    fun webFetchReturnsPageText() {
+        val server = MockWebServer()
+        server.enqueue(
+            MockResponse().setHeader("Content-Type", "text/html; charset=utf-8").setBody(
+                "<html><head><title>Hi</title></head><body><h1>Hello</h1><p>World</p></body></html>",
+            ),
+        )
+        server.start()
+        try {
+            val web = com.antigravity.core.agent.WebClient()
+            val fs = LocalDeviceFs(tmp)
+            val tools = ToolExecutor(fs, web)
+            val result = tools.execute("web_fetch", buildJsonObject { put("url", server.url("/page").toString()) })
+            assertTrue(result.contains("Hello"))
+            assertTrue(result.contains("World"))
+        } finally {
+            server.shutdown()
+        }
+    }
+
+    @Test
+    fun generateDropsGoogleSearchOn400ThenSucceeds() {
+        val server = MockWebServer()
+        server.enqueue(
+            MockResponse().setResponseCode(400).setBody(
+                """{"error":{"code":400,"message":"googleSearch is not supported","status":"INVALID_ARGUMENT"}}""",
+            ),
+        )
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                """{"response":{"candidates":[{"content":{"role":"model","parts":[{"text":"ok"}]},"finishReason":"STOP"}]}}""",
+            ),
+        )
+        server.start()
+        try {
+            val client = CloudCodeClient(baseUrl = server.url("/").toString().trimEnd('/'))
+            val session = AntigravitySession(
+                accessToken = "tok",
+                refreshToken = "rt",
+                expiresAtEpochMs = Long.MAX_VALUE,
+                email = "me@gmail.com",
+                projectId = "proj",
+            )
+            val reply = client.generate(
+                session,
+                "gemini-3.5-flash-lite",
+                "sys",
+                listOf(textTurn("user", "hi")),
+                com.antigravity.core.agent.ToolCatalog.declarations,
+            )
+            assertEquals("ok", reply.text)
+            val first = Json.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject
+            val second = Json.parseToJsonElement(server.takeRequest().body.readUtf8()).jsonObject
+            val firstTools = first["request"]!!.jsonObject["tools"]!!.toString()
+            val secondTools = second["request"]!!.jsonObject["tools"]!!.toString()
+            assertTrue(firstTools.contains("googleSearch"))
+            assertFalse(secondTools.contains("googleSearch"))
+            assertTrue(secondTools.contains("web_search"))
+        } finally {
+            server.shutdown()
+        }
+    }
+
+    @Test
+    fun agentSendsInlineImageInUserTurn() {
+        val fs = LocalDeviceFs(tmp)
+        val session = AntigravitySession(
+            accessToken = "a",
+            refreshToken = "r",
+            expiresAtEpochMs = Long.MAX_VALUE,
+            email = "me@gmail.com",
+            projectId = "p",
+        )
+        val extra = com.antigravity.core.agent.AttachmentCodec.toGeminiParts(
+            listOf(
+                com.antigravity.core.agent.LoadedAttachment(
+                    name = "a.png",
+                    mime = "image/png",
+                    bytes = byteArrayOf(1, 2, 3),
+                    savedPath = "/sdcard/a.png",
+                ),
+            ),
+        )
+        val llm = object : LlmClient {
+            override fun generate(
+                session: AntigravitySession,
+                model: String,
+                systemInstruction: String,
+                contents: List<ContentTurn>,
+                tools: JsonArray,
+            ): ModelReply {
+                val user = contents.first()
+                assertEquals("user", user.role)
+                assertTrue(user.parts.toString().contains("inlineData"))
+                assertTrue(systemInstruction.contains("web_search"))
+                return ModelReply(emptyList(), "STOP", "вижу картинку", emptyList())
+            }
+        }
+        val history = mutableListOf<ContentTurn>()
+        val answer = AgentLoop(llm, fs).run(session, "gemini-3-flash", "что на фото", history, extraParts = extra)
+        assertEquals("вижу картинку", answer)
+        assertTrue(history.first().parts.toString().contains("inlineData"))
+    }
+
+    @Test
+    fun toolLabelsLookLikeCursorRows() {
+        val read = com.antigravity.core.agent.ToolLabels.headline(
+            "read_file",
+            buildJsonObject { put("path", "/sdcard/Download/ToolCatalog.kt") },
+        )
+        assertEquals("Read ToolCatalog.kt", read)
+        val listed = com.antigravity.core.agent.ToolLabels.headline(
+            "list_dir",
+            buildJsonObject { put("path", "/sdcard/Download") },
+            result = "file\t1\ta\nfile\t1\tb\nfile\t1\tc",
+        )
+        assertEquals("Explored 3 files", listed)
+        val args = com.antigravity.core.agent.ToolLabels.parseArgs("""{"command":"ls /sdcard/Download"}""")
+        assertEquals("ls /sdcard/Download", com.antigravity.core.agent.ToolLabels.command("shell", args))
+        assertTrue(com.antigravity.core.agent.ToolLabels.isCommand("shell"))
+        assertFalse(com.antigravity.core.agent.ToolLabels.isCommand("read_file"))
+        assertEquals(
+            "Searched pixel 9",
+            com.antigravity.core.agent.ToolLabels.headline("web_search", buildJsonObject { put("query", "pixel 9") }),
+        )
+    }
+
+    @Test
+    fun planModeSkipsToolsAndAsksForPlan() {
+        val fs = LocalDeviceFs(tmp)
+        val session = AntigravitySession(
+            accessToken = "a",
+            refreshToken = "r",
+            expiresAtEpochMs = Long.MAX_VALUE,
+            email = "me@gmail.com",
+            projectId = "p",
+        )
+        val toolsUsed = mutableListOf<String>()
+        val llm = object : LlmClient {
+            override fun generate(
+                session: AntigravitySession,
+                model: String,
+                systemInstruction: String,
+                contents: List<ContentTurn>,
+                tools: JsonArray,
+            ): ModelReply {
+                assertTrue(systemInstruction.contains("режим ПЛАН"))
+                assertFalse(tools.toString().contains("extract_archive"))
+                return ModelReply(
+                    parts = emptyList(),
+                    finishReason = "STOP",
+                    text = "1. Прочитать файл\n2. Поправить",
+                    functionCalls = listOf(
+                        FunctionCall("extract_archive", buildJsonObject { put("archive", "x.zip") }, "1"),
+                    ),
+                )
+            }
+        }
+        val answer = AgentLoop(llm, fs).run(
+            session,
+            "gemini-3-flash",
+            "поправь проект",
+            mutableListOf(),
+            object : AgentListener {
+                override fun onToolStart(name: String, args: JsonObject) {
+                    toolsUsed += name
+                }
+            },
+            planOnly = true,
+        )
+        assertEquals("1. Прочитать файл\n2. Поправить", answer)
+        assertTrue(toolsUsed.isEmpty())
+    }
+
+    @Test
+    fun cancelStopsBeforeGenerate() {
+        val fs = LocalDeviceFs(tmp)
+        val session = AntigravitySession(
+            accessToken = "a",
+            refreshToken = "r",
+            expiresAtEpochMs = Long.MAX_VALUE,
+            email = "me@gmail.com",
+            projectId = "p",
+        )
+        var calls = 0
+        val llm = object : LlmClient {
+            override fun generate(
+                session: AntigravitySession,
+                model: String,
+                systemInstruction: String,
+                contents: List<ContentTurn>,
+                tools: JsonArray,
+            ): ModelReply {
+                calls += 1
+                return ModelReply(emptyList(), "STOP", "hi", emptyList())
+            }
+        }
+        val answer = AgentLoop(llm, fs).run(
+            session,
+            "gemini-3-flash",
+            "hi",
+            mutableListOf(),
+            shouldCancel = { true },
+        )
+        assertEquals("Остановлено", answer)
+        assertEquals(0, calls)
+    }
+
+    @Test
+    fun searchToggleOnlyAddsWebTools() {
+        val searchOnly = com.antigravity.core.agent.ToolCatalog.forMode(agent = false, webSearch = true).toString()
+        assertTrue(searchOnly.contains("web_search"))
+        assertTrue(searchOnly.contains("web_fetch"))
+        assertTrue(searchOnly.contains("googleSearch"))
+        assertFalse(searchOnly.contains("shell"))
+        assertFalse(searchOnly.contains("write_file"))
+        val prompt = com.antigravity.core.agent.SystemPrompt.build(
+            "/sdcard/Antigravity",
+            "a@b.c",
+            true,
+            agent = false,
+            webSearch = true,
+        )
+        assertTrue(prompt.contains("web_search"))
+        assertFalse(prompt.contains("write_file"))
+    }
+
+    @Test
+    fun agentSettingAddsFileToolsWithoutSearch() {
+        val agentOnly = com.antigravity.core.agent.ToolCatalog.forMode(agent = true, webSearch = false).toString()
+        assertTrue(agentOnly.contains("shell"))
+        assertTrue(agentOnly.contains("read_file"))
+        assertFalse(agentOnly.contains("web_search"))
+        assertFalse(agentOnly.contains("googleSearch"))
+        val chat = com.antigravity.core.agent.ToolCatalog.forMode(agent = false, webSearch = false)
+        assertEquals(0, chat.size)
+    }
+
+    @Test
+    fun agentKeepsGoingPastFormerFortyTurnCap() {
+        val fs = LocalDeviceFs(tmp)
+        val session = AntigravitySession(
+            accessToken = "a",
+            refreshToken = "r",
+            expiresAtEpochMs = Long.MAX_VALUE,
+            email = "me@gmail.com",
+            projectId = "p",
+        )
+        var generates = 0
+        val llm = object : LlmClient {
+            override fun generate(
+                session: AntigravitySession,
+                model: String,
+                systemInstruction: String,
+                contents: List<ContentTurn>,
+                tools: JsonArray,
+            ): ModelReply {
+                generates += 1
+                if (generates <= 45) {
+                    return ModelReply(
+                        parts = emptyList(),
+                        finishReason = "STOP",
+                        text = "",
+                        functionCalls = listOf(
+                            FunctionCall(
+                                "list_dir",
+                                buildJsonObject { put("path", ".") },
+                                generates.toString(),
+                            ),
+                        ),
+                    )
+                }
+                return ModelReply(emptyList(), "STOP", "готово", emptyList())
+            }
+        }
+        val answer = AgentLoop(llm, fs).run(session, "gemini-3-flash", "работай", mutableListOf())
+        assertEquals("готово", answer)
+        assertEquals(46, generates)
+    }
+}
