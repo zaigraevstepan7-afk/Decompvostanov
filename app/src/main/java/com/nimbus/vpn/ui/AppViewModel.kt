@@ -269,6 +269,19 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _access.value = AccessUiState()
     }
 
+    fun setBypassPackages(packages: Set<String>) = viewModelScope.launch {
+        app.container.settings.setBypassPackages(packages)
+    }
+
+    fun reconnectForBypass() = viewModelScope.launch {
+        opMutex.withLock {
+            val status = tunnel.value.status
+            if (status != ConnectionStatus.CONNECTED && status != ConnectionStatus.CONNECTING) return@withLock
+            runCatching { app.container.tunnel.disconnect() }
+            runCatching { app.container.tunnel.connectActive() }
+        }
+    }
+
     fun coachYes(hasProfiles: Boolean, connected: Boolean) {
         val target = when {
             connected -> CoachStep.CELEBRATE

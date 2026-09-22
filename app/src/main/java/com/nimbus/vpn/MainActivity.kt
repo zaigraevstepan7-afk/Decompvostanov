@@ -33,6 +33,7 @@ import com.nimbus.vpn.ui.AppViewModel
 import com.nimbus.vpn.ui.home.HomeScreen
 import com.nimbus.vpn.ui.importcfg.ImportScreen
 import com.nimbus.vpn.ui.profiles.ProfilesScreen
+import com.nimbus.vpn.ui.settings.BypassAppsScreen
 import com.nimbus.vpn.ui.settings.SettingsScreen
 import com.nimbus.vpn.ui.theme.BozyaTheme
 import com.nimbus.vpn.ui.theme.Motion
@@ -219,6 +220,17 @@ class MainActivity : ComponentActivity() {
                             },
                             onCoachOpened = viewModel::onEnterSettings,
                             onMoveDog = viewModel::moveDog,
+                            onBypass = { go("bypass") },
+                        )
+                    }
+                    composable("bypass") {
+                        BypassAppsScreen(
+                            selected = settings.bypassPackages,
+                            tunnelUp = tunnel.status == com.nimbus.vpn.tunnel.ConnectionStatus.CONNECTED ||
+                                tunnel.status == com.nimbus.vpn.tunnel.ConnectionStatus.CONNECTING,
+                            onBack = { nav.popBackStack() },
+                            onChange = viewModel::setBypassPackages,
+                            onReconnect = viewModel::reconnectForBypass,
                         )
                     }
                 }

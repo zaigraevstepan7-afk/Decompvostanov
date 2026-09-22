@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -75,6 +76,7 @@ fun SettingsScreen(
     onCoachNext: () -> Unit,
     onCoachOpened: () -> Unit,
     onMoveDog: (Float, Float) -> Unit,
+    onBypass: () -> Unit,
 ) {
     val context = LocalContext.current
     val crash = remember { CrashLog.summary(context) }
@@ -133,6 +135,33 @@ fun SettingsScreen(
                     settings.rootBatteryGuard,
                     onRootBattery,
                 )
+            }
+            Spacer(Modifier.height(22.dp))
+            SectionLabel("Что пускать через VPN")
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(Card)
+                    .background(Paper)
+                    .border(1.dp, Line, Card)
+                    .clickable(onClick = onBypass)
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Выбор приложений", color = Ink, fontWeight = FontWeight.Medium)
+                        Text(
+                            bypassSummary(settings.bypassPackages.size),
+                            color = InkMuted,
+                            fontSize = 13.sp,
+                        )
+                    }
+                    Icon(
+                        Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = InkMuted,
+                    )
+                }
             }
             Spacer(Modifier.height(22.dp))
             SectionLabel("Подтверждение доступа")

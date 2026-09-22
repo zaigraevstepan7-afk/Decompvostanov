@@ -2,6 +2,7 @@ package com.nimbus.vpn.tunnel
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.VpnService
 import android.os.Build
 import android.os.PowerManager
@@ -9,6 +10,7 @@ import android.util.Log
 import com.nimbus.vpn.data.ConfigParser
 import com.nimbus.vpn.data.ProfileStore
 import com.nimbus.vpn.data.SettingsRepository
+import com.nimbus.vpn.data.SplitTunnel
 import com.nimbus.vpn.data.VpnProfile
 import com.nimbus.vpn.CrashLog
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -20,6 +22,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -164,13 +167,14 @@ class TunnelController(
         }
         BozyaKeepAliveService.start(context, "Подключение…")
 
-        if (appSettings.rootBatteryGuard) {
+        val fresh = settings.settings.first()
+        if (fresh.rootBatteryGuard) {
             runCatching {
                 rootPower.applyLowDrainKeepAlive(
                     packageName = context.packageName,
                     uid = android.os.Process.myUid(),
-                    enableAlwaysOn = appSettings.autoConnect || appSettings.killSwitch,
-                    lockdown = appSettings.killSwitch,
+                    enableAlwaysOn = fresh.autoConnect || fresh.killSwitch,
+                    lockdown = fresh.killSwitch,
                 )
             }
         }
@@ -184,7 +188,8 @@ class TunnelController(
                 if (!preview.canConnect) {
                     error(preview.issues.joinToString("\n"))
                 }
-                val config = Config.parse(BufferedReader(StringReader(prepared)))
+                val routed = SplitTunnel.apply(prepared, fresh.bypassPackages, ::isInstalledPackage)
+                val config = Config.parse(BufferedReader(StringReader(routed)))
                 stateToken++
                 gate.setState(tunnel, Tunnel.State.UP, config)
             }
@@ -328,6 +333,18 @@ class TunnelController(
         return Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
             data = android.net.Uri.parse("package:${context.packageName}")
         }
+    }
+
+    private fun isInstalledPackage(packageName: String): Boolean {
+        if (packageName == context.packageName) return false
+        return runCatching {
+            if (Build.VERSION.SDK_INT >= 33) {
+                context.packageManager.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0))
+            } else {
+                @Suppress("DEPRECATION")
+                context.packageManager.getPackageInfo(packageName, 0)
+            }
+        }.isSuccess
     }
 
     private fun humanError(err: Throwable): String {

@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -26,6 +27,7 @@ class SettingsRepository(private val context: Context) {
             dogX = prefs[DOG_X] ?: -1f,
             dogY = prefs[DOG_Y] ?: -1f,
             heardAccess = prefs[HEARD_ACCESS] ?: false,
+            bypassPackages = prefs[BYPASS_APPS] ?: emptySet(),
         )
     }
 
@@ -50,6 +52,11 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setHeardAccess(value: Boolean) = set(HEARD_ACCESS, value)
 
+    suspend fun setBypassPackages(packages: Set<String>) {
+        val clean = packages.map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+        context.settingsStore.edit { it[BYPASS_APPS] = clean }
+    }
+
     suspend fun setDogAnchor(x: Float, y: Float) {
         context.settingsStore.edit {
             it[DOG_X] = x
@@ -73,6 +80,7 @@ class SettingsRepository(private val context: Context) {
         val DOG_X = floatPreferencesKey("dog_x")
         val DOG_Y = floatPreferencesKey("dog_y")
         val HEARD_ACCESS = booleanPreferencesKey("heard_access")
+        val BYPASS_APPS = stringSetPreferencesKey("bypass_apps")
     }
 }
 
@@ -88,4 +96,5 @@ data class AppSettings(
     val dogX: Float = -1f,
     val dogY: Float = -1f,
     val heardAccess: Boolean = false,
+    val bypassPackages: Set<String> = emptySet(),
 )
