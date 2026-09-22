@@ -137,12 +137,26 @@ fun HomeScreen(
         delay(4200)
         cheer = null
     }
-    val coachMessage = when (step) {
-        CoachStep.OFFER -> "Привет! Показать, как тут всё устроено?"
-        CoachStep.CREATE, CoachStep.PICK -> "Нажми светящуюся кнопку «+» и создай сервер сам. Я подожду."
-        CoachStep.CONNECT -> "Теперь нажми круглую кнопку внизу. Она включит туннель."
-        CoachStep.CELEBRATE -> "Получилось! Серия ${settings.streak.coerceAtLeast(1)} дн. Дальше заглянем в настройки."
-        CoachStep.SETTINGS -> "Открой шестерёнку справа. Там расскажу про каждый переключатель."
+    val teachAccess = step == CoachStep.ACCESS || (
+        !settings.heardAccess &&
+            step != CoachStep.OFFER &&
+            step != CoachStep.CREATE &&
+            step != CoachStep.PICK &&
+            step != CoachStep.CELEBRATE &&
+            step != CoachStep.SETTINGS &&
+            !step.explaining
+        )
+    val broken = state.status == ConnectionStatus.ERROR && !teachAccess &&
+        step != CoachStep.OFFER && step != CoachStep.CREATE && step != CoachStep.PICK &&
+        step != CoachStep.CELEBRATE && step != CoachStep.SETTINGS && !step.explaining
+    val coachMessage = when {
+        step == CoachStep.OFFER -> "Привет! Показать, как тут всё устроено?"
+        step == CoachStep.CREATE || step == CoachStep.PICK -> "Нажми светящуюся кнопку «+» и создай сервер сам. Я подожду."
+        teachAccess -> "Перед включением нажми светящуюся «Доступ». Сменился IP — снова эта одна кнопка, и всё работает. Перестало работать: отключи VPN и нажми «Доступ» ещё раз."
+        step == CoachStep.CONNECT -> "Теперь нажми круглую кнопку внизу. Она включит туннель."
+        step == CoachStep.CELEBRATE -> "Получилось! Серия ${settings.streak.coerceAtLeast(1)} дн. Дальше заглянем в настройки."
+        step == CoachStep.SETTINGS -> "Открой шестерёнку справа. Там расскажу про каждый переключатель."
+        broken -> "Перестало работать. Отключи VPN и нажми «Доступ» ещё раз."
         else -> cheer
     }
     val coachAction = when (step) {
@@ -155,10 +169,12 @@ fun HomeScreen(
         CoachStep.CELEBRATE -> onCoachCelebrateNext
         else -> null
     }
-    val mood = when (step) {
-        CoachStep.OFFER -> DogMood.WAVE
-        CoachStep.CELEBRATE -> DogMood.JOY
-        CoachStep.DONE -> if (cheer != null) DogMood.JOY else DogMood.CALM
+    val mood = when {
+        step == CoachStep.OFFER -> DogMood.WAVE
+        step == CoachStep.CELEBRATE -> DogMood.JOY
+        teachAccess || broken -> DogMood.POINT
+        step == CoachStep.DONE && cheer != null -> DogMood.JOY
+        step == CoachStep.DONE -> DogMood.CALM
         else -> DogMood.POINT
     }
 
@@ -171,7 +187,11 @@ fun HomeScreen(
                     .padding(start = 16.dp, end = 4.dp, top = 6.dp, bottom = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                AccessChip(access, onConfirmAccess)
+                AccessChip(
+                    access = access,
+                    onClick = onConfirmAccess,
+                    glow = teachAccess || broken,
+                )
                 Text(
                     "Bozya",
                     color = Ink,
@@ -267,7 +287,7 @@ fun HomeScreen(
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
                 .padding(bottom = 18.dp)
-                .coachGlow(step == CoachStep.CONNECT),
+                .coachGlow(step == CoachStep.CONNECT && !teachAccess),
             onClick = {
                 when {
                     busy -> Unit
@@ -301,7 +321,7 @@ fun HomeScreen(
 }
 
 @Composable
-private fun AccessChip(access: AccessUiState, onClick: () -> Unit) {
+private fun AccessChip(access: AccessUiState, onClick: () -> Unit, glow: Boolean) {
     val press = rememberPress(0.92f)
     val working = access.status == AccessStatus.WORKING
     val dot = when (access.status) {
@@ -313,6 +333,7 @@ private fun AccessChip(access: AccessUiState, onClick: () -> Unit) {
     Row(
         Modifier
             .pressScale(press.scale)
+            .coachGlow(glow)
             .height(32.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(Paper)

@@ -6,6 +6,7 @@ enum class CoachStep(val id: Int) {
     PICK(2),
     CONNECT(3),
     CELEBRATE(4),
+    ACCESS(11),
     SETTINGS(5),
     TOUR_AUTO(6),
     TOUR_KILL(7),

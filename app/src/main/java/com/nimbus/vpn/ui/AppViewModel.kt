@@ -84,6 +84,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun activateAccess() {
         if (_access.value.status == AccessStatus.WORKING) return
+        noteAccessPressed()
         _access.value = AccessUiState(AccessStatus.WORKING)
         viewModelScope.launch {
             val url = AccessApi.urlFor(app.container.settings.settings.first().accessLink)
@@ -271,7 +272,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun coachYes(hasProfiles: Boolean, connected: Boolean) {
         val target = when {
             connected -> CoachStep.CELEBRATE
-            hasProfiles -> CoachStep.CONNECT
+            hasProfiles -> CoachStep.ACCESS
             else -> CoachStep.CREATE
         }
         advanceCoach(target)
@@ -279,7 +280,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onCoachAddTapped() = advanceCoach(CoachStep.PICK)
 
-    fun onCoachWarpCreated() = advanceCoach(CoachStep.CONNECT)
+    fun onCoachWarpCreated() = advanceCoach(CoachStep.ACCESS)
+
+    private fun noteAccessPressed() {
+        viewModelScope.launch {
+            app.container.settings.setHeardAccess(true)
+            val current = CoachStep.from(app.container.settings.settings.first().coachStep)
+            if (current == CoachStep.ACCESS) {
+                app.container.settings.setCoachStep(CoachStep.CONNECT.id)
+            }
+        }
+    }
 
     fun onCoachCelebrateNext() = advanceCoach(CoachStep.SETTINGS)
 
@@ -307,7 +318,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     recordStreak()
                     _joy.update { it + 1 }
                     val step = CoachStep.from(app.container.settings.settings.first().coachStep)
-                    if (step != CoachStep.OFFER && step.id <= CoachStep.CONNECT.id) {
+                    if (step == CoachStep.CONNECT) {
                         advanceCoach(CoachStep.CELEBRATE)
                     }
                 }

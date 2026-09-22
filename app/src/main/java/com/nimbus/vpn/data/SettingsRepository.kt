@@ -25,6 +25,7 @@ class SettingsRepository(private val context: Context) {
             streakDay = prefs[STREAK_DAY] ?: 0L,
             dogX = prefs[DOG_X] ?: -1f,
             dogY = prefs[DOG_Y] ?: -1f,
+            heardAccess = prefs[HEARD_ACCESS] ?: false,
         )
     }
 
@@ -46,6 +47,8 @@ class SettingsRepository(private val context: Context) {
             it[STREAK_DAY] = day
         }
     }
+
+    suspend fun setHeardAccess(value: Boolean) = set(HEARD_ACCESS, value)
 
     suspend fun setDogAnchor(x: Float, y: Float) {
         context.settingsStore.edit {
@@ -69,6 +72,7 @@ class SettingsRepository(private val context: Context) {
         val STREAK_DAY = longPreferencesKey("streak_day")
         val DOG_X = floatPreferencesKey("dog_x")
         val DOG_Y = floatPreferencesKey("dog_y")
+        val HEARD_ACCESS = booleanPreferencesKey("heard_access")
     }
 }
 
@@ -83,4 +87,5 @@ data class AppSettings(
     val streakDay: Long = 0L,
     val dogX: Float = -1f,
     val dogY: Float = -1f,
+    val heardAccess: Boolean = false,
 )
