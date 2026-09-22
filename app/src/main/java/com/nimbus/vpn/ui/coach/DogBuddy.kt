@@ -3,19 +3,17 @@ package com.nimbus.vpn.ui.coach
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -32,35 +30,32 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.nimbus.vpn.R
 import com.nimbus.vpn.ui.theme.Accent
 import com.nimbus.vpn.ui.theme.Canvas
 import com.nimbus.vpn.ui.theme.Ink
 import com.nimbus.vpn.ui.theme.Motion
 import com.nimbus.vpn.ui.theme.Paper
-import kotlinx.coroutines.launch
-import kotlin.math.PI
-import kotlin.math.cos
+import kotlinx.coroutines.delay
+import kotlin.math.min
 import kotlin.math.roundToInt
-import kotlin.math.sin
 
 enum class DogMood { WAVE, POINT, JOY, CALM }
 
@@ -123,7 +118,14 @@ fun DogDock(
             Modifier.offset { IntOffset(placeX, placeY) },
         ) {
             if (bubbleAbove && message != null) {
-                SpeechBubble(message, action, onAction)
+                // The sprite keeps empty cells above the ears so a hop is not clipped.
+                // Pull the bubble down into that gap so the text still sits on the head.
+                SpeechBubble(
+                    message,
+                    action,
+                    onAction,
+                    Modifier.offset(y = ((DOG_PAD_TOP - 1) * DOG_CELL_DP).dp),
+                )
             }
             DogSprite(
                 mood = mood,
@@ -147,9 +149,14 @@ fun DogDock(
 }
 
 @Composable
-private fun SpeechBubble(message: String, action: String?, onAction: (() -> Unit)?) {
+private fun SpeechBubble(
+    message: String,
+    action: String?,
+    onAction: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+) {
     Column(
-        Modifier
+        modifier
             .padding(bottom = 6.dp)
             .widthIn(max = 210.dp)
             .clip(RoundedCornerShape(18.dp))
@@ -182,109 +189,127 @@ private fun SpeechBubble(message: String, action: String?, onAction: (() -> Unit
     }
 }
 
+private val dogInk = mapOf(
+    '1' to Color(0xFF1A1C22),
+    '2' to Color(0xFF3C3E44),
+    '3' to Color(0xFF6A6C72),
+    '4' to Color(0xFF9A9CA2),
+    '5' to Color(0xFFC8CACF),
+    '6' to Color(0xFFF7F7F8),
+)
+
 @Composable
 private fun DogSprite(mood: DogMood, joyPulse: Int, modifier: Modifier = Modifier) {
     val drift = rememberInfiniteTransition(label = "dog")
-    val bob by drift.animateFloat(
+    val bobT by drift.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(if (mood == DogMood.CALM) 1800 else 900, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        animationSpec = infiniteRepeatable(
+            tween(if (mood == DogMood.CALM) 1500 else 720, easing = LinearEasing),
+            RepeatMode.Reverse,
+        ),
         label = "bob",
     )
-    val sway by drift.animateFloat(
-        initialValue = -1f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(if (mood == DogMood.WAVE) 520 else 1400, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "sway",
-    )
-    val blink by drift.animateFloat(
+    val blinkT by drift.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(3200), RepeatMode.Restart),
+        animationSpec = infiniteRepeatable(
+            tween(if (mood == DogMood.CALM) 4400 else 2800, easing = LinearEasing),
+            RepeatMode.Restart,
+        ),
         label = "blink",
     )
-    val jump = remember { androidx.compose.animation.core.Animatable(0f) }
-    val squash = remember { androidx.compose.animation.core.Animatable(1f) }
-    LaunchedEffect(joyPulse, mood) {
-        if (joyPulse == 0 && mood != DogMood.JOY) return@LaunchedEffect
-        launch {
-            jump.snapTo(0f)
-            jump.animateTo(-26f, spring(dampingRatio = 0.38f, stiffness = 340f))
-            jump.animateTo(0f, spring(dampingRatio = 0.45f, stiffness = 460f))
-            jump.animateTo(-12f, spring(dampingRatio = 0.5f, stiffness = 400f))
-            jump.animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = 380f))
+    var hop by remember { mutableIntStateOf(0) }
+    var hopping by remember { mutableStateOf(false) }
+    LaunchedEffect(joyPulse) {
+        if (joyPulse == 0) return@LaunchedEffect
+        hopping = true
+        // Whole cells only: crouch, hop, land, small rebound.
+        for (step in intArrayOf(1, -2, -4, -6, -7, -6, -4, -2, 1, 0, -2, 0)) {
+            hop = step
+            delay(68)
         }
-        launch {
-            squash.snapTo(1f)
-            squash.animateTo(0.86f, tween(90))
-            squash.animateTo(1.08f, spring(dampingRatio = 0.4f, stiffness = 500f))
-            squash.animateTo(1f, spring(dampingRatio = 0.6f, stiffness = 320f))
-        }
+        hop = 0
+        hopping = false
     }
-    val shut = blink > 0.94f
-    val tilt = when (mood) {
-        DogMood.WAVE -> sway * 7f
-        DogMood.POINT -> -8f + sway * 2f
-        DogMood.JOY -> sway * 6f
-        DogMood.CALM -> sway * 1.5f
+    val bob = if (bobT > 0.5f) -1 else 0
+    val blink = when {
+        blinkT < 0.86f -> EyePose.OPEN
+        blinkT < 0.90f -> EyePose.HALF
+        blinkT < 0.95f -> EyePose.SHUT
+        blinkT < 0.98f -> EyePose.HALF
+        else -> EyePose.OPEN
     }
-    Box(
+    val pose = when {
+        mood == DogMood.JOY && hop > 0 -> EyePose.SHUT
+        mood == DogMood.JOY -> EyePose.HAPPY
+        blink == EyePose.HALF || blink == EyePose.SHUT -> blink
+        mood == DogMood.POINT -> EyePose.LOOK
+        mood == DogMood.WAVE && bob == -1 -> EyePose.LOOK
+        else -> EyePose.OPEN
+    }
+    val yCells = if (hopping) hop else bob
+    val tuck = hopping && hop < 0
+    val rows = DogPixels.rows(pose, tuck)
+    val padX = 4
+    val padTop = DOG_PAD_TOP
+    val padBot = 2
+    val cols = DogPixels.COLS + padX * 2
+    val gridRows = DogPixels.ROWS + padTop + padBot
+    val density = LocalDensity.current
+    val cellPx = with(density) { DOG_CELL_DP.dp.toPx() }.roundToInt().coerceAtLeast(2)
+    val boxW = with(density) { (cols * cellPx).toDp() }
+    val boxH = with(density) { (gridRows * cellPx).toDp() }
+    Canvas(
         modifier
-            .size(84.dp)
-            .graphicsLayer {
-                translationY = (bob - 0.5f) * 10.dp.toPx() + jump.value * density
-                rotationZ = tilt
-                scaleX = if (mood == DogMood.JOY) squash.value else 1f + bob * 0.03f
-                scaleY = if (mood == DogMood.JOY) 2f - squash.value else 1f - bob * 0.02f
-            },
-        contentAlignment = Alignment.Center,
+            .size(boxW, boxH)
+            .semantics { contentDescription = "Пёс" },
     ) {
-        if (mood == DogMood.JOY) {
-            Canvas(Modifier.matchParentSize()) {
-                repeat(6) { index ->
-                    val angle = index / 6f * (PI.toFloat() * 2f) + bob * PI.toFloat()
-                    val dist = 46.dp.toPx() + (index % 3) * 6.dp.toPx()
-                    drawCircle(
-                        color = Color(0xFFFFD27A),
-                        radius = 2.4.dp.toPx(),
-                        center = Offset(size.width / 2f + cos(angle) * dist, size.height * 0.42f + sin(angle) * dist * 0.55f),
-                    )
-                }
+        val cell = min(
+            (size.width / cols).toInt(),
+            (size.height / gridRows).toInt(),
+        ).coerceAtLeast(2)
+        val ox = ((size.width - cell * cols) / 2f).toInt()
+        val oy = ((size.height - cell * gridRows) / 2f).toInt()
+        val spriteX = ox + padX * cell
+        val spriteY = oy + (padTop + yCells) * cell
+        val cellF = cell.toFloat()
+        for (y in rows.indices) {
+            val row = rows[y]
+            val top = spriteY + y * cell
+            for (x in row.indices) {
+                val color = dogInk[row[x]] ?: continue
+                drawRect(
+                    color = color,
+                    topLeft = Offset(spriteX + x * cellF, top.toFloat()),
+                    size = Size(cellF, cellF),
+                )
             }
         }
-        Image(
-            painter = painterResource(R.drawable.dog_bozya),
-            contentDescription = "Пёс",
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.size(76.dp),
-        )
-        if (shut || mood == DogMood.JOY) {
-            Blink(happy = mood == DogMood.JOY)
+        if (hopping && hop <= -6) {
+            val star = Color(0xFFF0C36A)
+            pixelStar(spriteX + 2 * cellF, spriteY + 4 * cellF, cellF, star)
+            pixelStar(spriteX + (DogPixels.COLS - 3) * cellF, spriteY + 6 * cellF, cellF, star)
+            pixelStar(spriteX + DogPixels.COLS * cellF, spriteY + 14 * cellF, cellF, star)
+        }
+        if (hopping && hop > 0) {
+            val dust = Color(0xFF9A9CA2)
+            val foot = oy + (padTop + DogPixels.ROWS) * cell
+            drawRect(dust, Offset(spriteX + 4 * cellF, foot.toFloat()), Size(cellF * 2, cellF))
+            drawRect(dust, Offset(spriteX + (DogPixels.COLS - 7) * cellF, foot.toFloat()), Size(cellF * 2, cellF))
         }
     }
 }
 
-@Composable
-private fun Blink(happy: Boolean) {
-    BoxWithConstraints(Modifier.size(76.dp)) {
-        val barW = maxWidth * 0.16f
-        val barH = if (happy) maxHeight * 0.045f else maxHeight * 0.028f
-        val y = maxHeight * if (happy) 0.33f else 0.345f
-        listOf(0.30f, 0.66f).forEach { xFrac ->
-            Canvas(
-                Modifier
-                    .align(Alignment.TopStart)
-                    .padding(start = maxWidth * xFrac, top = y)
-                    .size(barW, barH),
-            ) {
-                drawLine(
-                    color = Color(0xFF1C1E26),
-                    start = Offset(0f, size.height / 2f),
-                    end = Offset(size.width, size.height / 2f),
-                    strokeWidth = size.height,
-                    cap = StrokeCap.Round,
-                )
-            }
-        }
-    }
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.pixelStar(
+    cx: Float,
+    cy: Float,
+    cell: Float,
+    color: Color,
+) {
+    drawRect(color, Offset(cx, cy), Size(cell, cell))
+    drawRect(color, Offset(cx - cell, cy), Size(cell, cell))
+    drawRect(color, Offset(cx + cell, cy), Size(cell, cell))
+    drawRect(color, Offset(cx, cy - cell), Size(cell, cell))
+    drawRect(color, Offset(cx, cy + cell), Size(cell, cell))
 }
