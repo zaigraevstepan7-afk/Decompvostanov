@@ -307,7 +307,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onCoachCelebrateNext() = advanceCoach(CoachStep.SETTINGS)
 
-    fun onEnterSettings() = advanceCoach(CoachStep.TOUR_AUTO, onlyFrom = CoachStep.SETTINGS)
+    fun onEnterSettings() {
+        viewModelScope.launch {
+            val current = CoachStep.from(app.container.settings.settings.first().coachStep)
+            if (current == CoachStep.SETTINGS || current == CoachStep.CELEBRATE) {
+                app.container.settings.setCoachStep(CoachStep.TOUR_AUTO.id)
+            }
+        }
+    }
 
     fun onCoachTourNext(step: CoachStep) = advanceCoach(step.nextTour())
 

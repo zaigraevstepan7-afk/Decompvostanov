@@ -17,6 +17,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.offset
@@ -29,7 +30,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -40,6 +40,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -115,21 +117,15 @@ fun DogDock(
         val bubbleAbove = py > maxH * 0.38f
         val placeX = px.roundToInt()
         val placeY = py.roundToInt()
-        Column(Modifier.offset { IntOffset(placeX, placeY) }) {
-            if (bubbleAbove && message != null) {
-                SpeechBubble(
-                    message,
-                    action,
-                    onAction,
-                    Modifier.offset(y = ((DOG_PAD_TOP - 1) * DOG_CELL_DP).dp),
-                )
-            }
+        val tuck = (DOG_PAD_TOP - 1) * cellPx
+        Box(Modifier.offset { IntOffset(placeX, placeY) }.size(boxW, boxH)) {
             DogSprite(
                 mood = mood,
                 joyPulse = joyPulse,
+                talking = message != null,
                 cellPx = cellPx,
                 modifier = Modifier
-                    .size(boxW, boxH)
+                    .matchParentSize()
                     .pointerInput(maxW, maxH) {
                         detectDragGestures(
                             onDragEnd = { onAnchor(px / maxW, py / maxH) },
@@ -141,8 +137,26 @@ fun DogDock(
                         }
                     },
             )
-            if (!bubbleAbove && message != null) {
-                SpeechBubble(message, action, onAction)
+            if (message != null) {
+                SpeechBubble(
+                    message,
+                    action,
+                    onAction,
+                    Modifier.layout { measurable, constraints ->
+                        val placeable = measurable.measure(
+                            constraints.copy(
+                                minWidth = 0,
+                                minHeight = 0,
+                                maxWidth = Constraints.Infinity,
+                                maxHeight = Constraints.Infinity,
+                            ),
+                        )
+                        val y = if (bubbleAbove) -placeable.height + tuck else constraints.maxHeight
+                        layout(placeable.width, 0) {
+                            placeable.placeRelative(0, y)
+                        }
+                    },
+                )
             }
         }
     }
@@ -199,7 +213,13 @@ private val dogInk = mapOf(
 )
 
 @Composable
-private fun DogSprite(mood: DogMood, joyPulse: Int, cellPx: Int, modifier: Modifier = Modifier) {
+private fun DogSprite(
+    mood: DogMood,
+    joyPulse: Int,
+    talking: Boolean,
+    cellPx: Int,
+    modifier: Modifier = Modifier,
+) {
     val drift = rememberInfiniteTransition(label = "dog")
     val bobT by drift.animateFloat(
         initialValue = 0f,
@@ -219,21 +239,11 @@ private fun DogSprite(mood: DogMood, joyPulse: Int, cellPx: Int, modifier: Modif
         ),
         label = "blink",
     )
-    var hop by remember { mutableIntStateOf(0) }
-    var jumping by remember { mutableStateOf(false) }
     var tail by remember { mutableStateOf(Tail.HIDDEN) }
     var wagging by remember { mutableStateOf(false) }
+    var mouth by remember { mutableStateOf(Mouth.SHUT) }
     LaunchedEffect(joyPulse) {
         if (joyPulse == 0) return@LaunchedEffect
-        jumping = true
-        wagging = false
-        tail = Tail.HIDDEN
-        for (step in intArrayOf(0, 2, 5, 7, 5, 2, 0)) {
-            hop = step
-            delay(68)
-        }
-        hop = 0
-        jumping = false
         wagging = true
         val sweep = listOf(Tail.LEVEL, Tail.HIGH, Tail.LEVEL, Tail.LOW)
         repeat(5) {
@@ -244,6 +254,22 @@ private fun DogSprite(mood: DogMood, joyPulse: Int, cellPx: Int, modifier: Modif
         }
         tail = Tail.HIDDEN
         wagging = false
+    }
+    LaunchedEffect(talking) {
+        if (!talking) {
+            mouth = Mouth.SHUT
+            return@LaunchedEffect
+        }
+        while (true) {
+            mouth = Mouth.OPEN
+            delay(150)
+            mouth = Mouth.SHUT
+            delay(110)
+            mouth = Mouth.OPEN
+            delay(170)
+            mouth = Mouth.SHUT
+            delay(260)
+        }
     }
     val bob = if (bobT > 0.5f) 1 else 0
     val blink = when {
@@ -260,15 +286,13 @@ private fun DogSprite(mood: DogMood, joyPulse: Int, cellPx: Int, modifier: Modif
         else -> EyePose.OPEN
     }
     val paws = when {
-        jumping && hop >= 4 -> Paws.UP
-        jumping && hop > 0 -> Paws.TUCK
         wagging -> Paws.DOWN
         mood != DogMood.JOY && blinkT in 0.62f..0.74f -> Paws.TUCK
         else -> Paws.DOWN
     }
-    val lift = if (jumping) hop else bob
+    val lift = if (wagging) 0 else bob
     Canvas(modifier.semantics { contentDescription = "Пёс" }) {
-        val rows = DogPixels.rows(pose, paws, tail)
+        val rows = DogPixels.rows(pose, paws, tail, mouth)
         val top = snap(size.height - (rows.size + lift) * cellPx, cellPx)
         drawPixels(rows, snap((size.width - rows.first().length * cellPx) / 2f, cellPx), top, cellPx, flip = false)
     }

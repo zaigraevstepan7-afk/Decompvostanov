@@ -66,5 +66,16 @@ class DogPixelsTest {
         }
     }
 
+    @Test
+    fun openMouthChangesTheMuzzleAndLeavesTheEyes() {
+        val shut = DogPixels.rows(EyePose.OPEN, mouth = Mouth.SHUT)
+        val open = DogPixels.rows(EyePose.OPEN, mouth = Mouth.OPEN)
+        assertEquals(shut[8], open[8])
+        assertEquals("111111", shut[25].substring(15, 21))
+        assertEquals("433334", shut[26].substring(15, 21))
+        assertEquals("111111", open[26].substring(15, 21))
+        assertNotEquals(shut[26], open[26])
+    }
+
     private fun eye(rows: List<String>, x: Int, y: Int) = List(6) { dy -> rows[y + dy].substring(x, x + 7) }
 }

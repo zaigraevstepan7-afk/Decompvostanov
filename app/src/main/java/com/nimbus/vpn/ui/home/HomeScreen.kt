@@ -123,17 +123,10 @@ fun HomeScreen(
     val active = profiles.profiles.firstOrNull { it.id == profiles.activeId } ?: state.profile
     val busy = state.status == ConnectionStatus.CONNECTING
     val step = CoachStep.from(settings.coachStep)
-    var cheer by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(profiles.profiles.size, step) {
         if (profiles.profiles.isNotEmpty() && (step == CoachStep.CREATE || step == CoachStep.PICK)) {
             onCoachReady()
         }
-    }
-    LaunchedEffect(joyPulse) {
-        if (joyPulse == 0 || step != CoachStep.DONE) return@LaunchedEffect
-        cheer = "Я в сети! Серия ${settings.streak.coerceAtLeast(1)}."
-        delay(3600)
-        cheer = null
     }
     val teachAccess = !settings.heardAccess && (step == CoachStep.ACCESS || step == CoachStep.CONNECT)
     val coachMessage = when {
@@ -141,25 +134,20 @@ fun HomeScreen(
         step == CoachStep.CREATE || step == CoachStep.PICK -> "Нажми светящуюся кнопку «+» и создай сервер сам. Я подожду."
         teachAccess -> "Перед включением нажми светящуюся «Доступ». Сменился IP — снова эта одна кнопка, и всё работает. Перестало работать: отключи VPN и нажми «Доступ» ещё раз."
         step == CoachStep.CONNECT -> "Теперь нажми круглую кнопку внизу. Она включит туннель."
-        step == CoachStep.CELEBRATE -> "Получилось! Серия ${settings.streak.coerceAtLeast(1)} дн. Дальше заглянем в настройки."
-        step == CoachStep.SETTINGS -> "Открой шестерёнку справа. Там расскажу про каждый переключатель."
-        else -> cheer
+        step == CoachStep.CELEBRATE || step == CoachStep.SETTINGS -> "Открой шестерёнку справа. Там расскажу про каждый переключатель."
+        else -> null
     }
     val coachAction = when (step) {
         CoachStep.OFFER -> "Да"
-        CoachStep.CELEBRATE -> "Дальше"
         else -> null
     }
     val coachClick: (() -> Unit)? = when (step) {
         CoachStep.OFFER -> onCoachYes
-        CoachStep.CELEBRATE -> onCoachCelebrateNext
         else -> null
     }
     val mood = when {
         step == CoachStep.OFFER -> DogMood.WAVE
-        step == CoachStep.CELEBRATE -> DogMood.JOY
-        teachAccess -> DogMood.POINT
-        step == CoachStep.DONE && cheer != null -> DogMood.JOY
+        teachAccess || step == CoachStep.CELEBRATE || step == CoachStep.SETTINGS -> DogMood.POINT
         step == CoachStep.DONE -> DogMood.CALM
         else -> DogMood.POINT
     }
@@ -213,7 +201,7 @@ fun HomeScreen(
                 }
                 PressIconButton(
                     onClick = onSettings,
-                    modifier = Modifier.coachGlow(step == CoachStep.SETTINGS),
+                    modifier = Modifier.coachGlow(step == CoachStep.SETTINGS || step == CoachStep.CELEBRATE),
                 ) {
                     Icon(Icons.Rounded.Settings, contentDescription = "Настройки", tint = Ink)
                 }

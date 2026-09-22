@@ -13,6 +13,8 @@ internal object DogPixels {
     const val TAIL_PAD = 10
     private const val LEG_TOP = 32
     private const val TAIL_X = 34
+    private const val MOUTH_X = 15
+    private const val MOUTH_Y = 25
 
     val eyes = listOf(8 to 8, 21 to 8)
 
@@ -116,6 +118,12 @@ internal object DogPixels {
         31 to "..11221.",
     )
 
+    private val mouthOpen = listOf(
+        "311113",
+        "111111",
+        "311113",
+    )
+
     private val tailLow = listOf(
         29 to "121.....",
         30 to "1221....",
@@ -132,7 +140,12 @@ internal object DogPixels {
         require(base.all { it.length == COLS })
     }
 
-    fun rows(pose: EyePose, paws: Paws = Paws.DOWN, tail: Tail = Tail.HIDDEN): List<String> {
+    fun rows(
+        pose: EyePose,
+        paws: Paws = Paws.DOWN,
+        tail: Tail = Tail.HIDDEN,
+        mouth: Mouth = Mouth.SHUT,
+    ): List<String> {
         val grid = base.map { it.toCharArray() }.toMutableList()
         val pattern = when (pose) {
             EyePose.OPEN -> null
@@ -167,6 +180,13 @@ internal object DogPixels {
         val wide = grid.map { row ->
             CharArray(COLS + TAIL_PAD) { index -> if (index < COLS) row[index] else '.' }
         }
+        if (mouth == Mouth.OPEN) {
+            for (dy in mouthOpen.indices) {
+                for (dx in mouthOpen[dy].indices) {
+                    wide[MOUTH_Y + dy][MOUTH_X + dx] = mouthOpen[dy][dx]
+                }
+            }
+        }
         if (tail != Tail.HIDDEN) paintTail(wide, tail)
         return wide.map { String(it) }
     }
@@ -194,3 +214,5 @@ internal enum class EyePose { OPEN, HALF, SHUT, HAPPY, LOOK }
 internal enum class Paws { DOWN, TUCK, UP }
 
 internal enum class Tail { HIDDEN, LOW, LEVEL, HIGH }
+
+internal enum class Mouth { SHUT, OPEN }
