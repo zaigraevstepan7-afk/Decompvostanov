@@ -17,8 +17,8 @@ object Motion {
     fun float(ms: Int = 520) = tween<Float>(durationMillis = ms, easing = EaseInOut)
 
     val Press = spring<Float>(
-        dampingRatio = 0.68f,
-        stiffness = 380f,
+        dampingRatio = 0.58f,
+        stiffness = 460f,
     )
     val Soft = spring<Float>(
         dampingRatio = Spring.DampingRatioNoBouncy,

@@ -1,13 +1,15 @@
 package com.nimbus.vpn.ui.home
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -31,12 +33,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Description
-import androidx.compose.material.icons.rounded.NearMe
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Timer
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -51,7 +50,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -79,6 +77,7 @@ import com.nimbus.vpn.ui.theme.Canvas
 import com.nimbus.vpn.ui.theme.Danger
 import com.nimbus.vpn.ui.theme.Ink
 import com.nimbus.vpn.ui.theme.InkMuted
+import com.nimbus.vpn.ui.theme.Lift
 import com.nimbus.vpn.ui.theme.Line
 import com.nimbus.vpn.ui.theme.Motion
 import com.nimbus.vpn.ui.theme.Paper
@@ -123,7 +122,6 @@ fun HomeScreen(
     }
     val active = profiles.profiles.firstOrNull { it.id == profiles.activeId } ?: state.profile
     val busy = state.status == ConnectionStatus.CONNECTING
-    val connected = state.status == ConnectionStatus.CONNECTED
     val step = CoachStep.from(settings.coachStep)
     var cheer by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(profiles.profiles.size, step) {
@@ -220,22 +218,40 @@ fun HomeScreen(
                     Icon(Icons.Rounded.Settings, contentDescription = "Настройки", tint = Ink)
                 }
             }
-            val statusLine = when {
-                connected -> "В сети · ${formatDuration(state.connectedSince, now)} · ↓ ${formatRate(state.rxRate)} · ↑ ${formatRate(state.txRate)}"
-                state.status == ConnectionStatus.CONNECTING -> "Подключение…"
-                state.status == ConnectionStatus.ERROR -> state.error ?: "Ошибка"
-                access.status == AccessStatus.FAIL -> access.message
-                else -> null
-            }
-            if (!statusLine.isNullOrBlank()) {
-                Text(
-                    statusLine,
-                    color = if (state.status == ConnectionStatus.ERROR || access.status == AccessStatus.FAIL) Danger else InkMuted,
-                    fontSize = 12.sp,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 2.dp),
-                )
+            val statusVisible = state.status != ConnectionStatus.DISCONNECTED || access.status == AccessStatus.FAIL
+            AnimatedVisibility(
+                visible = statusVisible,
+                enter = fadeIn(Motion.fade(320)) + expandVertically(tween(360, easing = Motion.EaseOut)) + slideInVertically(Motion.offset(360)) { -it / 2 },
+                exit = fadeOut(Motion.fade(220)) + shrinkVertically(tween(280, easing = Motion.EaseOut)) + slideOutVertically(Motion.offset(280)) { -it / 2 },
+            ) {
+                AnimatedContent(
+                    targetState = state.status,
+                    transitionSpec = {
+                        (fadeIn(Motion.fade(340)) + slideInVertically(Motion.offset(380)) { it / 2 })
+                            .togetherWith(fadeOut(Motion.fade(200)) + slideOutVertically(Motion.offset(260)) { -it / 2 })
+                    },
+                    label = "status-line",
+                ) { mode ->
+                    val line = when (mode) {
+                        ConnectionStatus.CONNECTED -> "В сети · ${formatDuration(state.connectedSince, now)} · ↓ ${formatRate(state.rxRate)} · ↑ ${formatRate(state.txRate)}"
+                        ConnectionStatus.CONNECTING -> "Подключение…"
+                        ConnectionStatus.ERROR -> state.error ?: "Ошибка"
+                        ConnectionStatus.DISCONNECTED -> access.message ?: ""
+                    }
+                    val tone by animateColorAsState(
+                        targetValue = if (mode == ConnectionStatus.ERROR || access.status == AccessStatus.FAIL) Danger else InkMuted,
+                        animationSpec = Motion.color(420),
+                        label = "status-tone",
+                    )
+                    Text(
+                        line,
+                        color = tone,
+                        fontSize = 12.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 2.dp),
+                    )
+                }
             }
             if (profiles.profiles.isEmpty()) {
                 Box(Modifier.fillMaxSize().padding(bottom = 96.dp), contentAlignment = Alignment.Center) {
@@ -248,7 +264,7 @@ fun HomeScreen(
                         start = 16.dp,
                         end = 16.dp,
                         top = 8.dp,
-                        bottom = if (coachMessage != null) 230.dp else 120.dp,
+                        bottom = if (coachMessage != null) 250.dp else 148.dp,
                     ),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
@@ -267,10 +283,10 @@ fun HomeScreen(
                 }
             }
         }
-        ConnectFab(
-            enabled = !busy,
-            connected = connected,
+        ConnectButton(
+            status = state.status,
             hasProfile = active != null,
+            animate = animate,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
@@ -312,12 +328,16 @@ fun HomeScreen(
 private fun AccessChip(access: AccessUiState, onClick: () -> Unit, glow: Boolean) {
     val press = rememberPress(0.92f)
     val working = access.status == AccessStatus.WORKING
-    val dot = when (access.status) {
-        AccessStatus.OK -> Success
-        AccessStatus.FAIL -> Danger
-        AccessStatus.WORKING -> Accent
-        AccessStatus.IDLE -> InkMuted
-    }
+    val dot by animateColorAsState(
+        targetValue = when (access.status) {
+            AccessStatus.OK -> Success
+            AccessStatus.FAIL -> Danger
+            AccessStatus.WORKING -> Accent
+            AccessStatus.IDLE -> InkMuted
+        },
+        animationSpec = Motion.color(420),
+        label = "access-dot",
+    )
     Row(
         Modifier
             .pressScale(press.scale)
@@ -353,7 +373,13 @@ private fun ServerRow(
     onDelete: () -> Unit,
 ) {
     val endpoint = remember(profile.rawConfig) { ConfigParser.endpointOf(profile.rawConfig) }
-    val press = rememberPress(0.97f)
+    val press = rememberPress(0.975f)
+    val fill by animateColorAsState(if (active) Lift else Paper, Motion.color(460), label = "row-fill")
+    val stroke by animateColorAsState(
+        if (active) Accent.copy(alpha = 0.7f) else Line,
+        Motion.color(460),
+        label = "row-stroke",
+    )
     val proto = if (ConfigParser.isAmneziaHint(profile.rawConfig)) "AmneziaWG" else "WireGuard"
     val pingLabel = when {
         pinging -> "…"
@@ -366,8 +392,8 @@ private fun ServerRow(
             .fillMaxWidth()
             .pressScale(press.scale)
             .clip(CardShape)
-            .background(Paper)
-            .border(1.dp, if (active) Accent.copy(alpha = 0.55f) else Line, CardShape)
+            .background(fill)
+            .border(1.dp, stroke, CardShape)
             .clickable(
                 interactionSource = press.interaction,
                 indication = ripple(),
@@ -409,70 +435,6 @@ private fun ServerRow(
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(end = 10.dp),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ConnectFab(
-    enabled: Boolean,
-    connected: Boolean,
-    hasProfile: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val press = rememberPress(0.88f)
-    val breathe by rememberInfiniteTransition(label = "fab").animateFloat(
-        initialValue = 1f,
-        targetValue = if (connected) 1.04f else 1.07f,
-        animationSpec = infiniteRepeatable(
-            tween(if (enabled) 1400 else 700),
-            RepeatMode.Reverse,
-        ),
-        label = "fab-breathe",
-    )
-    val icon = when {
-        !hasProfile -> Icons.Rounded.Add
-        connected -> Icons.Rounded.Close
-        else -> Icons.Rounded.NearMe
-    }
-    Box(
-        modifier
-            .graphicsLayer {
-                val s = press.scale * if (enabled) breathe else 1f
-                scaleX = s
-                scaleY = s
-            }
-            .size(58.dp)
-            .clip(CircleShape)
-            .background(if (enabled) Accent else Accent.copy(alpha = 0.45f))
-            .clickable(
-                interactionSource = press.interaction,
-                indication = ripple(),
-                enabled = enabled,
-                onClick = onClick,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (!enabled) {
-            CircularProgressIndicator(color = Canvas, strokeWidth = 2.dp, modifier = Modifier.size(22.dp))
-        } else {
-            AnimatedContent(
-                targetState = icon,
-                transitionSpec = { scaleIn(Motion.float(220)) togetherWith scaleOut(Motion.fade(140)) },
-                label = "fab-icon",
-            ) { image ->
-                Icon(
-                    imageVector = image,
-                    contentDescription = when {
-                        !hasProfile -> "Создать сервер"
-                        connected -> "Отключить"
-                        else -> "Подключить"
-                    },
-                    tint = Canvas,
-                    modifier = Modifier.size(26.dp),
                 )
             }
         }
