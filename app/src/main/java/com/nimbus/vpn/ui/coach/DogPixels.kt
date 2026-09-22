@@ -132,9 +132,6 @@ internal object DogPixels {
         }
         return grid.map { String(it) }
     }
-
-    /** Chest, where the ball sits when she carries it. Facing the screen, so it does not flip. */
-    fun mouth(): Pair<Int, Int> = 15 to 18
 }
 
 internal enum class EyePose { OPEN, HALF, SHUT, HAPPY, LOOK }
