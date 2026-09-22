@@ -106,9 +106,8 @@ fun DogDock(
 ) {
     val density = LocalDensity.current
     val cellPx = with(density) { DOG_CELL_DP.dp.toPx() }.roundToInt().coerceAtLeast(2)
-    val sit = DogPixels.rows(DogFrame.SIT)
-    val sitW = sit.first().length
-    val peakH = DogPixels.rows(DogFrame.PEAK).size
+    val sitW = DogPixels.COLS
+    val peakH = DogPixels.ROWS
     val boxW = with(density) { (sitW * cellPx).toDp() }
     val boxH = with(density) { ((peakH + DOG_PAD_TOP) * cellPx).toDp() }
     BoxWithConstraints(modifier) {
@@ -137,9 +136,9 @@ fun DogDock(
         var act by remember { mutableStateOf(Act.IDLE) }
         val bring = remember { mutableStateOf(false) }
         val armed = remember { mutableStateOf(false) }
-        var playFrame by remember { mutableStateOf(DogFrame.RUN_A) }
+        var playPose by remember { mutableStateOf(EyePose.OPEN) }
+        var playPaws by remember { mutableStateOf(Paws.DOWN) }
         var playLift by remember { mutableIntStateOf(0) }
-        var flip by remember { mutableStateOf(false) }
         var carry by remember { mutableStateOf(false) }
         var showBall by remember { mutableStateOf(false) }
         var centerX by remember { mutableFloatStateOf(0f) }
@@ -153,7 +152,8 @@ fun DogDock(
                     armed.value = true
                     if (act == Act.IDLE) {
                         centerX = homeCenter.floatValue
-                        playFrame = DogFrame.RUN_A
+                        playPose = EyePose.OPEN
+                        playPaws = Paws.DOWN
                         playLift = 0
                         carry = false
                         showBall = true
@@ -170,8 +170,13 @@ fun DogDock(
         }
         LaunchedEffect(act) {
             val cell = cellPx.toFloat()
-            val run = arrayOf(DogFrame.RUN_A, DogFrame.RUN_B, DogFrame.RUN_C, DogFrame.RUN_B)
-            val lifts = intArrayOf(0, 1, 0, 3)
+            val bounds = arrayOf(
+                EyePose.OPEN to Paws.DOWN,
+                EyePose.HAPPY to Paws.TUCK,
+                EyePose.HAPPY to Paws.UP,
+                EyePose.OPEN to Paws.TUCK,
+            )
+            val lifts = intArrayOf(0, 1, 3, 1)
             when (act) {
                 Act.IDLE -> {
                     showBall = false
@@ -189,8 +194,8 @@ fun DogDock(
                     val sign = if (start < maxW * 0.55f) 1 else -1
                     val dest = (start + sign * travel).coerceIn(48f, maxW - 48f)
                     centerX = start
-                    flip = sign < 0
-                    playFrame = DogFrame.RUN_A
+                    playPose = EyePose.OPEN
+                    playPaws = Paws.DOWN
                     showBall = true
                     carry = false
                     val steps = 12
@@ -206,9 +211,12 @@ fun DogDock(
                 }
                 Act.CHASE -> {
                     var n = 0
-                    while (n < 48 && !noseReached(centerX, ballX, flip, cell)) {
-                        centerX = (centerX + if (flip) -cell * 2 else cell * 2).coerceIn(cell * 6, maxW - cell * 6)
-                        playFrame = run[stride % 4]
+                    while (n < 48 && kotlin.math.abs(centerX - ballX) > cell * 8) {
+                        val step = if (ballX > centerX) cell * 2 else -cell * 2
+                        centerX = (centerX + step).coerceIn(cell * 8, maxW - cell * 8)
+                        val bound = bounds[stride % 4]
+                        playPose = bound.first
+                        playPaws = bound.second
                         playLift = lifts[stride % 4]
                         stride++
                         ballY = ground.floatValue - cell * 4 + if (stride % 2 == 0) 0f else -cell
@@ -216,13 +224,15 @@ fun DogDock(
                         delay(58)
                     }
                     playLift = 0
-                    playFrame = DogFrame.RUN_A
+                    playPose = EyePose.OPEN
+                    playPaws = Paws.DOWN
                     act = if (bring.value) Act.BACK else Act.WAIT
                 }
                 Act.WAIT -> {
                     var n = 0
                     while (!bring.value) {
-                        playFrame = if (n % 2 == 0) DogFrame.RUN_A else DogFrame.RUN_B
+                        playPose = EyePose.OPEN
+                        playPaws = if (n % 2 == 0) Paws.DOWN else Paws.TUCK
                         playLift = if (n % 2 == 0) 0 else 1
                         ballY = ground.floatValue - cell * 4 + if (n % 2 == 0) 0f else -cell
                         n++
@@ -231,41 +241,41 @@ fun DogDock(
                     act = Act.BACK
                 }
                 Act.BACK -> {
-                    flip = !flip
                     showBall = false
                     carry = true
+                    playPose = EyePose.HAPPY
                     var n = 0
                     while (n < 48 && kotlin.math.abs(centerX - homeCenter.floatValue) > cell * 2) {
                         val step = if (centerX < homeCenter.floatValue) cell * 2 else -cell * 2
-                        flip = step < 0
-                        centerX = (centerX + step).coerceIn(cell * 6, maxW - cell * 6)
-                        playFrame = run[stride % 4]
+                        centerX = (centerX + step).coerceIn(cell * 8, maxW - cell * 8)
+                        val bound = bounds[stride % 4]
+                        playPaws = bound.second
                         playLift = lifts[stride % 4]
                         stride++
                         n++
                         delay(58)
                     }
                     centerX = homeCenter.floatValue
-                    flip = false
                     playLift = 0
+                    playPaws = Paws.DOWN
                     act = Act.HOP
                 }
                 Act.HOP -> {
-                    flip = false
                     carry = true
                     showBall = false
                     val jumps = listOf(
-                        DogFrame.SIT,
-                        DogFrame.RISE,
-                        DogFrame.PEAK,
-                        DogFrame.RISE,
-                        DogFrame.SIT,
-                        DogFrame.RISE,
-                        DogFrame.PEAK,
-                        DogFrame.HAPPY,
+                        EyePose.OPEN to Paws.DOWN,
+                        EyePose.HAPPY to Paws.TUCK,
+                        EyePose.HAPPY to Paws.UP,
+                        EyePose.HAPPY to Paws.TUCK,
+                        EyePose.OPEN to Paws.DOWN,
+                        EyePose.HAPPY to Paws.UP,
+                        EyePose.HAPPY to Paws.DOWN,
                     )
-                    for (frame in jumps) {
-                        playFrame = frame
+                    for ((pose, paws) in jumps) {
+                        playPose = pose
+                        playPaws = paws
+                        playLift = if (paws == Paws.UP) 2 else 0
                         centerX = homeCenter.floatValue
                         delay(78)
                     }
@@ -273,7 +283,8 @@ fun DogDock(
                     showBall = true
                     ballX = centerX + cell * 8
                     ballY = ground.floatValue - cell * 4
-                    playFrame = DogFrame.HAPPY
+                    playPose = EyePose.HAPPY
+                    playPaws = Paws.DOWN
                     delay(320)
                     showBall = false
                     armed.value = false
@@ -291,24 +302,23 @@ fun DogDock(
                         .semantics { contentDescription = "Пёс" },
                 ) {
                     val cell = cellPx
-                    val rows = DogPixels.rows(playFrame)
+                    val rows = DogPixels.rows(playPose, playPaws)
                     val width = rows.first().length
                     val height = rows.size
                     val left = snap(centerX - width * cell / 2f, cell)
                     val top = snap(ground.floatValue - (height + playLift) * cell, cell)
-                    if (playLift > 0 || playFrame == DogFrame.PEAK || playFrame == DogFrame.RISE) {
+                    if (playLift > 0 || playPaws != Paws.DOWN) {
                         drawShadow(centerX, ground.floatValue, cell)
                     }
-                    drawPixels(rows, left, top, cell, flip)
+                    drawPixels(rows, left, top, cell, flip = false)
                     if (showBall) drawBall(ballX, ballY, cell)
                     if (carry) {
-                        val (mx, my) = DogPixels.mouth(playFrame)
-                        val bx = if (!flip) left + mx * cell else left + (width - 1 - mx) * cell
-                        drawBall(bx, top + my * cell, cell)
+                        val (mx, my) = DogPixels.mouth()
+                        drawBall(left + mx * cell, top + my * cell, cell)
                     }
-                    if (playFrame == DogFrame.PEAK) {
+                    if (playPaws == Paws.UP) {
                         val star = Color(0xFFF0C36A)
-                        pixelStar(left - cell, top + cell.toFloat(), cell.toFloat(), star)
+                        pixelStar(left, top + cell.toFloat(), cell.toFloat(), star)
                         pixelStar(left + width * cell, top + 3f * cell, cell.toFloat(), star)
                     }
                 }
@@ -319,7 +329,7 @@ fun DogDock(
                         message,
                         action,
                         onAction,
-                        Modifier.offset(y = (DOG_PAD_TOP * DOG_CELL_DP).dp),
+                        Modifier.offset(y = ((DOG_PAD_TOP - 1) * DOG_CELL_DP).dp),
                     )
                 }
                 Box(
@@ -351,11 +361,6 @@ fun DogDock(
             }
         }
     }
-}
-
-private fun noseReached(center: Float, ball: Float, flip: Boolean, cell: Float): Boolean {
-    val nose = center + if (flip) -7f * cell else 7f * cell
-    return if (flip) nose <= ball else nose >= ball
 }
 
 @Composable
@@ -400,13 +405,12 @@ private fun SpeechBubble(
 }
 
 private val dogInk = mapOf(
-    '1' to Color(0xFF141210),
-    '2' to Color(0xFF1B1B1B),
-    '3' to Color(0xFF3C3C3C),
-    '4' to Color(0xFFC8C0B8),
-    '5' to Color(0xFFF3F0EA),
+    '1' to Color(0xFF1A1C22),
+    '2' to Color(0xFF3C3E44),
+    '3' to Color(0xFF6A6C72),
+    '4' to Color(0xFF9A9CA2),
+    '5' to Color(0xFFC8CACF),
     '6' to Color(0xFFF7F7F8),
-    '7' to Color(0xFF6E564C),
 )
 
 @Composable
@@ -431,27 +435,24 @@ private fun DogSprite(mood: DogMood, cellPx: Int, modifier: Modifier = Modifier)
         label = "blink",
     )
     val bob = if (bobT > 0.5f) 1 else 0
-    val blinkShut = blinkT in 0.90f..0.96f
-    val frame = when {
-        mood == DogMood.JOY -> DogFrame.HAPPY
-        blinkShut -> DogFrame.BLINK
-        blinkT in 0.62f..0.74f -> DogFrame.PAW
-        mood == DogMood.POINT || (mood == DogMood.WAVE && bob == 1) -> DogFrame.LOOK
-        else -> DogFrame.SIT
+    val blink = when {
+        blinkT < 0.86f -> EyePose.OPEN
+        blinkT < 0.90f -> EyePose.HALF
+        blinkT < 0.95f -> EyePose.SHUT
+        blinkT < 0.98f -> EyePose.HALF
+        else -> EyePose.OPEN
     }
-    val lift = if (frame == DogFrame.PEAK) 2 else bob
+    val pose = when {
+        mood == DogMood.JOY -> EyePose.HAPPY
+        blink == EyePose.HALF || blink == EyePose.SHUT -> blink
+        mood == DogMood.POINT || (mood == DogMood.WAVE && bob == 1) -> EyePose.LOOK
+        else -> EyePose.OPEN
+    }
+    val paws = if (mood != DogMood.JOY && blinkT in 0.62f..0.74f) Paws.TUCK else Paws.DOWN
     Canvas(modifier.semantics { contentDescription = "Пёс" }) {
-        val rows = DogPixels.rows(frame)
-        val top = snap(size.height - (rows.size + lift) * cellPx, cellPx)
-        if (frame == DogFrame.PEAK || frame == DogFrame.RISE) {
-            drawShadow(size.width / 2f, size.height, cellPx)
-        }
+        val rows = DogPixels.rows(pose, paws)
+        val top = snap(size.height - (rows.size + bob) * cellPx, cellPx)
         drawPixels(rows, snap((size.width - rows.first().length * cellPx) / 2f, cellPx), top, cellPx, flip = false)
-        if (frame == DogFrame.PEAK) {
-            val star = Color(0xFFF0C36A)
-            pixelStar(4f, top, cellPx.toFloat(), star)
-            pixelStar(size.width - cellPx * 3f, top + cellPx, cellPx.toFloat(), star)
-        }
     }
 }
 
