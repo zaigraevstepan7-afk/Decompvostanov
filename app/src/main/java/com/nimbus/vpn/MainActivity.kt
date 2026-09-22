@@ -151,8 +151,9 @@ class MainActivity : ComponentActivity() {
                             onPing = viewModel::pingServers,
                             settings = settings,
                             joyPulse = joy,
-                            onCoachYes = {
-                                viewModel.coachYes(
+                            onCoachYes = { viewModel.coachYes() },
+                            onCoachAbout = {
+                                viewModel.onCoachAboutNext(
                                     hasProfiles = profiles.profiles.isNotEmpty(),
                                     connected = tunnel.status == com.nimbus.vpn.tunnel.ConnectionStatus.CONNECTED,
                                 )

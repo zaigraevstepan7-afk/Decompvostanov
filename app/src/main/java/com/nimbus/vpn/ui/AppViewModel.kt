@@ -282,13 +282,21 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun coachYes(hasProfiles: Boolean, connected: Boolean) {
-        val target = when {
-            connected -> CoachStep.CELEBRATE
-            hasProfiles -> CoachStep.ACCESS
-            else -> CoachStep.CREATE
+    fun coachYes() {
+        advanceCoach(CoachStep.ABOUT)
+    }
+
+    fun onCoachAboutNext(hasProfiles: Boolean, connected: Boolean) {
+        viewModelScope.launch {
+            val current = CoachStep.from(app.container.settings.settings.first().coachStep)
+            if (current != CoachStep.ABOUT) return@launch
+            val target = when {
+                connected -> CoachStep.CELEBRATE
+                hasProfiles -> CoachStep.ACCESS
+                else -> CoachStep.CREATE
+            }
+            app.container.settings.setCoachStep(target.id)
         }
-        advanceCoach(target)
     }
 
     fun onCoachAddTapped() = advanceCoach(CoachStep.PICK)

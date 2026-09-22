@@ -106,6 +106,7 @@ fun HomeScreen(
     settings: AppSettings,
     joyPulse: Int,
     onCoachYes: () -> Unit,
+    onCoachAbout: () -> Unit,
     onCoachAdd: () -> Unit,
     onCoachReady: () -> Unit,
     onCoachCelebrateNext: () -> Unit,
@@ -131,6 +132,7 @@ fun HomeScreen(
     val teachAccess = !settings.heardAccess && (step == CoachStep.ACCESS || step == CoachStep.CONNECT)
     val coachMessage = when {
         step == CoachStep.OFFER -> "Привет! Показать, как тут всё устроено?"
+        step == CoachStep.ABOUT -> "Cloudflare WARP — это сервис шифрования сетевого трафика от компании Cloudflare, работающий по принципу VPN на базе оптимизированного протокола WireGuard (реализация BoringTun)."
         step == CoachStep.CREATE || step == CoachStep.PICK -> "Нажми светящуюся кнопку «+» и создай сервер сам. Я подожду."
         teachAccess -> "Перед включением нажми светящуюся «Доступ». Сменился IP — снова эта одна кнопка, и всё работает. Перестало работать: отключи VPN и нажми «Доступ» ещё раз."
         step == CoachStep.CONNECT -> "Теперь нажми круглую кнопку внизу. Она включит туннель."
@@ -139,14 +141,17 @@ fun HomeScreen(
     }
     val coachAction = when (step) {
         CoachStep.OFFER -> "Да"
+        CoachStep.ABOUT -> "Дальше"
         else -> null
     }
     val coachClick: (() -> Unit)? = when (step) {
         CoachStep.OFFER -> onCoachYes
+        CoachStep.ABOUT -> onCoachAbout
         else -> null
     }
     val mood = when {
         step == CoachStep.OFFER -> DogMood.WAVE
+        step == CoachStep.ABOUT -> DogMood.POINT
         teachAccess || step == CoachStep.CELEBRATE || step == CoachStep.SETTINGS -> DogMood.POINT
         step == CoachStep.DONE -> DogMood.CALM
         else -> DogMood.POINT

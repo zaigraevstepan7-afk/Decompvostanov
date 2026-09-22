@@ -2,6 +2,7 @@ package com.nimbus.vpn.ui.coach
 
 enum class CoachStep(val id: Int) {
     OFFER(0),
+    ABOUT(12),
     CREATE(1),
     PICK(2),
     CONNECT(3),

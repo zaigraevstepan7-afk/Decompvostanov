@@ -172,7 +172,7 @@ private fun SpeechBubble(
     Column(
         modifier
             .padding(bottom = 6.dp)
-            .widthIn(max = 210.dp)
+            .widthIn(max = 260.dp)
             .clip(RoundedCornerShape(18.dp))
             .background(Paper)
             .padding(horizontal = 14.dp, vertical = 12.dp),
