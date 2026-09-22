@@ -2,6 +2,7 @@ package com.nimbus.vpn.ui.coach
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -10,7 +11,8 @@ class DogPixelsTest {
     fun openEyesKeepTheOriginalWhites() {
         val rows = DogPixels.rows(EyePose.OPEN)
         assertEquals(DogPixels.ROWS, rows.size)
-        assertTrue(rows.all { it.length == DogPixels.COLS })
+        assertTrue(rows.all { it.length == DogPixels.COLS + DogPixels.TAIL_PAD })
+        assertTrue(rows.all { it.drop(DogPixels.COLS).all { cell -> cell == '.' } })
         for ((x, y) in DogPixels.eyes) {
             val eye = eye(rows, x, y)
             assertTrue(eye.any { it.contains('6') })
@@ -47,6 +49,21 @@ class DogPixelsTest {
         assertEquals(standing[32], up[24])
         assertTrue(up.takeLast(8).all { row -> row.all { it == '.' } })
         assertTrue(standing.last().contains('1'))
+    }
+
+    @Test
+    fun tailWagStaysOffTheFaceAndChangesShape() {
+        val still = DogPixels.rows(EyePose.OPEN)
+        val high = DogPixels.rows(EyePose.OPEN, tail = Tail.HIGH)
+        val low = DogPixels.rows(EyePose.OPEN, tail = Tail.LOW)
+        assertEquals(still[8], high[8])
+        assertNotEquals(high.joinToString("\n"), low.joinToString("\n"))
+        assertTrue(high.any { it.drop(DogPixels.COLS).any { cell -> cell != '.' } })
+        for (y in still.indices) {
+            for (x in 0 until DogPixels.COLS) {
+                if (still[y][x] != '.') assertEquals(still[y][x], high[y][x])
+            }
+        }
     }
 
     private fun eye(rows: List<String>, x: Int, y: Int) = List(6) { dy -> rows[y + dy].substring(x, x + 7) }

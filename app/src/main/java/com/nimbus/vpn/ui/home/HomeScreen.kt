@@ -131,8 +131,8 @@ fun HomeScreen(
     }
     LaunchedEffect(joyPulse) {
         if (joyPulse == 0 || step != CoachStep.DONE) return@LaunchedEffect
-        cheer = "Ура, мы в сети! Серия ${settings.streak.coerceAtLeast(1)}."
-        delay(4200)
+        cheer = "Я в сети! Серия ${settings.streak.coerceAtLeast(1)}."
+        delay(3600)
         cheer = null
     }
     val teachAccess = !settings.heardAccess && (step == CoachStep.ACCESS || step == CoachStep.CONNECT)

@@ -10,7 +10,9 @@ internal const val DOG_PAD_TOP = 8
 internal object DogPixels {
     const val COLS = 36
     const val ROWS = 40
+    const val TAIL_PAD = 10
     private const val LEG_TOP = 32
+    private const val TAIL_X = 34
 
     val eyes = listOf(8 to 8, 21 to 8)
 
@@ -93,12 +95,44 @@ internal object DogPixels {
         "3466643",
     )
 
+    private val tailHigh = listOf(
+        20 to ".......121",
+        21 to "......1221",
+        22 to ".....12221",
+        23 to "....122221",
+        24 to "...1222221",
+        25 to "..1222221.",
+        26 to ".1222221..",
+        27 to "1222221...",
+        28 to "112221....",
+        29 to "121.......",
+    )
+
+    private val tailLevel = listOf(
+        27 to "1221....",
+        28 to "122221..",
+        29 to "11222221",
+        30 to ".122221.",
+        31 to "..11221.",
+    )
+
+    private val tailLow = listOf(
+        29 to "121.....",
+        30 to "1221....",
+        31 to "12221...",
+        32 to ".122221.",
+        33 to "..1222221",
+        34 to "...122221",
+        35 to "....11221",
+        36 to ".....1221",
+    )
+
     init {
         require(base.size == ROWS)
         require(base.all { it.length == COLS })
     }
 
-    fun rows(pose: EyePose, paws: Paws = Paws.DOWN): List<String> {
+    fun rows(pose: EyePose, paws: Paws = Paws.DOWN, tail: Tail = Tail.HIDDEN): List<String> {
         val grid = base.map { it.toCharArray() }.toMutableList()
         val pattern = when (pose) {
             EyePose.OPEN -> null
@@ -130,10 +164,33 @@ internal object DogPixels {
                 grid[y] = CharArray(COLS) { '.' }
             }
         }
-        return grid.map { String(it) }
+        val wide = grid.map { row ->
+            CharArray(COLS + TAIL_PAD) { index -> if (index < COLS) row[index] else '.' }
+        }
+        if (tail != Tail.HIDDEN) paintTail(wide, tail)
+        return wide.map { String(it) }
+    }
+
+    private fun paintTail(grid: List<CharArray>, tail: Tail) {
+        val stamp = when (tail) {
+            Tail.HIDDEN -> return
+            Tail.HIGH -> tailHigh
+            Tail.LEVEL -> tailLevel
+            Tail.LOW -> tailLow
+        }
+        for ((y, line) in stamp) {
+            line.forEachIndexed { dx, ch ->
+                if (ch == '.') return@forEachIndexed
+                val x = TAIL_X + dx
+                if (y !in grid.indices || x !in grid[y].indices) return@forEachIndexed
+                if (grid[y][x] == '.') grid[y][x] = ch
+            }
+        }
     }
 }
 
 internal enum class EyePose { OPEN, HALF, SHUT, HAPPY, LOOK }
 
 internal enum class Paws { DOWN, TUCK, UP }
+
+internal enum class Tail { HIDDEN, LOW, LEVEL, HIGH }

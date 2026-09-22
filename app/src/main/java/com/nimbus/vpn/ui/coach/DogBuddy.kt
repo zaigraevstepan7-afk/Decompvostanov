@@ -96,7 +96,7 @@ fun DogDock(
 ) {
     val density = LocalDensity.current
     val cellPx = with(density) { DOG_CELL_DP.dp.toPx() }.roundToInt().coerceAtLeast(2)
-    val boxW = with(density) { (DogPixels.COLS * cellPx).toDp() }
+    val boxW = with(density) { ((DogPixels.COLS + DogPixels.TAIL_PAD) * cellPx).toDp() }
     val boxH = with(density) { ((DogPixels.ROWS + DOG_PAD_TOP) * cellPx).toDp() }
     BoxWithConstraints(modifier) {
         val maxW = constraints.maxWidth.toFloat().coerceAtLeast(1f)
@@ -221,15 +221,29 @@ private fun DogSprite(mood: DogMood, joyPulse: Int, cellPx: Int, modifier: Modif
     )
     var hop by remember { mutableIntStateOf(0) }
     var jumping by remember { mutableStateOf(false) }
+    var tail by remember { mutableStateOf(Tail.HIDDEN) }
+    var wagging by remember { mutableStateOf(false) }
     LaunchedEffect(joyPulse) {
         if (joyPulse == 0) return@LaunchedEffect
         jumping = true
+        wagging = false
+        tail = Tail.HIDDEN
         for (step in intArrayOf(0, 2, 5, 7, 5, 2, 0)) {
             hop = step
             delay(68)
         }
         hop = 0
         jumping = false
+        wagging = true
+        val sweep = listOf(Tail.LEVEL, Tail.HIGH, Tail.LEVEL, Tail.LOW)
+        repeat(5) {
+            for (frame in sweep) {
+                tail = frame
+                delay(78)
+            }
+        }
+        tail = Tail.HIDDEN
+        wagging = false
     }
     val bob = if (bobT > 0.5f) 1 else 0
     val blink = when {
@@ -240,7 +254,7 @@ private fun DogSprite(mood: DogMood, joyPulse: Int, cellPx: Int, modifier: Modif
         else -> EyePose.OPEN
     }
     val pose = when {
-        mood == DogMood.JOY -> EyePose.HAPPY
+        wagging || mood == DogMood.JOY -> EyePose.HAPPY
         blink == EyePose.HALF || blink == EyePose.SHUT -> blink
         mood == DogMood.POINT || (mood == DogMood.WAVE && bob == 1) -> EyePose.LOOK
         else -> EyePose.OPEN
@@ -248,12 +262,13 @@ private fun DogSprite(mood: DogMood, joyPulse: Int, cellPx: Int, modifier: Modif
     val paws = when {
         jumping && hop >= 4 -> Paws.UP
         jumping && hop > 0 -> Paws.TUCK
+        wagging -> Paws.DOWN
         mood != DogMood.JOY && blinkT in 0.62f..0.74f -> Paws.TUCK
         else -> Paws.DOWN
     }
     val lift = if (jumping) hop else bob
     Canvas(modifier.semantics { contentDescription = "Пёс" }) {
-        val rows = DogPixels.rows(pose, paws)
+        val rows = DogPixels.rows(pose, paws, tail)
         val top = snap(size.height - (rows.size + lift) * cellPx, cellPx)
         drawPixels(rows, snap((size.width - rows.first().length * cellPx) / 2f, cellPx), top, cellPx, flip = false)
     }
