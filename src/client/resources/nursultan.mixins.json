@@ -1,0 +1,26 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "fun.nursultan.client.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "ConnectionMixin",
+    "ClientPacketListenerMixin",
+    "GameRendererMixin",
+    "MultiPlayerGameModeMixin",
+    "ItemInHandRendererMixin",
+    "CameraMixin",
+    "FogRendererMixin",
+    "ScreenEffectRendererMixin",
+    "LocalPlayerMixin",
+    "EntityMixin",
+    "MouseHandlerMixin",
+    "GuiMixin",
+    "ChatComponentMixin",
+    "PlayerInfoMixin",
+    "SoundEngineMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

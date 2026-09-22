@@ -1,0 +1,56 @@
+package fun.nursultan.client.mixin;
+
+import fun.nursultan.client.util.ChatLog;
+import fun.nursultan.client.util.ClientHooks;
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ClientboundDisguisedChatPacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerChatPacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerRotationPacket;
+import net.minecraft.network.protocol.game.ClientboundSystemChatPacket;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+@Mixin(ClientPacketListener.class)
+public class ClientPacketListenerMixin {
+    @Inject(method = "handleMovePlayer", at = @At("HEAD"), cancellable = true)
+    private void nursultan$noServerRotPos(ClientboundPlayerPositionPacket packet, CallbackInfo ci) {
+        if (ClientHooks.ignoreServerLook()) {
+            ci.cancel();
+        }
+    }
+
+    @Inject(method = "handleRotatePlayer", at = @At("HEAD"), cancellable = true)
+    private void nursultan$noServerRot(ClientboundPlayerRotationPacket packet, CallbackInfo ci) {
+        if (ClientHooks.ignoreServerLook()) {
+            ci.cancel();
+        }
+    }
+
+    @Inject(method = "handleSystemChat", at = @At("TAIL"))
+    private void nursultan$chat(ClientboundSystemChatPacket packet, CallbackInfo ci) {
+        ChatLog.push(packet.content().getString());
+    }
+
+    @Inject(method = "handlePlayerChat", at = @At("TAIL"))
+    private void nursultan$playerChat(ClientboundPlayerChatPacket packet, CallbackInfo ci) {
+        Component unsigned = packet.unsignedContent();
+        String raw = unsigned != null ? unsigned.getString() : packet.body().content();
+        ChatLog.push(packet.chatType().decorate(Component.literal(raw)).getString());
+    }
+
+    @Inject(method = "handleDisguisedChat", at = @At("TAIL"))
+    private void nursultan$disguisedChat(ClientboundDisguisedChatPacket packet, CallbackInfo ci) {
+        ChatLog.push(packet.chatType().decorate(packet.message()).getString());
+    }
+
+    @Inject(method = "sendChat", at = @At("HEAD"), cancellable = true)
+    private void nursultan$clientCmd(String message, CallbackInfo ci) {
+        if (ClientHooks.handleClientChat(message)) {
+            ci.cancel();
+        }
+    }
+}

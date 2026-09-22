@@ -1,0 +1,9 @@
+.gradle/
+build/
+data/
+decompiled/all/
+.idea/
+*.iml
+out/
+.cursor/
+artifacts/
