@@ -290,6 +290,7 @@ fun HomeScreen(
             action = coachAction,
             onAction = coachClick,
             joyPulse = joyPulse,
+            status = state.status,
             anchorX = settings.dogX,
             anchorY = settings.dogY,
             onAnchor = onMoveDog,
