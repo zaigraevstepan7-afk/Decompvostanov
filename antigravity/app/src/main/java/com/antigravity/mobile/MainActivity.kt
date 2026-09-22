@@ -15,8 +15,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import com.antigravity.mobile.auth.GoogleLoginActivity
-import com.antigravity.mobile.ui.AntigravityAppUi
-import com.antigravity.mobile.ui.AntigravityTheme
+import com.antigravity.mobile.ui.DeepSeekApp
+import com.deepseek.chat.ui.theme.DeepSeekTheme
+import com.deepseek.chat.ui.theme.DarkBackground
 
 class MainActivity : ComponentActivity() {
     private val viewModel: AntigravityViewModel by viewModels {
@@ -57,9 +58,9 @@ class MainActivity : ComponentActivity() {
         viewModel.refreshRoot()
         setContent {
             val state by viewModel.state.collectAsState()
-            AntigravityTheme {
-                Surface(modifier = Modifier.fillMaxSize(), color = com.antigravity.mobile.ui.AgColors.Bg) {
-                    AntigravityAppUi(
+            DeepSeekTheme {
+                Surface(modifier = Modifier.fillMaxSize(), color = DarkBackground) {
+                    DeepSeekApp(
                         state = state,
                         onLogin = {
                             val request = viewModel.createGoogleLogin()
@@ -71,17 +72,18 @@ class MainActivity : ComponentActivity() {
                         },
                         onLogout = viewModel::logout,
                         onSend = viewModel::send,
-                        onModel = viewModel::setModel,
                         onWorkspace = viewModel::setWorkspace,
                         onRetryRoot = viewModel::refreshRoot,
                         onAttach = { pickFiles.launch(arrayOf("*/*")) },
-                        onRemoveAttachment = viewModel::removeAttachment,
                         onNewChat = viewModel::newChat,
                         onOpenChat = viewModel::openChat,
                         onDeleteChat = viewModel::deleteChat,
                         onStop = viewModel::stop,
-                        onMode = viewModel::setMode,
-                        onConfirmPlan = viewModel::confirmPlan,
+                        onBrain = viewModel::setBrain,
+                        onSearch = viewModel::setSearch,
+                        onAgent = viewModel::setAgent,
+                        onRegenerate = viewModel::regenerate,
+                        onRemovePending = viewModel::removeAttachment,
                     )
                 }
             }

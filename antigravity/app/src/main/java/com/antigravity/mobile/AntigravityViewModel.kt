@@ -20,6 +20,7 @@ import com.antigravity.core.auth.AntigravityAuthClient
 import com.antigravity.core.auth.AntigravityOAuth
 import com.antigravity.core.auth.AntigravitySession
 import com.antigravity.mobile.auth.SessionStore
+import com.deepseek.chat.ui.model.DeepSeekModel
 import com.antigravity.mobile.chat.ChatStore
 import com.antigravity.mobile.chat.ChatThread
 import com.antigravity.mobile.chat.ChatTitle
@@ -65,6 +66,9 @@ data class UiState(
     val chatId: String = "",
     val chats: List<ChatThread> = emptyList(),
     val mode: String = "auto",
+    val brain: Boolean = false,
+    val search: Boolean = false,
+    val agent: Boolean = true,
 )
 
 data class GoogleLoginRequest(val url: String, val state: String)
@@ -83,16 +87,21 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
     private val initialChat: StoredChat = chatStore.currentId()?.let { chatStore.load(it) }
         ?: chatStore.list().firstOrNull()?.let { chatStore.load(it.id) }
         ?: chatStore.create()
+    private val initialBrain = store.loadBrain()
+    private val initialAgent = store.loadAgent()
 
     private val _state = MutableStateFlow(
         UiState(
             session = store.load(),
-            model = store.loadModel() ?: GeminiModels.DEFAULT,
+            model = if (initialBrain) DeepSeekModel.DEEPSEEK_R1.wireId else DeepSeekModel.DEEPSEEK_V3.wireId,
             workspace = store.loadWorkspace() ?: defaultWorkspace(),
             chatId = initialChat.id,
             chats = chatStore.list(),
             messages = ChatStore.toMessages(initialChat),
             mode = store.loadMode() ?: "auto",
+            brain = initialBrain,
+            search = store.loadSearch(),
+            agent = initialAgent,
         ),
     )
     val state: StateFlow<UiState> = _state
@@ -117,6 +126,26 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
         val id = if (mode == "plan") "plan" else "auto"
         store.saveMode(id)
         _state.update { it.copy(mode = id) }
+    }
+
+    fun setBrain(enabled: Boolean) {
+        if (_state.value.busy) return
+        val model = if (enabled) DeepSeekModel.DEEPSEEK_R1.wireId else DeepSeekModel.DEEPSEEK_V3.wireId
+        store.saveBrain(enabled)
+        store.saveModel(model)
+        _state.update { it.copy(brain = enabled, model = model) }
+    }
+
+    fun setSearch(enabled: Boolean) {
+        if (_state.value.busy) return
+        store.saveSearch(enabled)
+        _state.update { it.copy(search = enabled) }
+    }
+
+    fun setAgent(enabled: Boolean) {
+        if (_state.value.busy) return
+        store.saveAgent(enabled)
+        _state.update { it.copy(agent = enabled) }
     }
 
     fun stop() {
@@ -313,8 +342,18 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
             chatId = snapshot.chatId,
             userText = trimmed.ifBlank { "Смотри вложения. Ответь по картинкам и файлам." },
             extraParts = extraParts,
-            planOnly = snapshot.mode == "plan",
+            planOnly = false,
+            agent = snapshot.agent,
+            webSearch = snapshot.search,
+            modelOverride = if (snapshot.brain) DeepSeekModel.DEEPSEEK_R1.wireId else DeepSeekModel.DEEPSEEK_V3.wireId,
         )
+    }
+
+    fun regenerate() {
+        if (_state.value.busy) return
+        val text = _state.value.messages.lastOrNull { it.role == "user" }?.text?.trim().orEmpty()
+        if (text.isEmpty()) return
+        send(text)
     }
 
     fun confirmPlan() {
@@ -332,6 +371,9 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
             userText = "План подтверждён. Реализуй его по шагам, не переспрашивай:\n\n$plan",
             extraParts = emptyList(),
             planOnly = false,
+            agent = true,
+            webSearch = snapshot.search,
+            modelOverride = snapshot.model,
         )
     }
 
@@ -343,6 +385,9 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
         userText: String,
         extraParts: List<kotlinx.serialization.json.JsonObject>,
         planOnly: Boolean,
+        agent: Boolean = true,
+        webSearch: Boolean = false,
+        modelOverride: String? = null,
     ) {
         cancelled.set(false)
         agentJob?.cancel()
@@ -360,12 +405,14 @@ class AntigravityViewModel(application: Application) : AndroidViewModel(applicat
                 val loop = AgentLoop(llm, fs)
                 val answer = loop.run(
                     session = live,
-                    model = model,
+                    model = modelOverride ?: model,
                     userText = userText,
                     history = history,
                     extraParts = extraParts,
                     rooted = true,
                     planOnly = planOnly,
+                    agent = agent,
+                    webSearch = webSearch,
                     shouldCancel = { cancelled.get() },
                     listener = object : AgentListener {
                         override fun onThinking(text: String) {

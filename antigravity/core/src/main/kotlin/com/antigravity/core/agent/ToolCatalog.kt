@@ -5,6 +5,9 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
 object ToolCatalog {
@@ -120,6 +123,35 @@ object ToolCatalog {
 
     val withoutGrounding: JsonArray = buildJsonArray {
         add(functionTool)
+    }
+
+    private val webNames = setOf("web_search", "web_fetch")
+
+    fun forMode(agent: Boolean, webSearch: Boolean): JsonArray {
+        val selected = functionTool["functionDeclarations"]!!
+            .jsonArray
+            .filter { element ->
+                val name = element.jsonObject["name"]!!.jsonPrimitive.content
+                when {
+                    name in webNames -> webSearch
+                    else -> agent
+                }
+            }
+        if (selected.isEmpty() && !webSearch) return JsonArray(emptyList())
+        return buildJsonArray {
+            if (webSearch) {
+                add(googleSearch)
+                add(urlContext)
+            }
+            if (selected.isNotEmpty()) {
+                add(buildJsonObject { put("functionDeclarations", JsonArray(selected)) })
+            }
+        }
+    }
+
+    fun toolAllowed(name: String, agent: Boolean, webSearch: Boolean): Boolean = when (name) {
+        "web_search", "web_fetch" -> webSearch
+        else -> agent
     }
 
     private fun fn(name: String, description: String, parameters: JsonObject, required: List<String>) =

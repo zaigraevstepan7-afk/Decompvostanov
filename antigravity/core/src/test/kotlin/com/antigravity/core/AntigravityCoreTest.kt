@@ -587,6 +587,36 @@ class AntigravityCoreTest {
     }
 
     @Test
+    fun searchToggleOnlyAddsWebTools() {
+        val searchOnly = com.antigravity.core.agent.ToolCatalog.forMode(agent = false, webSearch = true).toString()
+        assertTrue(searchOnly.contains("web_search"))
+        assertTrue(searchOnly.contains("web_fetch"))
+        assertTrue(searchOnly.contains("googleSearch"))
+        assertFalse(searchOnly.contains("shell"))
+        assertFalse(searchOnly.contains("write_file"))
+        val prompt = com.antigravity.core.agent.SystemPrompt.build(
+            "/sdcard/Antigravity",
+            "a@b.c",
+            true,
+            agent = false,
+            webSearch = true,
+        )
+        assertTrue(prompt.contains("web_search"))
+        assertFalse(prompt.contains("write_file"))
+    }
+
+    @Test
+    fun agentSettingAddsFileToolsWithoutSearch() {
+        val agentOnly = com.antigravity.core.agent.ToolCatalog.forMode(agent = true, webSearch = false).toString()
+        assertTrue(agentOnly.contains("shell"))
+        assertTrue(agentOnly.contains("read_file"))
+        assertFalse(agentOnly.contains("web_search"))
+        assertFalse(agentOnly.contains("googleSearch"))
+        val chat = com.antigravity.core.agent.ToolCatalog.forMode(agent = false, webSearch = false)
+        assertEquals(0, chat.size)
+    }
+
+    @Test
     fun agentKeepsGoingPastFormerFortyTurnCap() {
         val fs = LocalDeviceFs(tmp)
         val session = AntigravitySession(

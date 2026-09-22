@@ -11,6 +11,9 @@ class SessionStore(context: Context) {
     private val modelFile = File(context.filesDir, "selected-model.txt")
     private val workspaceFile = File(context.filesDir, "workspace.txt")
     private val modeFile = File(context.filesDir, "agent-mode.txt")
+    private val brainFile = File(context.filesDir, "brain-model.txt")
+    private val searchFile = File(context.filesDir, "web-search.txt")
+    private val agentFile = File(context.filesDir, "agent-enabled.txt")
 
     fun load(): AntigravitySession? {
         if (!file.exists()) return null
@@ -40,6 +43,27 @@ class SessionStore(context: Context) {
 
     fun saveMode(mode: String) {
         modeFile.writeText(if (mode == "plan") "plan" else "auto")
+    }
+
+    fun loadBrain(): Boolean =
+        runCatching { brainFile.readText().trim() == "1" }.getOrDefault(false)
+
+    fun saveBrain(enabled: Boolean) {
+        brainFile.writeText(if (enabled) "1" else "0")
+    }
+
+    fun loadSearch(): Boolean =
+        runCatching { searchFile.readText().trim() == "1" }.getOrDefault(false)
+
+    fun saveSearch(enabled: Boolean) {
+        searchFile.writeText(if (enabled) "1" else "0")
+    }
+
+    fun loadAgent(): Boolean =
+        runCatching { agentFile.readText().trim() != "0" }.getOrDefault(true)
+
+    fun saveAgent(enabled: Boolean) {
+        agentFile.writeText(if (enabled) "1" else "0")
     }
 
     fun clear() {

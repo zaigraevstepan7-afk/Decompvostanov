@@ -49,12 +49,21 @@ class AgentLoop(
         rooted: Boolean = true,
         extraParts: List<JsonObject> = emptyList(),
         planOnly: Boolean = false,
+        agent: Boolean = true,
+        webSearch: Boolean = true,
         shouldCancel: () -> Boolean = { false },
     ): String {
         history.add(userTurn(userText, extraParts))
-        val system = SystemPrompt.build(fs.workspace, session.email, rooted, planOnly = planOnly)
+        val system = SystemPrompt.build(
+            fs.workspace,
+            session.email,
+            rooted,
+            planOnly = planOnly,
+            agent = agent && !planOnly,
+            webSearch = webSearch && !planOnly,
+        )
         val collected = StringBuilder()
-        val toolDefs = if (planOnly) JsonArray(emptyList()) else ToolCatalog.declarations
+        val toolDefs = if (planOnly) JsonArray(emptyList()) else ToolCatalog.forMode(agent, webSearch)
         while (true) {
             if (shouldCancel()) return collected.toString().ifBlank { "Остановлено" }
             val reply = llm.generate(session, model, system, history.toList(), toolDefs)
@@ -91,7 +100,11 @@ class AgentLoop(
             reply.functionCalls.forEach { call ->
                 if (shouldCancel()) return collected.toString().ifBlank { "Остановлено" }
                 listener.onToolStart(call.name, call.args)
-                val result = tools.execute(call.name, call.args)
+                val result = if (ToolCatalog.toolAllowed(call.name, agent, webSearch)) {
+                    tools.execute(call.name, call.args)
+                } else {
+                    "Инструмент ${call.name} выключен."
+                }
                 listener.onToolResult(call.name, result)
                 history.add(functionResponseTurn(call.name, call.id, result))
             }
