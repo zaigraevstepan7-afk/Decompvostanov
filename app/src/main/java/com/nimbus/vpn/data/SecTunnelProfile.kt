@@ -8,22 +8,24 @@ data class SecRegion(
     val id: String,
     val name: String,
     val flag: String,
+    val place: String,
 )
 
 data class SecTunnelSpec(
     val region: String,
     val name: String,
     val flag: String,
+    val place: String,
 )
 
 object SecTunnelProfile {
     const val ENGINE = "sec-tunnel"
 
     val regions: List<SecRegion> = listOf(
-        SecRegion("AUTO", "Авто", "🌐"),
-        SecRegion("EU", "Европа", "🇪🇺"),
-        SecRegion("AS", "Азия", "🌏"),
-        SecRegion("AM", "Америка", "🌎"),
+        SecRegion("AUTO", "Авто", "🌐", "сам выберет"),
+        SecRegion("EU", "Европа", "🇪🇺", "Швеция"),
+        SecRegion("AS", "Азия", "🌏", "Сингапур"),
+        SecRegion("AM", "Америка", "🌎", "США"),
     )
 
     fun region(id: String): SecRegion? = regions.firstOrNull { it.id.equals(id, ignoreCase = true) }
@@ -46,7 +48,7 @@ object SecTunnelProfile {
         }
         if (!engine.equals(ENGINE, ignoreCase = true)) return null
         val known = region(regionId ?: return null) ?: return null
-        return SecTunnelSpec(known.id, known.name, known.flag)
+        return SecTunnelSpec(known.id, known.name, known.flag, known.place)
     }
 
     fun build(regionId: String): String {

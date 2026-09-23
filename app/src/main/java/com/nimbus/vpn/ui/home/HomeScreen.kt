@@ -409,7 +409,7 @@ private fun ServerRow(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                if (sec != null) "sec-tunnel" else endpoint ?: proto,
+                if (sec != null) "${sec.place} · sec-tunnel" else endpoint ?: proto,
                 color = InkMuted,
                 fontSize = 13.sp,
                 maxLines = 1,

@@ -84,6 +84,12 @@ object SecTunnelApi {
 
     fun requestedGeo(region: String): String = "\"${region.trim().uppercase()}\",,"
 
+    fun sameRegion(country: String?, requested: String): Boolean {
+        val tagged = country?.trim()?.uppercase().orEmpty()
+        if (tagged.isEmpty()) return true
+        return tagged == requested.trim().uppercase()
+    }
+
     fun parseStatus(body: String): SecStatus {
         val root = json.parseToJsonElement(body).jsonObject
         val codeObject = root["return_code"]?.jsonObject ?: error("Нет return_code")
@@ -148,27 +154,43 @@ object SecTunnelApi {
 
     private fun collect(known: SecRegion, http: SecHttp): List<SecExit> {
         val device = register(http)
-        val home = if (known.id == "AUTO") geoCodes(http, device) else listOf(known.id)
-        val found = linkedMapOf<String, SecExit>()
-        fun take(code: String) {
-            discoverReady(http, device, code).forEach { endpoint ->
-                found.putIfAbsent(endpoint.ip, exitOf(device, endpoint, code))
-            }
+        val codes = if (known.id == "AUTO") geoCodes(http, device) else listOf(known.id)
+        val byRegion = linkedMapOf<String, List<SecExit>>()
+        for (code in codes) {
+            val batch = discoverReady(http, device, code).mapNotNull { endpoint ->
+                if (!sameRegion(endpoint.country, code)) return@mapNotNull null
+                exitOf(device, endpoint, code)
+            }.distinctBy { it.ip }
+            if (batch.isNotEmpty()) byRegion[code] = rank(batch)
         }
-        for (code in home) {
-            take(code)
-            if (known.id != "AUTO" && found.size >= 4) break
-        }
-        if (found.size < 2 && known.id != "AUTO") {
-            for (code in geoCodes(http, device).filter { it !in home }) {
-                take(code)
-                if (found.size >= 4) break
-            }
-        }
-        if (found.isEmpty()) {
+        if (byRegion.isEmpty()) {
             error(if (known.id == "AUTO") "Сейчас нет свободных выходов" else "Для ${known.name} сейчас нет выхода")
         }
-        return rank(found.values.toList())
+        if (known.id != "AUTO") return byRegion.values.first()
+        return interleave(byRegion)
+    }
+
+    private fun interleave(byRegion: Map<String, List<SecExit>>): List<SecExit> {
+        val keys = byRegion.keys.toList()
+        if (keys.size == 1) return byRegion.values.first()
+        val start = (System.nanoTime().and(Long.MAX_VALUE) % keys.size).toInt()
+        val order = keys.drop(start) + keys.take(start)
+        val lists = order.map { byRegion.getValue(it) }
+        val out = ArrayList<SecExit>()
+        var index = 0
+        while (out.size < 6) {
+            var added = false
+            for (list in lists) {
+                if (index < list.size) {
+                    out.add(list[index])
+                    added = true
+                    if (out.size >= 6) break
+                }
+            }
+            if (!added) break
+            index++
+        }
+        return out
     }
 
     private fun register(http: SecHttp): SecDevice {

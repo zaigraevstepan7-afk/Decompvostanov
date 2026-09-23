@@ -27,6 +27,15 @@ class SecTunnelTest {
         assertThat(exit.username).hasLength(40)
     }
 
+    @Test(timeout = 40_000)
+    fun americaIsNotTheEuropeanExit() {
+        val europe = SecTunnelApi.lease("EU")
+        val america = SecTunnelApi.lease("AM")
+        assertThat(europe.verifyName).isEqualTo("eu0.sec-tunnel.com")
+        assertThat(america.verifyName).isEqualTo("am0.sec-tunnel.com")
+        assertThat(america.ip).isNotEqualTo(europe.ip)
+    }
+
     @Test(timeout = 25_000)
     fun leaseEuReturnsExit() {
         val exit = SecTunnelApi.lease("EU")
@@ -45,6 +54,9 @@ class SecTunnelTest {
         assertThat(profile.name).isEqualTo("Европа")
         assertThat(spec!!.region).isEqualTo("EU")
         assertThat(spec.flag).isEqualTo("🇪🇺")
+        assertThat(spec.place).isEqualTo("Швеция")
+        assertThat(SecTunnelProfile.read(SecTunnelProfile.build("AM"))!!.place).isEqualTo("США")
+        assertThat(SecTunnelProfile.read(SecTunnelProfile.build("AS"))!!.place).isEqualTo("Сингапур")
         assertThat(SecTunnelProfile.isSec(profile.rawConfig)).isTrue()
         val auto = SecTunnelProfile.create("AUTO")
         assertThat(auto.id).isEqualTo("sec:AUTO")
@@ -86,6 +98,9 @@ class SecTunnelTest {
         assertThat(SecTunnelApi.capitalHexSha1("abc"))
             .isEqualTo("A9993E364706816ABA3E25717850C26C9CD0D89D")
         assertThat(SecTunnelApi.requestedGeo("eu")).isEqualTo("\"EU\",,")
+        assertThat(SecTunnelApi.sameRegion("AM", "AM")).isTrue()
+        assertThat(SecTunnelApi.sameRegion("EU", "AM")).isFalse()
+        assertThat(SecTunnelApi.sameRegion(null, "AS")).isTrue()
         val body = """
             {"return_code":{"0":"OK"},"data":{"ips":[{"ip":"203.0.113.10","host":"eu0.sec-tunnel.com","ports":[1080,443],"geo":{"country_code":"DE"}}]}}
         """.trimIndent()

@@ -165,7 +165,7 @@ fun WarpCreateScreen(
                             CountryTile(
                                 flag = item.flag,
                                 name = item.name,
-                                detail = if (item.id == "AUTO") "сам выберет" else "TCP · DNS",
+                                detail = item.place,
                                 selected = engine == "sec" && item.id == regionId,
                                 enabled = !warp.generating,
                                 onClick = {

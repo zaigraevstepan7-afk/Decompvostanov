@@ -123,7 +123,7 @@ fun ProfilesScreen(
                                     overflow = TextOverflow.Ellipsis,
                                 )
                                 Text(
-                                    if (sec != null) "sec-tunnel" else endpoint ?: "без endpoint",
+                                    if (sec != null) "${sec.place} · sec-tunnel" else endpoint ?: "без endpoint",
                                     color = InkMuted,
                                     fontSize = 13.sp,
                                     maxLines = 1,
