@@ -82,7 +82,7 @@ fun ConnectButton(
     }
     Box(
         modifier
-            .size(148.dp)
+            .size(248.dp)
             .graphicsLayer {
                 scaleX = press.scale
                 scaleY = press.scale
@@ -94,11 +94,11 @@ fun ConnectButton(
             val radius = size.minDimension / 2f
             drawCircle(
                 brush = Brush.radialGradient(
-                    0f to color.copy(alpha = 0.86f * glow),
-                    0.16f to color.copy(alpha = 0.62f * glow),
-                    0.34f to color.copy(alpha = 0.34f * glow),
-                    0.58f to color.copy(alpha = 0.14f * glow),
-                    0.82f to color.copy(alpha = 0.04f * glow),
+                    0f to color.copy(alpha = 0.92f * glow),
+                    0.10f to color.copy(alpha = 0.72f * glow),
+                    0.24f to color.copy(alpha = 0.40f * glow),
+                    0.46f to color.copy(alpha = 0.16f * glow),
+                    0.72f to color.copy(alpha = 0.05f * glow),
                     1f to Color.Transparent,
                     center = center,
                     radius = radius,

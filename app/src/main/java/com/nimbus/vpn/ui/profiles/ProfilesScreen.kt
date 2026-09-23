@@ -40,7 +40,7 @@ import com.nimbus.vpn.data.ProfileIndex
 import com.nimbus.vpn.tunnel.ConnectionStatus
 import com.nimbus.vpn.ui.components.ConfirmDeleteDialog
 import com.nimbus.vpn.ui.home.marble
-import com.nimbus.vpn.ui.home.marblePhase
+import com.nimbus.vpn.ui.home.marbleMotion
 import com.nimbus.vpn.ui.home.rememberMarbleTime
 import com.nimbus.vpn.ui.components.DeleteServerButton
 import com.nimbus.vpn.ui.components.MeshBackground
@@ -105,12 +105,12 @@ fun ProfilesScreen(
                         val sec = SecTunnelProfile.read(profile.rawConfig)
                         val amnezia = ConfigParser.isAmneziaHint(profile.rawConfig)
                         val active = profile.id == index.activeId
-                        val phase = remember(profile.id) { marblePhase(profile.id) }
+                        val motion = remember(profile.id) { marbleMotion(profile.id) }
                         Row(
                             Modifier
                                 .fillMaxWidth()
                                 .clip(Card)
-                                .marble(marbleTime, phase)
+                                .marble(marbleTime, motion)
                                 .border(1.dp, if (active) Accent else Line, Card)
                                 .clickable { onSelect(profile.id) }
                                 .padding(14.dp),

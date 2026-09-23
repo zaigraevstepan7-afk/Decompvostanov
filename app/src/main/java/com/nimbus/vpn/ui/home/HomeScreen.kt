@@ -282,7 +282,7 @@ fun HomeScreen(
                         start = 16.dp,
                         end = 16.dp,
                         top = 8.dp,
-                        bottom = if (coachMessage != null) 250.dp else 148.dp,
+                        bottom = if (coachMessage != null) 300.dp else 196.dp,
                     ),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
@@ -409,7 +409,7 @@ private fun ServerRow(
 ) {
     val endpoint = remember(profile.rawConfig) { ConfigParser.endpointOf(profile.rawConfig) }
     val sec = remember(profile.rawConfig) { SecTunnelProfile.read(profile.rawConfig) }
-    val phase = remember(profile.id) { marblePhase(profile.id) }
+    val motion = remember(profile.id) { marbleMotion(profile.id) }
     val press = rememberPress(0.975f)
     val stroke by animateColorAsState(
         if (active) Accent.copy(alpha = 0.7f) else Line,
@@ -428,7 +428,7 @@ private fun ServerRow(
             .fillMaxWidth()
             .pressScale(press.scale)
             .clip(CardShape)
-            .marble(marbleTime, phase)
+            .marble(marbleTime, motion)
             .border(1.dp, stroke, CardShape)
             .clickable(
                 interactionSource = press.interaction,

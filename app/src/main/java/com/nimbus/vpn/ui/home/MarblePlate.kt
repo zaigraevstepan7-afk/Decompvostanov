@@ -26,19 +26,21 @@ import androidx.compose.runtime.withFrameNanos
  * The pack used Moment * 0.09. This keeps the same veins and only turns the clock down.
  */
 object MarbleLook {
-    const val SPEED = 0.028f
+    const val SPEED = 0.072f
 
     const val AGSL = """
         uniform float2 iResolution;
+        uniform float2 iShift;
         uniform float iTime;
         uniform float iPhase;
         uniform float iSpeed;
 
         half4 main(float2 frag) {
             float2 extent = max(iResolution, float2(1.0));
-            float2 uv = frag / extent.y;
+            float span = max(extent.x, extent.y);
+            float2 uv = frag / span;
             float t = iTime * iSpeed + iPhase;
-            float2 p = uv * 2.05;
+            float2 p = uv * 2.35 + iShift;
             p += 0.42 * float2(sin(p.y * 1.7 + t), cos(p.x * 1.45 - t * 0.85));
             p += 0.22 * float2(sin(p.y * 3.4 - t * 0.55), cos(p.x * 2.9 + t * 0.40));
             p += 0.08 * float2(sin(p.y * 7.0 + t * 0.9), cos(p.x * 6.2 - t * 0.7));
@@ -49,15 +51,22 @@ object MarbleLook {
             float drift = 0.5 + 0.5 * sin(p.x * 1.1 - t * 0.7 + p.y * 0.35);
             float spec = pow(clamp(drift, 0.0, 1.0), 14.0);
             float grain = fract(sin(dot(uv * 42.0 + t * 0.2, float2(12.9, 78.2))) * 43758.5453);
-            float3 col = mix(float3(0.76, 0.72, 0.67), float3(0.14, 0.12, 0.13), vein * 0.88);
-            col = mix(col, float3(0.42, 0.32, 0.24), fine * 0.35);
-            col += float3(0.90, 0.88, 0.82) * spec * 0.16;
-            col -= grain * 0.035;
+            float3 col = mix(float3(0.86, 0.83, 0.78), float3(0.22, 0.18, 0.17), vein * 0.62);
+            col = mix(col, float3(0.55, 0.44, 0.34), fine * 0.22);
+            col += float3(0.96, 0.94, 0.90) * spec * 0.18;
+            col -= grain * 0.025;
             col = clamp(col, float3(0.0), float3(1.0));
             return half4(col.r, col.g, col.b, 1.0);
         }
     """
 }
+
+data class MarbleMotion(
+    val phase: Float,
+    val rate: Float,
+    val shiftX: Float,
+    val shiftY: Float,
+)
 
 @Composable
 fun rememberMarbleTime(animate: Boolean): Float {
@@ -74,15 +83,25 @@ fun rememberMarbleTime(animate: Boolean): Float {
     return time
 }
 
-fun marblePhase(id: String): Float {
-    val bucket = id.hashCode().toUInt() % 1000u
-    return bucket.toFloat() / 1000f * 6.2831855f
+fun marbleMotion(id: String): MarbleMotion {
+    val h = id.hashCode().toUInt()
+    fun unit(salt: UInt): Float {
+        var x = h xor salt
+        x = x * 1664525u + 1013904223u
+        return (x % 10000u).toFloat() / 10000f
+    }
+    return MarbleMotion(
+        phase = unit(0xA5A5u) * 24f,
+        rate = 0.62f + unit(0x3C3Cu) * 0.85f,
+        shiftX = unit(0x7F1u) * 5.5f,
+        shiftY = unit(0x91D2u) * 4.2f,
+    )
 }
 
 @Composable
-fun Modifier.marble(time: Float, phase: Float): Modifier {
+fun Modifier.marble(time: Float, motion: MarbleMotion): Modifier {
     val paint = remember { MarblePaint() }
-    return this.drawBehind { paint.draw(this, time, phase) }
+    return this.drawBehind { paint.draw(this, time, motion) }
 }
 
 private class MarblePaint {
@@ -90,20 +109,21 @@ private class MarblePaint {
         if (Build.VERSION.SDK_INT >= 33) MarbleShaders.new() else null
     }.getOrNull()
 
-    fun draw(scope: DrawScope, time: Float, phase: Float) {
+    fun draw(scope: DrawScope, time: Float, motion: MarbleMotion) {
         val runtime = shader
         if (runtime == null || scope.size.minDimension < 1f) {
-            scope.drawMarbleFallback(time, phase)
+            scope.drawMarbleFallback(time, motion)
             return
         }
         val painted = runCatching {
             runtime.setFloatUniform("iResolution", scope.size.width, scope.size.height)
+            runtime.setFloatUniform("iShift", motion.shiftX, motion.shiftY)
             runtime.setFloatUniform("iTime", time)
-            runtime.setFloatUniform("iPhase", phase)
-            runtime.setFloatUniform("iSpeed", MarbleLook.SPEED)
+            runtime.setFloatUniform("iPhase", motion.phase)
+            runtime.setFloatUniform("iSpeed", MarbleLook.SPEED * motion.rate)
             scope.drawRect(brush = ShaderBrush(runtime))
         }.isSuccess
-        if (!painted) scope.drawMarbleFallback(time, phase)
+        if (!painted) scope.drawMarbleFallback(time, motion)
     }
 }
 
@@ -112,25 +132,23 @@ private object MarbleShaders {
     fun new(): RuntimeShader = RuntimeShader(MarbleLook.AGSL)
 }
 
-private fun DrawScope.drawMarbleFallback(time: Float, phase: Float) {
-    drawRect(Color(0xFFC2B8AB))
-    val t = time * MarbleLook.SPEED + phase
+private fun DrawScope.drawMarbleFallback(time: Float, motion: MarbleMotion) {
+    drawRect(Color(0xFFDCD4C8))
+    val t = time * MarbleLook.SPEED * motion.rate + motion.phase
     val width = size.width
     val height = size.height
-    repeat(4) { band ->
+    repeat(3) { band ->
         val path = Path()
-        val origin = height * (0.18f + band * 0.22f)
+        val origin = height * (0.22f + band * 0.28f + motion.shiftY * 0.04f)
         var x = 0f
         var first = true
         while (x <= width + 4f) {
-            val warp = sin(x * 0.018f + t + band) * height * 0.16f +
-                cos(x * 0.011f - t * 0.7f) * height * 0.05f
+            val warp = sin(x * 0.012f + t * 0.35f + motion.shiftX + band) * height * 0.22f
             val y = origin + warp
             if (first) path.moveTo(x, y) else path.lineTo(x, y)
             first = false
-            x += 6f
+            x += 8f
         }
-        val tone = if (band % 2 == 0) Color(0x66241F21) else Color(0x446B523D)
-        drawPath(path, tone, style = Stroke(width = 1.6f + band * 0.35f))
+        drawPath(path, Color(0x55382E2A), style = Stroke(width = 2.2f))
     }
 }
