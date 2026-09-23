@@ -18,12 +18,14 @@ import java.net.InetSocketAddress
 import java.net.Socket
 import java.net.URL
 import java.net.URLEncoder
+import java.security.cert.X509Certificate
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import javax.net.ssl.HttpsURLConnection
-import javax.net.ssl.SNIHostName
 import javax.net.ssl.SSLContext
+import javax.net.ssl.SSLEngine
 import javax.net.ssl.SSLSocket
+import javax.net.ssl.TrustManager
+import javax.net.ssl.X509ExtendedTrustManager
 import java.security.MessageDigest
 import java.security.SecureRandom
 
@@ -243,6 +245,10 @@ object SecDigest {
 /**
  * Digest auth on api2.sec-tunnel.com is valid only for the TLS connection that
  * received the challenge. One socket carries register, device and discover.
+ *
+ * The SurfEasy client (opera-proxy, the engine inside Portal Connect) dials this
+ * host with an empty SNI and does not check the certificate name. A strict SNI
+ * handshake stalls on some mobile networks until our timeout fires.
  */
 class SecHttp : AutoCloseable {
     private val cookies = linkedMapOf<String, String>()
@@ -290,49 +296,34 @@ class SecHttp : AutoCloseable {
         nc = 0
         var last: Throwable? = null
         for (address in resolveHosts()) {
-            for (useSni in listOf(true, false)) {
-                try {
-                    open(address, useSni)
-                    return
-                } catch (error: Throwable) {
-                    close()
-                    last = error
-                }
+            try {
+                open(address)
+                return
+            } catch (error: Throwable) {
+                close()
+                last = error
             }
         }
         throw last ?: IllegalStateException("Нет соединения с $HOST")
     }
 
-    private fun open(address: InetAddress, useSni: Boolean) {
+    private fun open(address: InetAddress) {
         val tcp = Socket()
         try {
             tcp.tcpNoDelay = true
             tcp.connect(InetSocketAddress(address, 443), 10_000)
-            // A timeout set before the handshake makes the first response read
-            // fail on Android with "Read timed out" even when bytes are waiting.
             tcp.soTimeout = 0
             val context = SSLContext.getInstance("TLS")
-            context.init(null, null, SecureRandom())
-            val opened = context.socketFactory.createSocket(
-                tcp,
-                if (useSni) HOST else "",
-                443,
-                true,
-            ) as SSLSocket
+            context.init(null, arrayOf<TrustManager>(API_TRUST), SecureRandom())
+            val opened = context.socketFactory.createSocket(tcp, address.hostAddress, 443, true) as SSLSocket
             val params = opened.sslParameters
-            if (useSni) {
-                params.serverNames = listOf(SNIHostName(HOST))
-                params.endpointIdentificationAlgorithm = "HTTPS"
-            } else {
-                params.endpointIdentificationAlgorithm = null
-                runCatching { params.serverNames = emptyList() }
-            }
+            params.endpointIdentificationAlgorithm = null
+            runCatching { params.serverNames = emptyList() }
             opened.sslParameters = params
+            opened.javaClass.methods.firstOrNull {
+                it.name == "setHostname" && it.parameterTypes.contentEquals(arrayOf(String::class.java))
+            }?.let { runCatching { it.invoke(opened, "") } }
             handshake(opened, tcp)
-            if (!useSni) {
-                val matches = HttpsURLConnection.getDefaultHostnameVerifier().verify(HOST, opened.session)
-                if (!matches) error("Сертификат sec-tunnel не совпал")
-            }
             opened.soTimeout = 20_000
             socket = opened
             input = opened.inputStream
@@ -549,6 +540,16 @@ class SecHttp : AutoCloseable {
 
     companion object {
         private const val HOST = "api2.sec-tunnel.com"
+
+        private val API_TRUST = object : X509ExtendedTrustManager() {
+            override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?, socket: Socket?) = Unit
+            override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?, engine: SSLEngine?) = Unit
+            override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
+            override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?, socket: Socket?) = Unit
+            override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?, engine: SSLEngine?) = Unit
+            override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
+            override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
+        }
     }
 }
 

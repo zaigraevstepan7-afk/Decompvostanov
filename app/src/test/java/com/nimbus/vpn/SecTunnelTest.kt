@@ -16,6 +16,16 @@ import java.util.concurrent.TimeUnit
 import org.junit.Test
 
 class SecTunnelTest {
+    @Test(timeout = 25_000)
+    fun leaseEuReturnsExit() {
+        val exit = SecTunnelApi.lease("EU")
+        assertThat(exit.ip).contains(".")
+        assertThat(exit.port).isEqualTo(443)
+        assertThat(exit.username).hasLength(40)
+        assertThat(exit.password).isNotEmpty()
+        assertThat(exit.verifyName).isEqualTo("eu0.sec-tunnel.com")
+    }
+
     @Test
     fun profileRoundTrip() {
         val profile = SecTunnelProfile.create("eu")

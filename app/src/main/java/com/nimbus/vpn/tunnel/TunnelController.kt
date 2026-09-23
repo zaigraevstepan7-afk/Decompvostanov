@@ -436,7 +436,7 @@ class TunnelController(
             return
         }
         val outcome = withContext(Dispatchers.IO) {
-            withTimeoutOrNull(8_000) { pending.await() }
+            withTimeoutOrNull(20_000) { pending.await() }
         }
         if (connectToken != token || userStopped) return
         if (outcome != null && outcome.isSuccess) {
@@ -465,27 +465,20 @@ class TunnelController(
     }
 
     private fun fetchExit(region: String): SecExit {
-        var last: Throwable? = null
-        repeat(2) {
-            val http = SecHttp()
-            val pool = Executors.newSingleThreadExecutor()
+        val http = SecHttp()
+        val pool = Executors.newSingleThreadExecutor()
+        return try {
+            val future = pool.submit<SecExit> { SecTunnelApi.lease(region, http) }
             try {
-                val future = pool.submit<SecExit> { SecTunnelApi.lease(region, http) }
-                try {
-                    return future.get(22, TimeUnit.SECONDS)
-                } catch (timeout: TimeoutException) {
-                    http.close()
-                    future.cancel(true)
-                    last = IllegalStateException("Таймаут sec-tunnel")
-                } catch (error: Throwable) {
-                    last = unwrap(error)
-                }
-            } finally {
-                pool.shutdownNow()
+                future.get(30, TimeUnit.SECONDS)
+            } catch (timeout: TimeoutException) {
                 http.close()
+                future.cancel(true)
+                throw IllegalStateException("Таймаут sec-tunnel")
             }
+        } finally {
+            pool.shutdownNow()
         }
-        throw last ?: IllegalStateException("Таймаут sec-tunnel")
     }
 
     private fun unwrap(error: Throwable): Throwable {

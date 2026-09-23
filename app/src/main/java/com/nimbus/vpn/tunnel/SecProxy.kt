@@ -70,7 +70,9 @@ object SecProxy {
         idleTimeoutMs: Int = 0,
     ): UpstreamConn {
         var last: Throwable? = null
-        for (useSni in listOf(true, false)) {
+        // Portal's engine sends an empty SNI and checks the certificate against
+        // eu0.sec-tunnel.com afterwards. Trying a name in ClientHello first stalls.
+        for (useSni in listOf(false, true)) {
             try {
                 return handshake(protect, exit, host, port, timeoutMs, idleTimeoutMs, useSni)
             } catch (error: Throwable) {
