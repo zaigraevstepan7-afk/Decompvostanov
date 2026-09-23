@@ -272,6 +272,14 @@ fun HomeScreen(
                             onSelect = { onSelect(profile.id) },
                             onPing = onPing,
                             onDelete = { pendingDelete = profile.id to profile.name },
+                            livePlace = if (
+                                state.status == ConnectionStatus.CONNECTED &&
+                                profile.id == state.profile?.id
+                            ) {
+                                state.exitPlace
+                            } else {
+                                null
+                            },
                         )
                     }
                 }
@@ -365,6 +373,7 @@ private fun ServerRow(
     onSelect: () -> Unit,
     onPing: () -> Unit,
     onDelete: () -> Unit,
+    livePlace: String? = null,
 ) {
     val endpoint = remember(profile.rawConfig) { ConfigParser.endpointOf(profile.rawConfig) }
     val sec = remember(profile.rawConfig) { SecTunnelProfile.read(profile.rawConfig) }
@@ -409,7 +418,11 @@ private fun ServerRow(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                if (sec != null) "${sec.place} · sec-tunnel" else endpoint ?: proto,
+                when {
+                    sec == null -> endpoint ?: proto
+                    !livePlace.isNullOrBlank() -> "$livePlace · sec-tunnel"
+                    else -> "${sec.place} · sec-tunnel"
+                },
                 color = InkMuted,
                 fontSize = 13.sp,
                 maxLines = 1,

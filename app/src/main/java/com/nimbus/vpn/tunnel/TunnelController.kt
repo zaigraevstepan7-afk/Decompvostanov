@@ -38,8 +38,8 @@ import org.amnezia.awg.backend.RootTunnelActionHandler
 import org.amnezia.awg.backend.Tunnel
 import org.amnezia.awg.config.Config
 import org.amnezia.awg.util.RootShell
+import com.nimbus.vpn.data.SecAccountStore
 import com.nimbus.vpn.data.SecExit
-import com.nimbus.vpn.data.SecHttp
 import com.nimbus.vpn.data.SecTunnelApi
 import java.io.BufferedReader
 import java.io.StringReader
@@ -53,6 +53,7 @@ class TunnelController(
     private val context: Context,
     private val profiles: ProfileStore,
     private val settings: SettingsRepository,
+    private val accounts: SecAccountStore = SecAccountStore(context),
 ) {
     private val scope = CoroutineScope(
         SupervisorJob() + Dispatchers.Default + CoroutineExceptionHandler { _, error ->
@@ -102,6 +103,7 @@ class TunnelController(
     }
 
     init {
+        SecTunnelRuntime.accounts = accounts
         scope.launch {
             settings.settings.collect { appSettings = it }
         }
@@ -115,6 +117,7 @@ class TunnelController(
                     it.copy(
                         status = ConnectionStatus.DISCONNECTED,
                         connectedSince = null,
+                        exitPlace = null,
                         rxRate = 0,
                         txRate = 0,
                     )
@@ -193,6 +196,7 @@ class TunnelController(
                 status = ConnectionStatus.CONNECTING,
                 error = null,
                 profile = profile,
+                exitPlace = null,
             )
         }
         BozyaKeepAliveService.start(context, "Подключение…")
@@ -268,6 +272,7 @@ class TunnelController(
                 it.copy(
                     status = ConnectionStatus.ERROR,
                     error = humanError(err),
+                    exitPlace = null,
                 )
             }
             BozyaKeepAliveService.stop(context)
@@ -295,6 +300,7 @@ class TunnelController(
                 txTotal = 0,
                 handshakeAgeMs = 0,
                 connectedSince = null,
+                exitPlace = null,
             )
         }
         BozyaKeepAliveService.stop(context)
@@ -455,6 +461,13 @@ class TunnelController(
             }
             BozyaKeepAliveService.start(context, profile.name)
             startStatsLoop()
+            val watched = exits.first()
+            val tokenNow = token
+            scope.launch(Dispatchers.IO) {
+                val place = runCatching { SecProxy.locate(watched) }.getOrNull() ?: return@launch
+                if (connectToken != tokenNow || _ui.value.status != ConnectionStatus.CONNECTED) return@launch
+                _ui.update { it.copy(exitPlace = place) }
+            }
         } else {
             connectToken = 0
             activeEngine = Engine.NONE
@@ -465,22 +478,39 @@ class TunnelController(
     }
 
     private fun fetchExits(region: String): List<SecExit> {
-        val http = SecHttp()
         val pool = Executors.newSingleThreadExecutor()
         return try {
-            val future = pool.submit<List<SecExit>> {
-                SecProxy.preferAlive(SecTunnelApi.leaseMany(region, http))
-            }
+            val future = pool.submit<List<SecExit>> { loadExits(region) }
             try {
                 future.get(30, TimeUnit.SECONDS)
             } catch (timeout: TimeoutException) {
-                http.close()
                 future.cancel(true)
                 throw IllegalStateException("Таймаут sec-tunnel")
             }
         } finally {
             pool.shutdownNow()
         }
+    }
+
+    private fun loadExits(region: String): List<SecExit> {
+        val saved = accounts.load()
+        if (saved != null) {
+            try {
+                val exits = SecTunnelApi.reuse(region, saved)
+                if (exits.isEmpty()) error(if (region.equals("AUTO", true)) "Сейчас нет свободных выходов" else "Для региона сейчас нет выхода")
+                SecTunnelRuntime.account = saved
+                return SecProxy.preferAlive(exits)
+            } catch (error: Throwable) {
+                val message = error.message.orEmpty()
+                if (message.startsWith("Для ") || message.startsWith("Сейчас нет")) throw error
+                accounts.clear()
+                SecTunnelRuntime.account = null
+            }
+        }
+        val lease = SecTunnelApi.registerLease(region)
+        accounts.save(lease.account)
+        SecTunnelRuntime.account = lease.account
+        return SecProxy.preferAlive(lease.exits)
     }
 
     private fun unwrap(error: Throwable): Throwable {
@@ -509,6 +539,7 @@ class TunnelController(
             it.copy(
                 status = ConnectionStatus.ERROR,
                 error = humanError(err),
+                exitPlace = null,
             )
         }
         BozyaKeepAliveService.stop(context)
@@ -561,4 +592,5 @@ data class TunnelUiState(
     val rxTotal: Long = 0,
     val txTotal: Long = 0,
     val handshakeAgeMs: Long = 0,
+    val exitPlace: String? = null,
 )

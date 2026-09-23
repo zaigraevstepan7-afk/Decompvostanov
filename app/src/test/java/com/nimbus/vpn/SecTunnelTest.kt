@@ -2,9 +2,12 @@ package com.nimbus.vpn
 
 import com.google.common.truth.Truth.assertThat
 import com.nimbus.vpn.data.SecDigest
+import com.nimbus.vpn.data.SecGeo
+import com.nimbus.vpn.data.SecHttp
 import com.nimbus.vpn.data.SecTunnelApi
 import com.nimbus.vpn.data.SecTunnelProfile
 import com.nimbus.vpn.data.SecExit
+import com.nimbus.vpn.tunnel.SecProxy
 import com.nimbus.vpn.tunnel.Packets
 import com.nimbus.vpn.tunnel.SecConnect
 import com.nimbus.vpn.tunnel.SecRoster
@@ -73,6 +76,23 @@ class SecTunnelTest {
         assertThat(roster.peek().ip).isEqualTo("203.0.113.10")
         roster.noteFailure(slow)
         assertThat(roster.peek().ip).isEqualTo("203.0.113.11")
+    }
+
+    @Test
+    fun placeParserReadsRussianCity() {
+        assertThat(SecGeo.parsePlace("""{"status":"success","country":"США","city":"Вашингтон"}"""))
+            .isEqualTo("США, Вашингтон")
+        assertThat(SecGeo.parsePlace("HTTP/1.1 200 OK\r\n\r\n{\"status\":\"fail\"}")).isNull()
+    }
+
+    @Test(timeout = 45_000)
+    fun savedAccountSkipsASecondRegistration() {
+        val lease = SecTunnelApi.registerLease("AM", SecHttp())
+        assertThat(lease.exits.first().verifyName).isEqualTo("am0.sec-tunnel.com")
+        val again = SecTunnelApi.reuse("EU", lease.account)
+        assertThat(again.first().verifyName).isEqualTo("eu0.sec-tunnel.com")
+        assertThat(again.first().username).isEqualTo(SecTunnelApi.capitalHexSha1(lease.account.deviceId))
+        assertThat(SecProxy.locate(lease.exits.first())).contains("США")
     }
 
     @Test

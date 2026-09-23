@@ -1,6 +1,7 @@
 package com.nimbus.vpn.tunnel
 
 import com.nimbus.vpn.data.SecExit
+import com.nimbus.vpn.data.SecGeo
 import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
@@ -105,6 +106,33 @@ object SecProxy {
             connectTls(protect = { true }, exit = exit, timeoutMs = timeoutMs, useSni = false).close()
             sniMode = false
         }.isSuccess
+    }
+
+    fun locate(exit: SecExit): String? = runCatching {
+        open({ true }, exit, "ip-api.com", 80, timeoutMs = 6_000, idleTimeoutMs = 6_000).use { conn ->
+            val request = (
+                "GET /json?lang=ru&fields=status,country,city HTTP/1.1\r\n" +
+                    "Host: ip-api.com\r\n" +
+                    "Connection: close\r\n\r\n"
+                ).toByteArray(Charsets.ISO_8859_1)
+            conn.output.write(request)
+            conn.output.flush()
+            SecGeo.parsePlace(readText(conn.input, 8_000))
+        }
+    }.getOrNull()
+
+    private fun readText(input: InputStream, limit: Int): String {
+        val out = java.io.ByteArrayOutputStream()
+        val buf = ByteArray(512)
+        while (out.size() < limit) {
+            val count = input.read(buf)
+            if (count < 0) break
+            if (count == 0) continue
+            out.write(buf, 0, count)
+            val text = out.toString(Charsets.UTF_8)
+            if (text.contains("\r\n\r\n") && text.contains('}')) break
+        }
+        return out.toString(Charsets.UTF_8)
     }
 
     fun preferAlive(exits: List<SecExit>): List<SecExit> {

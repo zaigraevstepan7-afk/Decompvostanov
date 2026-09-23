@@ -70,6 +70,7 @@ data class SecExit(
  */
 object SecTunnelApi {
     const val REGISTER = "https://api2.sec-tunnel.com/v4/register_subscriber"
+    const val LOGIN = "https://api2.sec-tunnel.com/v4/subscriber_login"
     const val REGISTER_DEVICE = "https://api2.sec-tunnel.com/v4/register_device"
     const val GEO_LIST = "https://api2.sec-tunnel.com/v4/geo_list"
     const val DISCOVER = "https://api2.sec-tunnel.com/v4/discover"
@@ -141,19 +142,40 @@ object SecTunnelApi {
         }
     }
 
-    fun lease(region: String, http: SecHttp = SecHttp()): SecExit = leaseMany(region, http).first()
+    fun lease(region: String, http: SecHttp = SecHttp()): SecExit = registerLease(region, http).exits.first()
 
-    fun leaseMany(region: String, http: SecHttp = SecHttp()): List<SecExit> {
+    fun leaseMany(region: String, http: SecHttp = SecHttp()): List<SecExit> = registerLease(region, http).exits
+
+    fun reuse(region: String, account: SecAccount, http: SecHttp = SecHttp()): List<SecExit> {
         val known = SecTunnelProfile.region(region) ?: error("Неизвестный регион: $region")
         try {
-            return collect(known, http)
+            val body = http.post(
+                LOGIN,
+                mapOf(
+                    "login" to account.email,
+                    "password" to account.password,
+                    "client_type" to "se0316",
+                ),
+            )
+            val status = parseStatus(body)
+            if (status.code != 0L) error("sec-tunnel ${status.code}: ${status.message}")
+            return exitsFor(known, http, account.device())
         } finally {
             http.close()
         }
     }
 
-    private fun collect(known: SecRegion, http: SecHttp): List<SecExit> {
-        val device = register(http)
+    fun registerLease(region: String, http: SecHttp = SecHttp()): SecLease {
+        val known = SecTunnelProfile.region(region) ?: error("Неизвестный регион: $region")
+        try {
+            val account = register(http)
+            return SecLease(exitsFor(known, http, account.device()), account)
+        } finally {
+            http.close()
+        }
+    }
+
+    private fun exitsFor(known: SecRegion, http: SecHttp, device: SecDevice): List<SecExit> {
         val codes = if (known.id == "AUTO") geoCodes(http, device) else listOf(known.id)
         val byRegion = linkedMapOf<String, List<SecExit>>()
         for (code in codes) {
@@ -193,16 +215,17 @@ object SecTunnelApi {
         return out
     }
 
-    private fun register(http: SecHttp): SecDevice {
+    private fun register(http: SecHttp): SecAccount {
         val email = "${randomHex(32)}@se0316.best.vpn"
+        val password = capitalHexSha1(email)
         http.post(
             REGISTER,
-            mapOf("email" to email, "password" to capitalHexSha1(email)),
+            mapOf("email" to email, "password" to password),
         ).also { body ->
             val status = parseStatus(body)
             if (status.code != 0L) error("sec-tunnel ${status.code}: ${status.message}")
         }
-        return parseDevice(
+        val device = parseDevice(
             http.post(
                 REGISTER_DEVICE,
                 mapOf(
@@ -212,6 +235,7 @@ object SecTunnelApi {
                 ),
             ),
         )
+        return SecAccount(email, password, device.id, device.password)
     }
 
     private fun discoverReady(http: SecHttp, device: SecDevice, region: String): List<SecEndpoint> {

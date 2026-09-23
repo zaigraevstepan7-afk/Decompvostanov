@@ -2,6 +2,8 @@ package com.nimbus.vpn.tunnel
 
 import android.content.Context
 import android.content.Intent
+import com.nimbus.vpn.data.SecAccount
+import com.nimbus.vpn.data.SecAccountStore
 import com.nimbus.vpn.data.SecExit
 import java.util.concurrent.CancellationException
 import java.util.concurrent.atomic.AtomicInteger
@@ -18,6 +20,8 @@ object SecTunnelRuntime {
     @Volatile var active: Boolean = false
     @Volatile var abort: Boolean = false
     @Volatile var onUnexpectedDown: (() -> Unit)? = null
+    @Volatile var accounts: SecAccountStore? = null
+    @Volatile var account: SecAccount? = null
 
     private val generation = AtomicInteger()
     private val lock = Any()
