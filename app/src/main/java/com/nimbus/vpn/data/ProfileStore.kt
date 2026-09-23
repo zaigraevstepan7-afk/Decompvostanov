@@ -21,6 +21,10 @@ class ProfileStore(context: Context) {
     private val _index = MutableStateFlow(load())
     val index: StateFlow<ProfileIndex> = _index.asStateFlow()
 
+    init {
+        ensureAuto()
+    }
+
     val profiles: List<VpnProfile>
         get() = synchronized(this) { _index.value.profiles }
 
@@ -72,6 +76,18 @@ class ProfileStore(context: Context) {
             ProfileIndex(
                 profiles = incoming + kept,
                 activeId = activeId ?: current.activeId ?: incoming.first().id,
+            ),
+        )
+    }
+
+    private fun ensureAuto() = synchronized(this) {
+        val current = _index.value
+        if (current.profiles.any { it.id == "sec:AUTO" }) return
+        val auto = SecTunnelProfile.create("AUTO")
+        persist(
+            ProfileIndex(
+                profiles = listOf(auto) + current.profiles,
+                activeId = current.activeId ?: auto.id,
             ),
         )
     }

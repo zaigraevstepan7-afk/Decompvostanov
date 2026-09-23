@@ -20,6 +20,7 @@ object SecTunnelProfile {
     const val ENGINE = "sec-tunnel"
 
     val regions: List<SecRegion> = listOf(
+        SecRegion("AUTO", "Авто", "🌐"),
         SecRegion("EU", "Европа", "🇪🇺"),
         SecRegion("AS", "Азия", "🌏"),
         SecRegion("AM", "Америка", "🌎"),

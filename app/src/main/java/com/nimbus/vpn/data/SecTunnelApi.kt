@@ -71,7 +71,9 @@ data class SecExit(
 object SecTunnelApi {
     const val REGISTER = "https://api2.sec-tunnel.com/v4/register_subscriber"
     const val REGISTER_DEVICE = "https://api2.sec-tunnel.com/v4/register_device"
+    const val GEO_LIST = "https://api2.sec-tunnel.com/v4/geo_list"
     const val DISCOVER = "https://api2.sec-tunnel.com/v4/discover"
+    private const val EMPTY_REGION = 801L
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -104,8 +106,20 @@ object SecTunnelApi {
         return SecDevice(id, password)
     }
 
+    fun parseGeoList(body: String): List<String> {
+        val status = parseStatus(body)
+        if (status.code != 0L) error("sec-tunnel ${status.code}: ${status.message}")
+        val geos = json.parseToJsonElement(body).jsonObject["data"]?.jsonObject
+            ?.get("geos") as? JsonArray ?: return emptyList()
+        return geos.mapNotNull { element ->
+            val item = element as? JsonObject ?: return@mapNotNull null
+            item.string("country_code")?.trim()?.uppercase()
+        }
+    }
+
     fun parseDiscover(body: String): List<SecEndpoint> {
         val status = parseStatus(body)
+        if (status.code == EMPTY_REGION) return emptyList()
         if (status.code != 0L) error("sec-tunnel ${status.code}: ${status.message}")
         val ips = json.parseToJsonElement(body).jsonObject["data"]?.jsonObject
             ?.get("ips") as? JsonArray ?: return emptyList()
@@ -124,13 +138,29 @@ object SecTunnelApi {
     fun lease(region: String, http: SecHttp = SecHttp()): SecExit {
         val known = SecTunnelProfile.region(region) ?: error("Неизвестный регион: $region")
         try {
-            return leaseOn(known, http)
+            return if (known.id == "AUTO") leaseAuto(http) else leaseOn(known, http)
         } finally {
             http.close()
         }
     }
 
     private fun leaseOn(known: SecRegion, http: SecHttp): SecExit {
+        val device = register(http)
+        val chosen = discoverReady(http, device, known.id).randomOrNull()
+            ?: error("Для ${known.name} сейчас нет выхода")
+        return exitOf(device, chosen, known.id)
+    }
+
+    private fun leaseAuto(http: SecHttp): SecExit {
+        val device = register(http)
+        val exits = geoCodes(http, device).flatMap { code ->
+            discoverReady(http, device, code).map { endpoint -> exitOf(device, endpoint, code) }
+        }
+        if (exits.isEmpty()) error("Сейчас нет свободных выходов")
+        return fastest(exits)
+    }
+
+    private fun register(http: SecHttp): SecDevice {
         val email = "${randomHex(32)}@se0316.best.vpn"
         http.post(
             REGISTER,
@@ -139,7 +169,7 @@ object SecTunnelApi {
             val status = parseStatus(body)
             if (status.code != 0L) error("sec-tunnel ${status.code}: ${status.message}")
         }
-        val device = parseDevice(
+        return parseDevice(
             http.post(
                 REGISTER_DEVICE,
                 mapOf(
@@ -149,23 +179,61 @@ object SecTunnelApi {
                 ),
             ),
         )
-        val endpoints = parseDiscover(
-            http.post(
-                DISCOVER,
-                mapOf(
-                    "serial_no" to capitalHexSha1(device.id),
-                    "requested_geo" to requestedGeo(known.id),
+    }
+
+    private fun discoverReady(http: SecHttp, device: SecDevice, region: String): List<SecEndpoint> {
+        repeat(3) {
+            val found = parseDiscover(
+                http.post(
+                    DISCOVER,
+                    mapOf(
+                        "serial_no" to capitalHexSha1(device.id),
+                        "requested_geo" to requestedGeo(region),
+                    ),
                 ),
-            ),
-        )
-        val chosen = endpoints.randomOrNull() ?: error("sec-tunnel не выдал выход для ${known.name}")
-        return SecExit(
+            )
+            if (found.isNotEmpty()) return found
+        }
+        return emptyList()
+    }
+
+    private fun geoCodes(http: SecHttp, device: SecDevice): List<String> {
+        val pinned = SecTunnelProfile.regions.map { it.id }.filter { it != "AUTO" }
+        val listed = runCatching {
+            parseGeoList(http.post(GEO_LIST, mapOf("device_id" to capitalHexSha1(device.id))))
+        }.getOrDefault(emptyList())
+        val known = listed.map { it.uppercase() }.filter { it in pinned }.distinct()
+        return known.ifEmpty { pinned }
+    }
+
+    private fun exitOf(device: SecDevice, chosen: SecEndpoint, region: String): SecExit =
+        SecExit(
             ip = chosen.ip,
             port = chosen.port,
-            verifyName = chosen.verifyName(known.id),
+            verifyName = chosen.verifyName(region),
             username = capitalHexSha1(device.id),
             password = device.password,
         )
+
+    private fun fastest(exits: List<SecExit>): SecExit {
+        if (exits.size == 1) return exits.first()
+        val pool = Executors.newFixedThreadPool(minOf(4, exits.size))
+        try {
+            val ranked = exits.map { exit ->
+                pool.submit<Pair<SecExit, Long>?> {
+                    val start = System.nanoTime()
+                    val ok = runCatching {
+                        Socket().use { socket ->
+                            socket.connect(InetSocketAddress(exit.ip, exit.port), 1_200)
+                        }
+                    }.isSuccess
+                    if (!ok) null else exit to (System.nanoTime() - start) / 1_000_000
+                }
+            }.mapNotNull { future -> runCatching { future.get(2, TimeUnit.SECONDS) }.getOrNull() }
+            return ranked.minByOrNull { it.second }?.first ?: exits.random()
+        } finally {
+            pool.shutdownNow()
+        }
     }
 
     private fun JsonObject.string(key: String): String? {

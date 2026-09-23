@@ -76,7 +76,7 @@ fun WarpCreateScreen(
 ) {
     var engine by remember { mutableStateOf("warp") }
     var countryId by remember { mutableStateOf("de") }
-    var regionId by remember { mutableStateOf("EU") }
+    var regionId by remember { mutableStateOf("AUTO") }
     var lte by remember { mutableStateOf(false) }
     val country = WarpConfigBuilder.country(countryId)
     val lteAvailable = engine == "warp" && country?.hasLte == true
@@ -165,7 +165,7 @@ fun WarpCreateScreen(
                             CountryTile(
                                 flag = item.flag,
                                 name = item.name,
-                                detail = "TCP · DNS",
+                                detail = if (item.id == "AUTO") "сам выберет" else "TCP · DNS",
                                 selected = engine == "sec" && item.id == regionId,
                                 enabled = !warp.generating,
                                 onClick = {

@@ -16,6 +16,15 @@ import java.util.concurrent.TimeUnit
 import org.junit.Test
 
 class SecTunnelTest {
+    @Test(timeout = 45_000)
+    fun leaseAutoPicksARealRegion() {
+        val exit = SecTunnelApi.lease("AUTO")
+        assertThat(exit.ip).contains(".")
+        assertThat(exit.port).isEqualTo(443)
+        assertThat(exit.verifyName.lowercase()).doesNotContain("auto")
+        assertThat(exit.username).hasLength(40)
+    }
+
     @Test(timeout = 25_000)
     fun leaseEuReturnsExit() {
         val exit = SecTunnelApi.lease("EU")
@@ -35,6 +44,23 @@ class SecTunnelTest {
         assertThat(spec!!.region).isEqualTo("EU")
         assertThat(spec.flag).isEqualTo("🇪🇺")
         assertThat(SecTunnelProfile.isSec(profile.rawConfig)).isTrue()
+        val auto = SecTunnelProfile.create("AUTO")
+        assertThat(auto.id).isEqualTo("sec:AUTO")
+        assertThat(auto.name).isEqualTo("Авто")
+        assertThat(SecTunnelProfile.read(auto.rawConfig)!!.flag).isEqualTo("🌐")
+        assertThat(SecTunnelProfile.regions.first().id).isEqualTo("AUTO")
+    }
+
+    @Test
+    fun emptyRegionIsNotAnError() {
+        val empty = SecTunnelApi.parseDiscover(
+            """{"return_code":{"801":"No Available Proxies for Region"}}""",
+        )
+        assertThat(empty).isEmpty()
+        val codes = SecTunnelApi.parseGeoList(
+            """{"return_code":{"0":"OK"},"data":{"geos":[{"country":"Europe","country_code":"EU"},{"country":"Asia","country_code":"AS"}]}}""",
+        )
+        assertThat(codes).containsExactly("EU", "AS").inOrder()
     }
 
     @Test
