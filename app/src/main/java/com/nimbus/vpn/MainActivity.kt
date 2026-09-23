@@ -168,7 +168,7 @@ class MainActivity : ComponentActivity() {
                         WarpCreateScreen(
                             warp = warp,
                             onBack = { nav.popBackStack() },
-                            onCreate = viewModel::createWarp,
+                            onCreate = viewModel::createServer,
                             onImport = { go("import") },
                             onCreated = {
                                 viewModel.onCoachWarpCreated()

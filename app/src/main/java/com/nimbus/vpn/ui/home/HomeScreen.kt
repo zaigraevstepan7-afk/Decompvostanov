@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nimbus.vpn.data.AppSettings
 import com.nimbus.vpn.data.ConfigParser
+import com.nimbus.vpn.data.SecTunnelProfile
 import com.nimbus.vpn.data.ProfileIndex
 import com.nimbus.vpn.data.VpnProfile
 import com.nimbus.vpn.tunnel.ConnectionStatus
@@ -366,6 +367,7 @@ private fun ServerRow(
     onDelete: () -> Unit,
 ) {
     val endpoint = remember(profile.rawConfig) { ConfigParser.endpointOf(profile.rawConfig) }
+    val sec = remember(profile.rawConfig) { SecTunnelProfile.read(profile.rawConfig) }
     val press = rememberPress(0.975f)
     val fill by animateColorAsState(if (active) Lift else Paper, Motion.color(460), label = "row-fill")
     val stroke by animateColorAsState(
@@ -395,7 +397,7 @@ private fun ServerRow(
             .padding(start = 12.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        FlagBadge(endpoint, badge = 36.dp)
+        FlagBadge(endpoint, emoji = sec?.flag, badge = 36.dp)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(
@@ -407,7 +409,7 @@ private fun ServerRow(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                endpoint ?: proto,
+                if (sec != null) "sec-tunnel" else endpoint ?: proto,
                 color = InkMuted,
                 fontSize = 13.sp,
                 maxLines = 1,

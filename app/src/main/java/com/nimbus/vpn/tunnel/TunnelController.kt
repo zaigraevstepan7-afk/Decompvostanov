@@ -9,6 +9,7 @@ import android.os.PowerManager
 import android.util.Log
 import com.nimbus.vpn.data.ConfigParser
 import com.nimbus.vpn.data.ProfileStore
+import com.nimbus.vpn.data.SecTunnelProfile
 import com.nimbus.vpn.data.SettingsRepository
 import com.nimbus.vpn.data.SplitTunnel
 import com.nimbus.vpn.data.VpnProfile
@@ -29,6 +30,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.amnezia.awg.backend.Backend
 import org.amnezia.awg.backend.GoBackend
 import org.amnezia.awg.backend.NoopTunnelActionHandler
@@ -80,6 +82,8 @@ class TunnelController(
     private var lastSampleAt = 0L
     private var appSettings = com.nimbus.vpn.data.AppSettings()
     private var uiVisible = false
+    private var activeEngine = Engine.NONE
+    private var awgRunning = false
 
     private val tunnel = BozyaTunnel { state ->
         val token = stateToken
@@ -92,6 +96,24 @@ class TunnelController(
     init {
         scope.launch {
             settings.settings.collect { appSettings = it }
+        }
+        SecTunnelRuntime.onUnexpectedDown = {
+            scope.launch {
+                if (userStopped || activeEngine != Engine.SEC) return@launch
+                if (_ui.value.status != ConnectionStatus.CONNECTED) return@launch
+                activeEngine = Engine.NONE
+                connectedSince = null
+                _ui.update {
+                    it.copy(
+                        status = ConnectionStatus.DISCONNECTED,
+                        connectedSince = null,
+                        rxRate = 0,
+                        txRate = 0,
+                    )
+                }
+                BozyaKeepAliveService.stop(context)
+                scheduleReconnect()
+            }
         }
         scope.launch {
             profiles.index.collect { index ->
@@ -179,6 +201,13 @@ class TunnelController(
             }
         }
 
+        if (SecTunnelProfile.isSec(profile.rawConfig)) {
+            connectSec(profile, fresh, userInitiated)
+            return@withLock
+        }
+        activeEngine = Engine.AWG
+        SecTunnelRuntime.requestStop(context)
+
         val gate = backendOnMain()
         val result = withContext(Dispatchers.IO) {
             runCatching {
@@ -206,6 +235,8 @@ class TunnelController(
         }
 
         result.onSuccess {
+            awgRunning = true
+            activeEngine = Engine.AWG
             connectedSince = System.currentTimeMillis()
             lastRx = 0
             lastTx = 0
@@ -222,6 +253,8 @@ class TunnelController(
             startStatsLoop()
         }.onFailure { err ->
             Log.e(TAG, "Connect failed", err)
+            awgRunning = false
+            if (activeEngine == Engine.AWG) activeEngine = Engine.NONE
             connectedSince = null
             _ui.update {
                 it.copy(
@@ -237,15 +270,11 @@ class TunnelController(
     suspend fun disconnect() {
         userStopped = true
         reconnectJob?.cancel()
+        SecTunnelRuntime.requestStop(context)
         mutex.withLock {
+        activeEngine = Engine.NONE
         statsJob?.cancel()
-        val gate = runCatching { backendOnMain() }.getOrNull()
-        runCatching {
-            withContext(Dispatchers.IO) {
-                stateToken++
-                gate?.setState(tunnel, Tunnel.State.DOWN, null)
-            }
-        }
+        downAwg()
         connectedSince = null
         _ui.update {
             it.copy(
@@ -266,7 +295,7 @@ class TunnelController(
     private suspend fun backendOnMain(): Backend = withContext(Dispatchers.Main.immediate) { backend }
 
     private suspend fun onNativeState(state: Tunnel.State) {
-        if (userStopped) return
+        if (userStopped || activeEngine != Engine.AWG) return
         if (state == Tunnel.State.DOWN && _ui.value.status == ConnectionStatus.CONNECTED) {
             _ui.update { it.copy(status = ConnectionStatus.DISCONNECTED, connectedSince = null) }
             BozyaKeepAliveService.stop(context)
@@ -285,6 +314,19 @@ class TunnelController(
     }
 
     private suspend fun sampleStats() {
+        if (activeEngine == Engine.SEC) {
+            val now = System.currentTimeMillis()
+            val rx = SecTunnelRuntime.rx.get()
+            val tx = SecTunnelRuntime.tx.get()
+            val dt = if (lastSampleAt == 0L) 1_500.0 else (now - lastSampleAt).coerceAtLeast(1).toDouble()
+            val rxRate = ((rx - lastRx).coerceAtLeast(0) * 1000.0 / dt).toLong()
+            val txRate = ((tx - lastTx).coerceAtLeast(0) * 1000.0 / dt).toLong()
+            lastRx = rx
+            lastTx = tx
+            lastSampleAt = now
+            _ui.update { it.copy(rxTotal = rx, txTotal = tx, rxRate = rxRate, txRate = txRate, handshakeAgeMs = 0) }
+            return
+        }
         val stats = runCatching {
             withContext(Dispatchers.IO) { backend.getStatistics(tunnel) }
         }.getOrNull() ?: return
@@ -335,6 +377,90 @@ class TunnelController(
         }
     }
 
+    private suspend fun connectSec(
+        profile: VpnProfile,
+        fresh: com.nimbus.vpn.data.AppSettings,
+        userInitiated: Boolean,
+    ) {
+        activeEngine = Engine.SEC
+        downAwg()
+        SecTunnelRuntime.requestStop(context)
+        val token = SecTunnelRuntime.arm()
+        val bypass = ArrayList(fresh.bypassPackages.filter(::isInstalledPackage))
+        val intent = Intent(context, SecTunnelService::class.java).apply {
+            action = SecTunnelService.ACTION_CONNECT
+            putExtra(SecTunnelService.EXTRA_CONFIG, profile.rawConfig)
+            putExtra(SecTunnelService.EXTRA_TOKEN, token)
+            putStringArrayListExtra(SecTunnelService.EXTRA_BYPASS, bypass)
+        }
+        runCatching {
+            if (Build.VERSION.SDK_INT >= 26) context.startForegroundService(intent)
+            else context.startService(intent)
+        }.onFailure { error ->
+            activeEngine = Engine.NONE
+            failConnect(error, userInitiated)
+            return
+        }
+        val pending = SecTunnelRuntime.awaitHandle()
+        val result = if (pending == null) {
+            Result.failure(IllegalStateException("sec-tunnel не запустился"))
+        } else {
+            withTimeoutOrNull(35_000) { pending.await() }
+                ?: Result.failure(IllegalStateException("Таймаут sec-tunnel"))
+        }
+        if (userStopped || !SecTunnelRuntime.isCurrent(token)) {
+            activeEngine = Engine.NONE
+            return
+        }
+        result.onSuccess {
+            connectedSince = System.currentTimeMillis()
+            lastRx = 0
+            lastTx = 0
+            lastSampleAt = 0
+            activeEngine = Engine.SEC
+            _ui.update {
+                it.copy(
+                    status = ConnectionStatus.CONNECTED,
+                    error = null,
+                    connectedSince = connectedSince,
+                    backendLabel = "sec-tunnel",
+                )
+            }
+            BozyaKeepAliveService.start(context, profile.name)
+            startStatsLoop()
+        }.onFailure { error ->
+            activeEngine = Engine.NONE
+            SecTunnelRuntime.requestStop(context)
+            failConnect(error, userInitiated)
+        }
+    }
+
+    private suspend fun downAwg() {
+        if (!awgRunning) return
+        val gate = runCatching { backendOnMain() }.getOrNull()
+        runCatching {
+            withContext(Dispatchers.IO) {
+                stateToken++
+                gate?.setState(tunnel, Tunnel.State.DOWN, null)
+            }
+        }
+        awgRunning = false
+    }
+
+    private fun failConnect(err: Throwable, userInitiated: Boolean) {
+        if (userStopped) return
+        Log.e(TAG, "Connect failed", err)
+        connectedSince = null
+        _ui.update {
+            it.copy(
+                status = ConnectionStatus.ERROR,
+                error = humanError(err),
+            )
+        }
+        BozyaKeepAliveService.stop(context)
+        if (userInitiated) scheduleReconnect()
+    }
+
     private fun isInstalledPackage(packageName: String): Boolean {
         if (packageName == context.packageName) return false
         return runCatching {
@@ -357,6 +483,8 @@ class TunnelController(
             else -> raw.take(180)
         }
     }
+
+    private enum class Engine { NONE, AWG, SEC }
 
     companion object {
         private const val TAG = "Bozya/Tunnel"

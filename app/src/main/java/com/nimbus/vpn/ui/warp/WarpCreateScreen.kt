@@ -40,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nimbus.vpn.data.SecTunnelProfile
 import com.nimbus.vpn.data.WarpConfigBuilder
 import com.nimbus.vpn.tunnel.ConnectionStatus
 import com.nimbus.vpn.ui.WarpUiState
@@ -64,7 +65,7 @@ private val Tile = RoundedCornerShape(22.dp)
 fun WarpCreateScreen(
     warp: WarpUiState,
     onBack: () -> Unit,
-    onCreate: (countryId: String, lte: Boolean) -> Unit,
+    onCreate: (engine: String, id: String, lte: Boolean) -> Unit,
     onImport: () -> Unit,
     onCreated: () -> Unit,
     onConsumed: () -> Unit,
@@ -73,11 +74,17 @@ fun WarpCreateScreen(
     dogY: Float = -1f,
     onMoveDog: (Float, Float) -> Unit = { _, _ -> },
 ) {
+    var engine by remember { mutableStateOf("warp") }
     var countryId by remember { mutableStateOf("de") }
+    var regionId by remember { mutableStateOf("EU") }
     var lte by remember { mutableStateOf(false) }
     val country = WarpConfigBuilder.country(countryId)
-    val lteAvailable = country?.hasLte == true
-    val preview = remember(countryId, lte) { WarpConfigBuilder.resolve(countryId, lte && lteAvailable) }
+    val lteAvailable = engine == "warp" && country?.hasLte == true
+    val previewName = if (engine == "sec") {
+        SecTunnelProfile.region(regionId)?.name ?: regionId
+    } else {
+        WarpConfigBuilder.resolve(countryId, lte && lteAvailable).name
+    }
 
     LaunchedEffect(lteAvailable) {
         if (!lteAvailable) lte = false
@@ -106,7 +113,7 @@ fun WarpCreateScreen(
                 }
                 Column {
                     Text("Новый сервер", color = Ink, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
-                    Text("Страна выхода", color = InkMuted, fontSize = 13.sp)
+                    Text("WARP или sec-tunnel", color = InkMuted, fontSize = 13.sp)
                 }
             }
             Column(
@@ -116,6 +123,7 @@ fun WarpCreateScreen(
                     .padding(horizontal = 20.dp),
             ) {
                 Spacer(Modifier.height(8.dp))
+                Text("WARP", color = InkMuted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
                 WarpConfigBuilder.countries.chunked(2).forEach { row ->
                     Row(
                         Modifier
@@ -128,14 +136,55 @@ fun WarpCreateScreen(
                                 flag = item.flag,
                                 name = item.name,
                                 detail = if (item.hasLte) "есть LTE" else "обычный",
-                                selected = item.id == countryId,
+                                selected = engine == "warp" && item.id == countryId,
                                 enabled = !warp.generating,
-                                onClick = { countryId = item.id },
+                                onClick = {
+                                    engine = "warp"
+                                    countryId = item.id
+                                },
                                 modifier = Modifier.weight(1f),
                             )
                         }
                         if (row.size == 1) Spacer(Modifier.weight(1f))
                     }
+                }
+                Text(
+                    "sec-tunnel",
+                    color = InkMuted,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 6.dp, bottom = 8.dp),
+                )
+                SecTunnelProfile.regions.chunked(2).forEach { row ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        row.forEach { item ->
+                            CountryTile(
+                                flag = item.flag,
+                                name = item.name,
+                                detail = "TCP · DNS",
+                                selected = engine == "sec" && item.id == regionId,
+                                enabled = !warp.generating,
+                                onClick = {
+                                    engine = "sec"
+                                    regionId = item.id
+                                },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                        if (row.size == 1) Spacer(Modifier.weight(1f))
+                    }
+                }
+                if (engine == "sec") {
+                    Text(
+                        "Выход выдаётся при включении. Кроме DNS, UDP не идёт в туннель.",
+                        color = InkMuted,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(bottom = 10.dp),
+                    )
                 }
                 Row(
                     Modifier
@@ -181,7 +230,10 @@ fun WarpCreateScreen(
                 val press = rememberPress(0.97f)
                 Button(
                     interactionSource = press.interaction,
-                    onClick = { onCreate(countryId, lte && lteAvailable) },
+                    onClick = {
+                        if (engine == "sec") onCreate("sec", regionId, false)
+                        else onCreate("warp", countryId, lte && lteAvailable)
+                    },
                     enabled = !warp.generating,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Accent,
@@ -205,7 +257,7 @@ fun WarpCreateScreen(
                         Spacer(Modifier.padding(6.dp))
                         Text("Собираю…")
                     } else {
-                        Text("Создать ${preview.name}", fontWeight = FontWeight.SemiBold)
+                        Text("Создать $previewName", fontWeight = FontWeight.SemiBold)
                     }
                 }
                 Text(

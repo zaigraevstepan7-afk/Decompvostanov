@@ -10,6 +10,8 @@ import com.nimbus.vpn.data.AccessApi
 import com.nimbus.vpn.data.AppSettings
 import com.nimbus.vpn.data.ConfigParser
 import com.nimbus.vpn.data.DayStreak
+import com.nimbus.vpn.data.SecTunnelApi
+import com.nimbus.vpn.data.SecTunnelProfile
 import com.nimbus.vpn.data.ServerPing
 import com.nimbus.vpn.data.VpnProfile
 import com.nimbus.vpn.data.WarpGenerator
@@ -105,12 +107,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun createWarp(countryId: String, lte: Boolean) {
+    fun createServer(engine: String, id: String, lte: Boolean) {
         if (_warp.value.generating) return
         _warp.value = WarpUiState(generating = true)
         viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
-                runCatching { WarpGenerator.generateOne(countryId, lte) }
+                runCatching {
+                    if (engine == "sec") SecTunnelProfile.create(id)
+                    else WarpGenerator.generateOne(id, lte)
+                }
             }
             result.fold(
                 onSuccess = { profile ->
@@ -130,7 +135,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 },
                 onFailure = { error ->
                     _warp.value = WarpUiState(
-                        error = error.message ?: "Не удалось создать WARP-конфиг",
+                        error = error.message ?: "Не удалось создать сервер",
                     )
                 },
             )
@@ -154,7 +159,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 snapshot.map { profile ->
                     async(Dispatchers.IO) {
                         gate.withPermit {
-                            val host = ServerPing.hostOf(ConfigParser.endpointOf(profile.rawConfig))
+                            val host = if (SecTunnelProfile.isSec(profile.rawConfig)) {
+                                SecTunnelProfile.read(profile.rawConfig)?.region?.let { region ->
+                                    runCatching { SecTunnelApi.lease(region).ip }.getOrNull()
+                                }
+                            } else {
+                                ServerPing.hostOf(ConfigParser.endpointOf(profile.rawConfig))
+                            }
                             val ms = if (host == null) null else ServerPing.ping(host)
                             _ping.update { state ->
                                 state.copy(

@@ -54,7 +54,11 @@ fun subtitleForConfig(raw: String): String {
 }
 
 @Composable
-fun FlagBadge(endpoint: String?, modifier: Modifier = Modifier, badge: Dp = 36.dp) {
+fun FlagBadge(endpoint: String?, emoji: String? = null, modifier: Modifier = Modifier, badge: Dp = 36.dp) {
+    if (!emoji.isNullOrBlank()) {
+        Text(emoji, fontSize = 22.sp, modifier = modifier)
+        return
+    }
     val res = flagResForEndpoint(endpoint)
     if (res != null) {
         Image(

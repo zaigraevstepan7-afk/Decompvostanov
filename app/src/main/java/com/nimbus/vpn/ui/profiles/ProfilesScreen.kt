@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nimbus.vpn.data.ConfigParser
+import com.nimbus.vpn.data.SecTunnelProfile
 import com.nimbus.vpn.data.ProfileIndex
 import com.nimbus.vpn.tunnel.ConnectionStatus
 import com.nimbus.vpn.ui.components.ConfirmDeleteDialog
@@ -97,6 +98,7 @@ fun ProfilesScreen(
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(index.profiles, key = { it.id }) { profile ->
                         val endpoint = ConfigParser.endpointOf(profile.rawConfig)
+                        val sec = SecTunnelProfile.read(profile.rawConfig)
                         val amnezia = ConfigParser.isAmneziaHint(profile.rawConfig)
                         val active = profile.id == index.activeId
                         Row(
@@ -109,7 +111,7 @@ fun ProfilesScreen(
                                 .padding(14.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            FlagBadge(endpoint, badge = 40.dp)
+                            FlagBadge(endpoint, emoji = sec?.flag, badge = 40.dp)
                             Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(
@@ -121,14 +123,18 @@ fun ProfilesScreen(
                                     overflow = TextOverflow.Ellipsis,
                                 )
                                 Text(
-                                    endpoint ?: "без endpoint",
+                                    if (sec != null) "sec-tunnel" else endpoint ?: "без endpoint",
                                     color = InkMuted,
                                     fontSize = 13.sp,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                 )
                                 Text(
-                                    if (amnezia) "AmneziaWG" else "WireGuard",
+                                    when {
+                                        sec != null -> sec.name
+                                        amnezia -> "AmneziaWG"
+                                        else -> "WireGuard"
+                                    },
                                     color = if (active) Accent else InkMuted,
                                     fontSize = 12.sp,
                                 )
