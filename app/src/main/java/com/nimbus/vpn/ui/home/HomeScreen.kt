@@ -83,7 +83,6 @@ import com.nimbus.vpn.ui.theme.Canvas
 import com.nimbus.vpn.ui.theme.Danger
 import com.nimbus.vpn.ui.theme.Ink
 import com.nimbus.vpn.ui.theme.InkMuted
-import com.nimbus.vpn.ui.theme.Lift
 import com.nimbus.vpn.ui.theme.Line
 import com.nimbus.vpn.ui.theme.Motion
 import com.nimbus.vpn.ui.theme.Paper
@@ -130,6 +129,7 @@ fun HomeScreen(
         }
     }
     val context = LocalContext.current
+    val marbleTime = rememberMarbleTime(animate)
     val active = profiles.profiles.firstOrNull { it.id == profiles.activeId } ?: state.profile
     val busy = state.status == ConnectionStatus.CONNECTING
     val step = CoachStep.from(settings.coachStep)
@@ -308,6 +308,7 @@ fun HomeScreen(
                                 }
                             },
                             onRotate = if (connectedHere && SecTunnelProfile.isSec(profile.rawConfig)) onRotate else null,
+                            marbleTime = marbleTime,
                         )
                     }
                 }
@@ -404,11 +405,12 @@ private fun ServerRow(
     livePlace: String? = null,
     onCopyIp: (() -> Unit)? = null,
     onRotate: (() -> Unit)? = null,
+    marbleTime: Float = 0f,
 ) {
     val endpoint = remember(profile.rawConfig) { ConfigParser.endpointOf(profile.rawConfig) }
     val sec = remember(profile.rawConfig) { SecTunnelProfile.read(profile.rawConfig) }
+    val phase = remember(profile.id) { marblePhase(profile.id) }
     val press = rememberPress(0.975f)
-    val fill by animateColorAsState(if (active) Lift else Paper, Motion.color(460), label = "row-fill")
     val stroke by animateColorAsState(
         if (active) Accent.copy(alpha = 0.7f) else Line,
         Motion.color(460),
@@ -426,7 +428,7 @@ private fun ServerRow(
             .fillMaxWidth()
             .pressScale(press.scale)
             .clip(CardShape)
-            .background(fill)
+            .marble(marbleTime, phase)
             .border(1.dp, stroke, CardShape)
             .clickable(
                 interactionSource = press.interaction,
