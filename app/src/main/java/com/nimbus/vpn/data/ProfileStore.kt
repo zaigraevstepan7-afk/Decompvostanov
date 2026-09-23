@@ -22,8 +22,7 @@ class ProfileStore(context: Context) {
     val index: StateFlow<ProfileIndex> = _index.asStateFlow()
 
     init {
-        dropSec()
-        ensureAuto()
+        dropRemoved()
     }
 
     val profiles: List<VpnProfile>
@@ -37,7 +36,7 @@ class ProfileStore(context: Context) {
         }
 
     fun upsert(profile: VpnProfile, makeActive: Boolean = true) = synchronized(this) {
-        if (SecTunnelProfile.isSec(profile.rawConfig)) return
+        if (isRemoved(profile)) return
         val current = _index.value
         val existing = current.profiles.indexOfFirst { it.id == profile.id }
         val nextProfiles = current.profiles.toMutableList()
@@ -51,7 +50,6 @@ class ProfileStore(context: Context) {
     }
 
     fun delete(id: String) = synchronized(this) {
-        if (id == WarpAutoProfile.ID) return
         val current = _index.value
         val next = current.profiles.filterNot { it.id == id }
         persist(
@@ -71,9 +69,7 @@ class ProfileStore(context: Context) {
     }
 
     fun upsertAll(incoming: List<VpnProfile>, activeId: String? = incoming.firstOrNull()?.id) = synchronized(this) {
-        val clean = incoming.filterNot {
-            SecTunnelProfile.isSec(it.rawConfig) || it.id == WarpAutoProfile.ID
-        }
+        val clean = incoming.filterNot { isRemoved(it) }
         if (clean.isEmpty()) return
         val current = _index.value
         val incomingIds = clean.map { it.id }.toSet()
@@ -88,24 +84,9 @@ class ProfileStore(context: Context) {
         )
     }
 
-    private fun ensureAuto() = synchronized(this) {
-        val pinned = pinAuto(_index.value)
-        if (pinned != _index.value) persist(pinned)
-    }
-
-    private fun pinAuto(index: ProfileIndex): ProfileIndex {
-        val rest = index.profiles.filterNot { it.id == WarpAutoProfile.ID }
-        val kept = index.profiles.firstOrNull { it.id == WarpAutoProfile.ID && WarpAutoProfile.isAuto(it.rawConfig) }
-        val auto = kept ?: WarpAutoProfile.create()
-        return index.copy(
-            profiles = listOf(auto) + rest,
-            activeId = index.activeId ?: auto.id,
-        )
-    }
-
-    private fun dropSec() = synchronized(this) {
+    private fun dropRemoved() = synchronized(this) {
         val current = _index.value
-        val kept = current.profiles.filterNot { SecTunnelProfile.isSec(it.rawConfig) }
+        val kept = current.profiles.filterNot { isRemoved(it) }
         if (kept.size == current.profiles.size) return
         persist(
             ProfileIndex(
@@ -115,6 +96,12 @@ class ProfileStore(context: Context) {
         )
     }
 
+    private fun isRemoved(profile: VpnProfile): Boolean {
+        if (profile.id == "warp:auto") return true
+        if (SecTunnelProfile.isSec(profile.rawConfig)) return true
+        return profile.rawConfig.contains("Engine = warp-auto")
+    }
+
     private fun load(): ProfileIndex {
         val raw = runCatching { prefs.getString(KEY, null) }.getOrNull() ?: return ProfileIndex()
         return runCatching { json.decodeFromString(ProfileIndex.serializer(), raw) }
@@ -122,11 +109,10 @@ class ProfileStore(context: Context) {
     }
 
     private fun persist(index: ProfileIndex) {
-        val pinned = pinAuto(index)
         runCatching {
-            prefs.edit().putString(KEY, json.encodeToString(ProfileIndex.serializer(), pinned)).apply()
+            prefs.edit().putString(KEY, json.encodeToString(ProfileIndex.serializer(), index)).apply()
         }.onFailure { Log.e(TAG, "Failed to persist profiles", it) }
-        _index.value = pinned
+        _index.value = index
     }
 
     companion object {

@@ -30,23 +30,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nimbus.vpn.data.ConfigParser
 import com.nimbus.vpn.data.SecTunnelProfile
-import com.nimbus.vpn.data.WarpAutoProfile
 import com.nimbus.vpn.data.ProfileIndex
 import com.nimbus.vpn.tunnel.ConnectionStatus
 import com.nimbus.vpn.ui.components.ConfirmDeleteDialog
-import com.nimbus.vpn.ui.home.GoldLook
-import com.nimbus.vpn.ui.home.gold
-import com.nimbus.vpn.ui.home.marble
-import com.nimbus.vpn.ui.home.marbleMotion
-import com.nimbus.vpn.ui.home.rememberMarbleTime
 import com.nimbus.vpn.ui.components.DeleteServerButton
 import com.nimbus.vpn.ui.components.MeshBackground
 import com.nimbus.vpn.ui.home.FlagBadge
@@ -61,15 +53,12 @@ private val Card = RoundedCornerShape(22.dp)
 @Composable
 fun ProfilesScreen(
     index: ProfileIndex,
-    marble: Boolean,
     onBack: () -> Unit,
     onSelect: (String) -> Unit,
     onDelete: (String) -> Unit,
     onImport: () -> Unit,
 ) {
     var pendingDelete by remember { mutableStateOf<Pair<String, String>?>(null) }
-    val marbleTime = rememberMarbleTime(marble)
-    val goldTime = rememberMarbleTime(true)
     Box(Modifier.fillMaxSize()) {
         MeshBackground(ConnectionStatus.DISCONNECTED, animate = true, modifier = Modifier.fillMaxSize())
         Column(
@@ -110,48 +99,19 @@ fun ProfilesScreen(
                     items(index.profiles, key = { it.id }) { profile ->
                         val endpoint = ConfigParser.endpointOf(profile.rawConfig)
                         val sec = SecTunnelProfile.read(profile.rawConfig)
-                        val auto = WarpAutoProfile.isAuto(profile.rawConfig)
                         val amnezia = ConfigParser.isAmneziaHint(profile.rawConfig)
                         val active = profile.id == index.activeId
-                        val motion = remember(profile.id) { marbleMotion(profile.id) }
                         Row(
                             Modifier
                                 .fillMaxWidth()
-                                .then(
-                                    if (auto) {
-                                        Modifier.shadow(
-                                            18.dp,
-                                            Card,
-                                            clip = false,
-                                            ambientColor = GoldLook.Rim.copy(alpha = 0.85f),
-                                            spotColor = Color(0xFFFFE08A),
-                                        )
-                                    } else {
-                                        Modifier
-                                    },
-                                )
                                 .clip(Card)
-                                .then(
-                                    when {
-                                        auto -> Modifier.gold(goldTime)
-                                        marble -> Modifier.marble(marbleTime, motion)
-                                        else -> Modifier.background(Paper)
-                                    },
-                                )
-                                .border(
-                                    if (auto) 2.dp else 1.dp,
-                                    when {
-                                        auto -> GoldLook.Rim
-                                        active -> Accent
-                                        else -> Line
-                                    },
-                                    Card,
-                                )
+                                .background(Paper)
+                                .border(1.dp, if (active) Accent else Line, Card)
                                 .clickable { onSelect(profile.id) }
                                 .padding(14.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            FlagBadge(endpoint, emoji = if (auto) "✨" else sec?.flag, badge = 40.dp)
+                            FlagBadge(endpoint, emoji = sec?.flag, badge = 40.dp)
                             Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(
@@ -163,11 +123,7 @@ fun ProfilesScreen(
                                     overflow = TextOverflow.Ellipsis,
                                 )
                                 Text(
-                                    when {
-                                        auto -> "сам выберет"
-                                        sec != null -> "${sec.place} · sec-tunnel"
-                                        else -> endpoint ?: "без endpoint"
-                                    },
+                                    if (sec != null) "${sec.place} · sec-tunnel" else endpoint ?: "без endpoint",
                                     color = InkMuted,
                                     fontSize = 13.sp,
                                     maxLines = 1,
@@ -175,7 +131,6 @@ fun ProfilesScreen(
                                 )
                                 Text(
                                     when {
-                                        auto -> "WARP"
                                         sec != null -> sec.name
                                         amnezia -> "AmneziaWG"
                                         else -> "WireGuard"
@@ -184,11 +139,9 @@ fun ProfilesScreen(
                                     fontSize = 12.sp,
                                 )
                             }
-                            if (!auto) {
-                                DeleteServerButton(
-                                    onClick = { pendingDelete = profile.id to profile.name },
-                                )
-                            }
+                            DeleteServerButton(
+                                onClick = { pendingDelete = profile.id to profile.name },
+                            )
                         }
                     }
                 }

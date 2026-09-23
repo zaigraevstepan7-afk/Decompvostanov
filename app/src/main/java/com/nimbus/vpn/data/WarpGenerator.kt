@@ -1,10 +1,5 @@
 package com.nimbus.vpn.data
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -62,21 +57,6 @@ object WarpConfigBuilder {
     )
 
     fun country(id: String): WarpCountry? = countries.firstOrNull { it.id == id }
-
-    /** Countries Auto measures. Russia stays a manual choice. */
-    fun autoCountries(): List<WarpCountry> = countries.filter { it.id != "ru" }
-
-    /**
-     * Lowest answered ping wins. Unanswered hosts and Russia are ignored.
-     * A tie keeps the earlier id so the choice is stable.
-     */
-    fun fastest(pings: Map<String, Int?>): String? {
-        return pings
-            .filterKeys { it != "ru" }
-            .mapNotNull { (id, ms) -> ms?.let { id to it } }
-            .minWithOrNull(compareBy<Pair<String, Int>> { it.second }.thenBy { it.first })
-            ?.first
-    }
 
     fun resolve(countryId: String, lte: Boolean): WarpEndpoint {
         val country = country(countryId) ?: error("Неизвестная страна: $countryId")
@@ -204,46 +184,6 @@ object WarpGenerator {
             name = endpoint.name,
             rawConfig = conf,
         )
-    }
-}
-
-data class WarpAutoChoice(
-    val config: String,
-    val country: String,
-    val pingMs: Int,
-)
-
-object WarpAutoProfile {
-    const val ID = "warp:auto"
-    const val ENGINE = "warp-auto"
-
-    fun isAuto(raw: String): Boolean {
-        var engine: String? = null
-        raw.replace("\r\n", "\n").lineSequence().forEach { original ->
-            val line = original.substringBefore('#').trim()
-            val eq = line.indexOf('=')
-            if (eq <= 0) return@forEach
-            val key = line.substring(0, eq).trim()
-            val value = line.substring(eq + 1).trim()
-            if (key.equals("Engine", ignoreCase = true)) engine = value
-        }
-        return engine.equals(ENGINE, ignoreCase = true)
-    }
-
-    fun create(): VpnProfile = VpnProfile(
-        id = ID,
-        name = "Авто",
-        rawConfig = "[Bozya]\nEngine = $ENGINE\n",
-    )
-
-    suspend fun materialize(): WarpAutoChoice = coroutineScope {
-        val measured = WarpConfigBuilder.autoCountries().map { country ->
-            async { country.id to withContext(Dispatchers.IO) { ServerPing.ping(country.host) } }
-        }.awaitAll().toMap()
-        val id = WarpConfigBuilder.fastest(measured) ?: error("Никто не ответил")
-        val country = WarpConfigBuilder.country(id) ?: error("Неизвестная страна")
-        val built = withContext(Dispatchers.IO) { WarpGenerator.generateOne(id, lte = false) }
-        WarpAutoChoice(built.rawConfig, country.name, measured[id] ?: 0)
     }
 }
 

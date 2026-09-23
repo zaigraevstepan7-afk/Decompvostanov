@@ -5,7 +5,6 @@ import com.nimbus.vpn.data.ConfigParser
 import com.nimbus.vpn.data.WarpApi
 import com.nimbus.vpn.data.WarpConfigBuilder
 import com.nimbus.vpn.data.WarpGenerator
-import com.nimbus.vpn.data.WarpAutoProfile
 import com.nimbus.vpn.data.WarpKeys
 import com.nimbus.vpn.ui.home.flagForEndpoint
 import org.junit.Test
@@ -68,28 +67,6 @@ class WarpGeneratorTest {
         assertThat(flagForEndpoint(preview.endpoint)).isEqualTo("🇩🇪")
         assertThat(flagForEndpoint("tel.pl.tribukvy.ltd:500")).isEqualTo("🇵🇱")
         assertThat(flagForEndpoint("ru0.tribukvy.ltd:4500")).isEqualTo("🇷🇺")
-    }
-
-    @Test
-    fun autoProfileStaysAMarker() {
-        val profile = WarpAutoProfile.create()
-        assertThat(profile.id).isEqualTo("warp:auto")
-        assertThat(profile.name).isEqualTo("Авто")
-        assertThat(WarpAutoProfile.isAuto(profile.rawConfig)).isTrue()
-        assertThat(WarpAutoProfile.isAuto("[Interface]\nPrivateKey = a\n")).isFalse()
-    }
-
-    @Test
-    fun autoSkipsRussiaAndKeepsTheFastest() {
-        val ids = WarpConfigBuilder.autoCountries().map { it.id }
-        assertThat(ids).containsExactly("de", "pl", "nl", "fi", "ee", "lv")
-        assertThat(ids).doesNotContain("ru")
-        assertThat(
-            WarpConfigBuilder.fastest(
-                mapOf("de" to 80, "pl" to 40, "nl" to null, "ru" to 5, "fi" to 40),
-            ),
-        ).isEqualTo("fi")
-        assertThat(WarpConfigBuilder.fastest(mapOf("de" to null, "ru" to 10))).isNull()
     }
 
     @Test

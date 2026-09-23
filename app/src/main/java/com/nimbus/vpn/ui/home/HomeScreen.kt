@@ -54,8 +54,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -66,7 +64,6 @@ import com.nimbus.vpn.data.ConfigParser
 import com.nimbus.vpn.data.SecTunnelProfile
 import com.nimbus.vpn.data.ProfileIndex
 import com.nimbus.vpn.data.VpnProfile
-import com.nimbus.vpn.data.WarpAutoProfile
 import com.nimbus.vpn.tunnel.ConnectionStatus
 import com.nimbus.vpn.tunnel.TunnelUiState
 import com.nimbus.vpn.ui.AccessStatus
@@ -133,9 +130,6 @@ fun HomeScreen(
         }
     }
     val context = LocalContext.current
-    val marbleOn = settings.marble
-    val marbleTime = rememberMarbleTime(animate && marbleOn)
-    val goldTime = rememberMarbleTime(animate)
     val active = profiles.profiles.firstOrNull { it.id == profiles.activeId } ?: state.profile
     val busy = state.status == ConnectionStatus.CONNECTING
     val step = CoachStep.from(settings.coachStep)
@@ -293,9 +287,6 @@ fun HomeScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     items(profiles.profiles, key = { it.id }) { profile ->
-                        val focused = profile.id == state.profile?.id &&
-                            (state.status == ConnectionStatus.CONNECTED ||
-                                state.status == ConnectionStatus.CONNECTING)
                         val connectedHere = state.status == ConnectionStatus.CONNECTED &&
                             profile.id == state.profile?.id
                         val exitIp = state.exitIp?.takeIf { connectedHere && it.isNotBlank() }
@@ -308,7 +299,7 @@ fun HomeScreen(
                             onSelect = { onSelect(profile.id) },
                             onPing = onPing,
                             onDelete = { pendingDelete = profile.id to profile.name },
-                            livePlace = if (focused) state.exitPlace else null,
+                            livePlace = if (connectedHere) state.exitPlace else null,
                             onCopyIp = exitIp?.let { ip ->
                                 {
                                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -317,9 +308,6 @@ fun HomeScreen(
                                 }
                             },
                             onRotate = if (connectedHere && SecTunnelProfile.isSec(profile.rawConfig)) onRotate else null,
-                            marbleTime = marbleTime,
-                            marble = marbleOn,
-                            goldTime = goldTime,
                         )
                     }
                 }
@@ -416,21 +404,12 @@ private fun ServerRow(
     livePlace: String? = null,
     onCopyIp: (() -> Unit)? = null,
     onRotate: (() -> Unit)? = null,
-    marbleTime: Float = 0f,
-    marble: Boolean = false,
-    goldTime: Float = 0f,
 ) {
     val endpoint = remember(profile.rawConfig) { ConfigParser.endpointOf(profile.rawConfig) }
     val sec = remember(profile.rawConfig) { SecTunnelProfile.read(profile.rawConfig) }
-    val auto = remember(profile.rawConfig) { WarpAutoProfile.isAuto(profile.rawConfig) }
-    val motion = remember(profile.id) { marbleMotion(profile.id) }
     val press = rememberPress(0.975f)
     val stroke by animateColorAsState(
-        when {
-            auto -> GoldLook.Rim
-            active -> Accent.copy(alpha = 0.7f)
-            else -> Line
-        },
+        if (active) Accent.copy(alpha = 0.7f) else Line,
         Motion.color(460),
         label = "row-stroke",
     )
@@ -445,28 +424,9 @@ private fun ServerRow(
         Modifier
             .fillMaxWidth()
             .pressScale(press.scale)
-            .then(
-                if (auto) {
-                    Modifier.shadow(
-                        18.dp,
-                        CardShape,
-                        clip = false,
-                        ambientColor = GoldLook.Rim.copy(alpha = 0.85f),
-                        spotColor = Color(0xFFFFE08A),
-                    )
-                } else {
-                    Modifier
-                },
-            )
             .clip(CardShape)
-            .then(
-                when {
-                    auto -> Modifier.gold(goldTime)
-                    marble -> Modifier.marble(marbleTime, motion)
-                    else -> Modifier.background(if (active) Lift else Paper)
-                },
-            )
-            .border(if (auto) 2.dp else 1.dp, stroke, CardShape)
+            .background(if (active) Lift else Paper)
+            .border(1.dp, stroke, CardShape)
             .clickable(
                 interactionSource = press.interaction,
                 indication = ripple(),
@@ -475,7 +435,7 @@ private fun ServerRow(
             .padding(start = 12.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        FlagBadge(endpoint, emoji = if (auto) "✨" else sec?.flag, badge = 36.dp)
+        FlagBadge(endpoint, emoji = sec?.flag, badge = 36.dp)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(
@@ -488,8 +448,6 @@ private fun ServerRow(
             )
             Text(
                 when {
-                    auto && !livePlace.isNullOrBlank() -> livePlace
-                    auto -> "сам выберет"
                     sec == null -> endpoint ?: proto
                     !livePlace.isNullOrBlank() -> "$livePlace · sec-tunnel"
                     else -> "${sec.place} · sec-tunnel"
@@ -515,9 +473,7 @@ private fun ServerRow(
                 PressIconButton(onClick = onPing, modifier = Modifier.size(36.dp), enabled = !pinging) {
                     Icon(Icons.Rounded.Timer, contentDescription = "Пинг", tint = Ink, modifier = Modifier.size(18.dp))
                 }
-                if (!auto) {
-                    DeleteServerButton(onClick = onDelete, modifier = Modifier.size(36.dp))
-                }
+                DeleteServerButton(onClick = onDelete, modifier = Modifier.size(36.dp))
             }
             if (pingLabel.isNotEmpty()) {
                 Text(
