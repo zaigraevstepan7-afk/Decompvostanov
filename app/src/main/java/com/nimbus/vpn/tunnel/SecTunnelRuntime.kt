@@ -2,6 +2,7 @@ package com.nimbus.vpn.tunnel
 
 import android.content.Context
 import android.content.Intent
+import com.nimbus.vpn.data.SecExit
 import java.util.concurrent.CancellationException
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
@@ -21,6 +22,7 @@ object SecTunnelRuntime {
     private val generation = AtomicInteger()
     private val lock = Any()
     private var pending: CompletableDeferred<Result<Unit>>? = null
+    private var staged: Pair<Int, SecExit>? = null
 
     fun arm(): Int {
         val token = generation.incrementAndGet()
@@ -28,6 +30,7 @@ object SecTunnelRuntime {
         rx.set(0)
         tx.set(0)
         synchronized(lock) {
+            staged = null
             pending?.let { current ->
                 if (!current.isCompleted) {
                     current.complete(Result.failure(CancellationException("Остановлено")))
@@ -36,6 +39,16 @@ object SecTunnelRuntime {
             pending = CompletableDeferred()
         }
         return token
+    }
+
+    fun stage(token: Int, exit: SecExit) {
+        synchronized(lock) {
+            if (generation.get() == token) staged = token to exit
+        }
+    }
+
+    fun takeExit(token: Int): SecExit? = synchronized(lock) {
+        staged?.takeIf { it.first == token }?.second
     }
 
     fun isCurrent(token: Int): Boolean = generation.get() == token && !abort
@@ -67,6 +80,7 @@ object SecTunnelRuntime {
         generation.incrementAndGet()
         active = false
         synchronized(lock) {
+            staged = null
             pending?.let { current ->
                 if (!current.isCompleted) {
                     current.complete(Result.failure(CancellationException("Остановлено")))

@@ -77,5 +77,19 @@ class DogPixelsTest {
         assertNotEquals(shut[26], open[26])
     }
 
+    @Test
+    fun anotherServerDoesNotReplayTheGearHint() {
+        assertEquals(CoachStep.ACCESS, CoachStep.CREATE.afterServerCreated(heardAccess = false))
+        assertEquals(CoachStep.ACCESS, CoachStep.PICK.afterServerCreated(heardAccess = true))
+        assertEquals(CoachStep.DONE, CoachStep.ACCESS.afterServerCreated(heardAccess = true))
+        assertEquals(CoachStep.ACCESS, CoachStep.ACCESS.afterServerCreated(heardAccess = false))
+        assertEquals(CoachStep.DONE, CoachStep.CELEBRATE.afterServerCreated(heardAccess = true))
+        assertEquals(CoachStep.DONE, CoachStep.DONE.afterServerCreated(heardAccess = true))
+        assertEquals(CoachStep.CELEBRATE, CoachStep.CONNECT.afterTunnelUp())
+        assertEquals(CoachStep.ACCESS, CoachStep.ACCESS.afterTunnelUp())
+        assertEquals(CoachStep.DONE, CoachStep.DONE.afterTunnelUp())
+        assertEquals(CoachStep.SETTINGS, CoachStep.SETTINGS.afterTunnelUp())
+    }
+
     private fun eye(rows: List<String>, x: Int, y: Int) = List(6) { dy -> rows[y + dy].substring(x, x + 7) }
 }

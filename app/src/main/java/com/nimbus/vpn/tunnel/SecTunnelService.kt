@@ -6,6 +6,9 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
@@ -13,7 +16,6 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.nimbus.vpn.MainActivity
 import com.nimbus.vpn.R
-import com.nimbus.vpn.data.SecTunnelApi
 import com.nimbus.vpn.data.SecTunnelProfile
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -51,20 +53,22 @@ class SecTunnelService : VpnService() {
         val raw = intent?.getStringExtra(EXTRA_CONFIG).orEmpty()
         val bypass = intent?.getStringArrayListExtra(EXTRA_BYPASS).orEmpty()
         worker = Thread({
-            var unexpected = false
+            var running = false
             try {
                 runTunnel(token, raw, bypass)
+                running = SecTunnelRuntime.active
             } catch (error: Throwable) {
+                running = SecTunnelRuntime.active
                 Log.e(TAG, "sec-tunnel failed", error)
                 SecTunnelRuntime.fail(token, error)
             } finally {
-                unexpected = SecTunnelRuntime.active && SecTunnelRuntime.isCurrent(token)
+                val current = SecTunnelRuntime.isCurrent(token)
                 if (activeToken == token) {
                     shutdown()
                     if (!SecTunnelRuntime.active) {
                         SecTunnelRuntime.fail(token, IllegalStateException("sec-tunnel остановился"))
                     }
-                    if (unexpected) {
+                    if (running && current) {
                         SecTunnelRuntime.markStopped()
                         SecTunnelRuntime.notifyDown()
                     }
@@ -73,7 +77,7 @@ class SecTunnelService : VpnService() {
             }
         }, "sec-tun")
         worker?.start()
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
     override fun onRevoke() {
@@ -90,17 +94,22 @@ class SecTunnelService : VpnService() {
     }
 
     private fun runTunnel(token: Int, raw: String, bypass: List<String>) {
-        val spec = SecTunnelProfile.read(raw) ?: error("Это не профиль sec-tunnel")
-        val exit = SecTunnelApi.lease(spec.region)
+        SecTunnelProfile.read(raw) ?: error("Это не профиль sec-tunnel")
+        val exit = SecTunnelRuntime.takeExit(token) ?: error("Нет выхода sec-tunnel")
         if (!SecTunnelRuntime.isCurrent(token)) return
+        val outside = pickNetwork()
         val pfd = openTun(bypass)
         if (!SecTunnelRuntime.isCurrent(token)) {
             pfd.close()
             return
         }
         tun = pfd
+        if (outside != null) runCatching { setUnderlyingNetworks(arrayOf(outside)) }
         tunOut = FileOutputStream(pfd.fileDescriptor)
-        val guard: (Socket) -> Boolean = { socket -> this@SecTunnelService.protect(socket) }
+        val guard: (Socket) -> Boolean = { socket ->
+            if (outside != null) runCatching { outside.bindSocket(socket) }
+            this@SecTunnelService.protect(socket)
+        }
         val engine = TunRelay(
             dial = { host, port -> SecProxy.open(guard, exit, host, port) },
             dns = { query -> SecProxy.queryDns(guard, exit, query) },
@@ -135,16 +144,25 @@ class SecTunnelService : VpnService() {
             .addDnsServer("1.1.1.1")
             .addDnsServer("1.0.0.1")
         if (Build.VERSION.SDK_INT >= 29) builder.setMetered(false)
-        runCatching {
-            builder.addAddress("fd00:b07a::2", 128)
-            builder.addRoute("::", 0)
-        }
         runCatching { builder.addDisallowedApplication(packageName) }
         bypass.forEach { packageName ->
             if (packageName == this.packageName) return@forEach
             runCatching { builder.addDisallowedApplication(packageName) }
         }
         return builder.establish() ?: error("Не удалось создать туннель")
+    }
+
+    @Suppress("DEPRECATION")
+    private fun pickNetwork(): Network? {
+        val manager = getSystemService(ConnectivityManager::class.java) ?: return null
+        val active = manager.activeNetwork
+        if (active != null && !isVpn(manager, active)) return active
+        return manager.allNetworks.firstOrNull { network -> !isVpn(manager, network) }
+    }
+
+    private fun isVpn(manager: ConnectivityManager, network: Network): Boolean {
+        val caps = manager.getNetworkCapabilities(network) ?: return false
+        return caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
     }
 
     private fun shutdown() {

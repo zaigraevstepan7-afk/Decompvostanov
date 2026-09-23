@@ -27,6 +27,16 @@ enum class CoachStep(val id: Int) {
         else -> this
     }
 
+    /** First-run only. A later server must not rewind the tour onto the gear hint. */
+    fun afterServerCreated(heardAccess: Boolean): CoachStep = when (this) {
+        CREATE, PICK -> ACCESS
+        ACCESS, CELEBRATE, SETTINGS -> if (heardAccess) DONE else this
+        else -> this
+    }
+
+    /** The gear hint follows the first connect, not every later one. */
+    fun afterTunnelUp(): CoachStep = if (this == CONNECT) CELEBRATE else this
+
     companion object {
         fun from(id: Int): CoachStep = entries.firstOrNull { it.id == id } ?: OFFER
     }

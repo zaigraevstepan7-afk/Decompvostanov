@@ -12,9 +12,14 @@ import kotlinx.serialization.json.jsonPrimitive
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.io.OutputStream
+import java.net.InetAddress
 import java.net.InetSocketAddress
+import java.net.Socket
 import java.net.URL
 import java.net.URLEncoder
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import javax.net.ssl.SNIHostName
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLSocket
 import java.security.MessageDigest
@@ -281,15 +286,33 @@ class SecHttp : AutoCloseable {
         challenge = null
         nonce = null
         nc = 0
+        val tcp = Socket()
+        tcp.tcpNoDelay = true
+        tcp.connect(InetSocketAddress(resolveHost(), 443), 10_000)
+        tcp.soTimeout = 15_000
         val context = SSLContext.getInstance("TLS")
         context.init(null, null, SecureRandom())
-        val opened = context.socketFactory.createSocket() as SSLSocket
+        val opened = context.socketFactory.createSocket(tcp, HOST, 443, true) as SSLSocket
+        val params = opened.sslParameters
+        params.serverNames = listOf(SNIHostName(HOST))
+        params.endpointIdentificationAlgorithm = "HTTPS"
+        opened.sslParameters = params
         opened.soTimeout = 15_000
-        opened.connect(InetSocketAddress(HOST, 443), 12_000)
         opened.startHandshake()
         socket = opened
         input = opened.inputStream
         output = opened.outputStream
+    }
+
+    private fun resolveHost(): InetAddress {
+        val pool = Executors.newSingleThreadExecutor()
+        return try {
+            pool.submit<InetAddress> { InetAddress.getByName(HOST) }.get(8, TimeUnit.SECONDS)
+        } catch (timeout: java.util.concurrent.TimeoutException) {
+            throw IllegalStateException("Не удалось найти $HOST")
+        } finally {
+            pool.shutdownNow()
+        }
     }
 
     private fun remember(header: String?) {

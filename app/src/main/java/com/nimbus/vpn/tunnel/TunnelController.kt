@@ -38,8 +38,15 @@ import org.amnezia.awg.backend.RootTunnelActionHandler
 import org.amnezia.awg.backend.Tunnel
 import org.amnezia.awg.config.Config
 import org.amnezia.awg.util.RootShell
+import com.nimbus.vpn.data.SecExit
+import com.nimbus.vpn.data.SecHttp
+import com.nimbus.vpn.data.SecTunnelApi
 import java.io.BufferedReader
 import java.io.StringReader
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import kotlin.math.min
 
 class TunnelController(
@@ -386,8 +393,26 @@ class TunnelController(
     ) {
         activeEngine = Engine.SEC
         downAwg()
+        val spec = SecTunnelProfile.read(profile.rawConfig)
+        if (spec == null) {
+            activeEngine = Engine.NONE
+            failConnect(IllegalStateException("Это не профиль sec-tunnel"), userInitiated)
+            return
+        }
+        val exit = try {
+            withContext(Dispatchers.IO) { fetchExit(spec.region) }
+        } catch (error: Throwable) {
+            activeEngine = Engine.NONE
+            failConnect(unwrap(error), userInitiated)
+            return
+        }
+        if (userStopped) {
+            activeEngine = Engine.NONE
+            return
+        }
         val token = SecTunnelRuntime.arm()
         connectToken = token
+        SecTunnelRuntime.stage(token, exit)
         val bypass = ArrayList(fresh.bypassPackages.filter(::isInstalledPackage))
         val intent = Intent(context, SecTunnelService::class.java).apply {
             action = SecTunnelService.ACTION_CONNECT
@@ -403,45 +428,63 @@ class TunnelController(
         if (started.isFailure || pending == null) {
             connectToken = 0
             activeEngine = Engine.NONE
+            SecTunnelRuntime.requestStop(context)
             failConnect(
                 started.exceptionOrNull() ?: IllegalStateException("sec-tunnel не запустился"),
                 userInitiated,
             )
             return
         }
-        // The button must stay usable. Waiting here holds the connect lock and
-        // leaves the screen on "Подключение…" until the API answers.
-        scope.launch {
-            val result = runCatching {
-                withTimeoutOrNull(20_000) { pending.await() }
-                    ?: Result.failure(IllegalStateException("Таймаут sec-tunnel"))
-            }.getOrElse { Result.failure(it) }
-            mutex.withLock {
-                if (connectToken != token || userStopped) return@withLock
-                result.onSuccess {
-                    connectedSince = System.currentTimeMillis()
-                    lastRx = 0
-                    lastTx = 0
-                    lastSampleAt = 0
-                    activeEngine = Engine.SEC
-                    _ui.update {
-                        it.copy(
-                            status = ConnectionStatus.CONNECTED,
-                            error = null,
-                            connectedSince = connectedSince,
-                            backendLabel = "sec-tunnel",
-                        )
-                    }
-                    BozyaKeepAliveService.start(context, profile.name)
-                    startStatsLoop()
-                }.onFailure { error ->
-                    connectToken = 0
-                    activeEngine = Engine.NONE
-                    SecTunnelRuntime.requestStop(context)
-                    failConnect(error, userInitiated)
-                }
-            }
+        val outcome = withContext(Dispatchers.IO) {
+            withTimeoutOrNull(8_000) { pending.await() }
         }
+        if (connectToken != token || userStopped) return
+        if (outcome != null && outcome.isSuccess) {
+            connectedSince = System.currentTimeMillis()
+            lastRx = 0
+            lastTx = 0
+            lastSampleAt = 0
+            activeEngine = Engine.SEC
+            _ui.update {
+                it.copy(
+                    status = ConnectionStatus.CONNECTED,
+                    error = null,
+                    connectedSince = connectedSince,
+                    backendLabel = "sec-tunnel",
+                )
+            }
+            BozyaKeepAliveService.start(context, profile.name)
+            startStatsLoop()
+        } else {
+            connectToken = 0
+            activeEngine = Engine.NONE
+            SecTunnelRuntime.requestStop(context)
+            val error = outcome?.exceptionOrNull() ?: IllegalStateException("Таймаут sec-tunnel")
+            failConnect(unwrap(error), userInitiated)
+        }
+    }
+
+    private fun fetchExit(region: String): SecExit {
+        val http = SecHttp()
+        val pool = Executors.newSingleThreadExecutor()
+        return try {
+            val future = pool.submit<SecExit> { SecTunnelApi.lease(region, http) }
+            try {
+                future.get(18, TimeUnit.SECONDS)
+            } catch (timeout: TimeoutException) {
+                http.close()
+                future.cancel(true)
+                throw IllegalStateException("Таймаут sec-tunnel")
+            }
+        } finally {
+            pool.shutdownNow()
+        }
+    }
+
+    private fun unwrap(error: Throwable): Throwable {
+        var current = error
+        while (current is ExecutionException && current.cause != null) current = current.cause!!
+        return current
     }
 
     private suspend fun downAwg() {
