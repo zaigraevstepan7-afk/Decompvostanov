@@ -77,6 +77,7 @@ fun SettingsScreen(
     onCoachOpened: () -> Unit,
     onMoveDog: (Float, Float) -> Unit,
     onBypass: () -> Unit,
+    onExport: () -> Unit,
 ) {
     val context = LocalContext.current
     val crash = remember { CrashLog.summary(context) }
@@ -229,6 +230,17 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth().height(52.dp).pressScale(createPress.scale),
             ) {
                 Text("Создать WARP", fontWeight = FontWeight.SemiBold)
+            }
+            Spacer(Modifier.height(10.dp))
+            val exportPress = rememberPress(0.97f)
+            Button(
+                onClick = onExport,
+                interactionSource = exportPress.interaction,
+                colors = ButtonDefaults.buttonColors(containerColor = Lift, contentColor = Ink),
+                shape = Pill,
+                modifier = Modifier.fillMaxWidth().height(52.dp).pressScale(exportPress.scale),
+            ) {
+                Text("Экспорт серверов", fontWeight = FontWeight.SemiBold)
             }
             if (crash != null) {
                 Spacer(Modifier.height(22.dp))

@@ -22,6 +22,12 @@ object SecTunnelRuntime {
     @Volatile var onUnexpectedDown: (() -> Unit)? = null
     @Volatile var accounts: SecAccountStore? = null
     @Volatile var account: SecAccount? = null
+    @Volatile var publishedIp: String? = null
+    @Volatile var onRotate: (() -> Unit)? = null
+
+    fun requestRotate() {
+        onRotate?.invoke()
+    }
 
     private val generation = AtomicInteger()
     private val lock = Any()

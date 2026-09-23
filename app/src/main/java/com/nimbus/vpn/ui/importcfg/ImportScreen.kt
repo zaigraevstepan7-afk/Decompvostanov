@@ -45,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nimbus.vpn.data.ConfigParser
+import com.nimbus.vpn.data.ProfileBundle
 import com.nimbus.vpn.data.ParsedConfigPreview
 import com.nimbus.vpn.tunnel.ConnectionStatus
 import com.nimbus.vpn.ui.components.MeshBackground
@@ -76,14 +77,23 @@ fun ImportScreen(
     var raw by remember { mutableStateOf("") }
     var message by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
     var preview by remember { mutableStateOf<ParsedConfigPreview?>(null) }
+    var bundleCount by remember { mutableStateOf<Int?>(null) }
     val scope = rememberCoroutineScope()
     LaunchedEffect(raw) {
         if (raw.isBlank()) {
             preview = null
+            bundleCount = null
             return@LaunchedEffect
         }
         delay(220)
-        preview = withContext(Dispatchers.Default) { ConfigParser.parse(raw) }
+        val bundle = withContext(Dispatchers.Default) { ProfileBundle.parse(raw) }
+        if (bundle != null) {
+            bundleCount = bundle.profiles.size
+            preview = null
+        } else {
+            bundleCount = null
+            preview = withContext(Dispatchers.Default) { ConfigParser.parse(raw) }
+        }
     }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
@@ -114,7 +124,7 @@ fun ImportScreen(
                 }
                 Column {
                     Text("Свой конфиг", color = Ink, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
-                    Text("AmneziaWG или WireGuard", color = InkMuted, fontSize = 13.sp)
+                    Text("AmneziaWG, WireGuard или список серверов", color = InkMuted, fontSize = 13.sp)
                 }
             }
             Spacer(Modifier.height(18.dp))
@@ -151,6 +161,20 @@ fun ImportScreen(
                 textStyle = TextStyle(color = Ink, fontFamily = FontFamily.Monospace, fontSize = 14.sp),
                 colors = fieldColors(),
             )
+            bundleCount?.let { count ->
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    "Серверов в файле: $count",
+                    color = Success,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(Card)
+                        .background(Paper)
+                        .border(1.dp, Accent, Card)
+                        .padding(16.dp),
+                )
+            }
             preview?.let { parsed ->
                 Spacer(Modifier.height(12.dp))
                 Column(

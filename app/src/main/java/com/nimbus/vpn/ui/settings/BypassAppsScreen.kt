@@ -26,6 +26,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -50,6 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
+import com.nimbus.vpn.data.BankBypass
 import com.nimbus.vpn.tunnel.ConnectionStatus
 import com.nimbus.vpn.ui.components.MeshBackground
 import com.nimbus.vpn.ui.theme.Accent
@@ -123,6 +126,7 @@ fun BypassAppsScreen(
     var chosen by remember { mutableStateOf(selected) }
     var query by remember { mutableStateOf("") }
     var apps by remember { mutableStateOf<List<BypassApp>?>(null) }
+    var bankNote by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) {
         apps = withContext(Dispatchers.IO) { queryLaunchableApps(context) }
     }
@@ -172,6 +176,40 @@ fun BypassAppsScreen(
                 fontSize = 13.sp,
             )
             Spacer(Modifier.height(14.dp))
+            Button(
+                onClick = {
+                    val installed = apps.orEmpty().map { it.packageName }.toSet()
+                    val match = BankBypass.matching(installed)
+                    if (match.isEmpty()) {
+                        bankNote = "Банковских приложений не нашлось"
+                    } else {
+                        val next = chosen + match.toSet()
+                        chosen = next
+                        onChange(next)
+                        bankNote = "Добавлено ${match.size}"
+                    }
+                },
+                enabled = apps != null,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Accent,
+                    contentColor = Canvas,
+                    disabledContainerColor = Line,
+                    disabledContentColor = InkMuted,
+                ),
+                shape = Field,
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+            ) {
+                Text("Банк и карты мимо", fontWeight = FontWeight.SemiBold)
+            }
+            bankNote?.let { note ->
+                Text(
+                    note,
+                    color = InkMuted,
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(top = 6.dp, start = 4.dp),
+                )
+            }
+            Spacer(Modifier.height(12.dp))
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },

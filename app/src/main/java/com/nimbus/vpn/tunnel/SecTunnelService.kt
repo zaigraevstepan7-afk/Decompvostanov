@@ -32,6 +32,13 @@ class SecTunnelService : VpnService() {
     @Volatile private var activeToken = 0
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_LABEL) {
+            val label = intent.getStringExtra(EXTRA_LABEL)?.takeIf { it.isNotBlank() } ?: return START_NOT_STICKY
+            if (worker != null) {
+                getSystemService(NotificationManager::class.java)?.notify(NOTIF_ID, notification(label))
+            }
+            return START_NOT_STICKY
+        }
         if (intent?.action == ACTION_STOP) {
             shutdown()
             stopSelf(startId)
@@ -42,7 +49,8 @@ class SecTunnelService : VpnService() {
             stopSelf(startId)
             return START_NOT_STICKY
         }
-        if (!promote()) {
+        val label = intent?.getStringExtra(EXTRA_LABEL)?.takeIf { it.isNotBlank() } ?: "sec-tunnel"
+        if (!promote(label)) {
             SecTunnelRuntime.fail(token, IllegalStateException("Не удалось показать уведомление VPN"))
             stopSelf(startId)
             return START_NOT_STICKY
@@ -116,7 +124,12 @@ class SecTunnelService : VpnService() {
             dial = { host, port -> roster.open(guard, host, port) },
             dns = { query -> roster.queryDns(guard, query) },
             emit = { packet -> writeTun(packet) },
+            onBroken = { roster.noteFailure(roster.peek()) },
         )
+        SecTunnelRuntime.onRotate = {
+            roster.noteFailure(roster.peek())
+            engine.dropUnanswered()
+        }
         relay = engine
         SecTunnelRuntime.succeed(token)
         val input = FileInputStream(pfd.fileDescriptor)
@@ -172,6 +185,7 @@ class SecTunnelService : VpnService() {
             relay?.close()
             return
         }
+        SecTunnelRuntime.onRotate = null
         relay?.close()
         relay = null
         synchronized(writeLock) {
@@ -182,7 +196,27 @@ class SecTunnelService : VpnService() {
         tun = null
     }
 
-    private fun promote(): Boolean {
+    private fun notification(text: String): Notification {
+        val open = PendingIntent.getActivity(
+            this,
+            2,
+            Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_bozya)
+            .setContentTitle(getString(R.string.app_name))
+            .setContentText(text)
+            .setContentIntent(open)
+            .setOngoing(true)
+            .setSilent(true)
+            .setOnlyAlertOnce(true)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .build()
+    }
+
+    private fun promote(label: String): Boolean {
         val manager = getSystemService(NotificationManager::class.java)
         val channel = NotificationChannel(
             CHANNEL_ID,
@@ -194,23 +228,7 @@ class SecTunnelService : VpnService() {
             setSound(null, null)
         }
         manager?.createNotificationChannel(channel)
-        val open = PendingIntent.getActivity(
-            this,
-            2,
-            Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
-        val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_bozya)
-            .setContentTitle(getString(R.string.app_name))
-            .setContentText("sec-tunnel")
-            .setContentIntent(open)
-            .setOngoing(true)
-            .setSilent(true)
-            .setOnlyAlertOnce(true)
-            .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .build()
+        val notification: Notification = notification(label)
         return try {
             if (Build.VERSION.SDK_INT >= 34) {
                 startForeground(NOTIF_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
@@ -227,9 +245,11 @@ class SecTunnelService : VpnService() {
     companion object {
         const val ACTION_STOP = "com.nimbus.vpn.SEC_STOP"
         const val ACTION_CONNECT = "com.nimbus.vpn.SEC_CONNECT"
+        const val ACTION_LABEL = "com.nimbus.vpn.SEC_LABEL"
         const val EXTRA_CONFIG = "config"
         const val EXTRA_BYPASS = "bypass"
         const val EXTRA_TOKEN = "token"
+        const val EXTRA_LABEL = "label"
         private const val CHANNEL_ID = "bozya.keepalive"
         private const val NOTIF_ID = 18
         private const val TAG = "Bozya/SecTunnel"

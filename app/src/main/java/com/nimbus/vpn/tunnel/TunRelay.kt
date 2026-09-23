@@ -23,6 +23,7 @@ class TunRelay(
     private val dial: (String, Int) -> UpstreamConn,
     private val dns: (ByteArray) -> ByteArray,
     private val emit: (ByteArray) -> Unit,
+    private val onBroken: () -> Unit = {},
 ) {
     private val workers: ExecutorService = Executors.newCachedThreadPool { runnable ->
         Thread(runnable, "sec-flow").apply { isDaemon = true }
@@ -42,6 +43,17 @@ class TunRelay(
         when (ip.protocol) {
             Packets.PROTO_TCP -> onTcp(ip)
             Packets.PROTO_UDP -> onUdp(ip)
+        }
+    }
+
+    fun dropUnanswered() {
+        flows.values.filter { !it.answered && !it.dead }.forEach { flow ->
+            synchronized(flow) {
+                if (!flow.dead) emitReset(flow)
+                flow.dead = true
+            }
+            flow.shutdown()
+            flows.remove(flow.key, flow)
         }
     }
 
@@ -176,42 +188,73 @@ class TunRelay(
     }
 
     private fun serve(flow: Flow, target: String, port: Int) {
-        val conn = try {
-            dial(target, port)
-        } catch (_: Throwable) {
-            synchronized(flow) {
-                if (!flow.dead) emitReset(flow)
-                flow.dead = true
-            }
-            flows.remove(flow.key, flow)
-            return
-        }
-        val queued = synchronized(flow) {
-            if (flow.dead || closed) {
-                runCatching { conn.close() }
+        var sentToClient = false
+        var replay = ByteArray(0)
+        var attempt = 0
+        try {
+            while (attempt < 2 && !closed && !flow.dead) {
+                attempt++
+            val conn = try {
+                dial(target, port)
+            } catch (_: Throwable) {
+                onBroken()
+                if (attempt < 2 && !closed && !flow.dead) continue
+                synchronized(flow) {
+                    if (!flow.dead) emitReset(flow)
+                    flow.dead = true
+                }
                 return
             }
-            flow.conn = conn
-            val pending = flow.pending.toList()
-            flow.pending.clear()
-            pending
-        }
-        try {
-            queued.forEach { chunk ->
-                conn.output.write(chunk)
+            val queued = synchronized(flow) {
+                if (flow.dead || closed) {
+                    runCatching { conn.close() }
+                    return
+                }
+                flow.conn = conn
+                val pending = flow.pending.toList()
+                flow.pending.clear()
+                pending
             }
-            conn.output.flush()
-            val buffer = ByteArray(16 * 1024)
-            while (!closed && !flow.dead) {
-                val read = conn.input.read(buffer)
-                if (read < 0) break
-                if (read == 0) continue
-                val chunk = buffer.copyOf(read)
-                synchronized(flow) {
-                    if (!flow.dead) writeToClient(flow, chunk)
+            val outbound = concat(listOf(replay) + queued)
+            if (!sentToClient) replay = outbound
+            var retry = false
+            try {
+                if (outbound.isNotEmpty()) {
+                    conn.output.write(outbound)
+                    conn.output.flush()
+                }
+                val buffer = ByteArray(16 * 1024)
+                while (!closed && !flow.dead) {
+                    val read = conn.input.read(buffer)
+                    if (read < 0) break
+                    if (read == 0) continue
+                    replay = ByteArray(0)
+                    sentToClient = true
+                    flow.answered = true
+                    val chunk = buffer.copyOf(read)
+                    synchronized(flow) {
+                        if (!flow.dead) writeToClient(flow, chunk)
+                    }
+                }
+            } catch (_: Throwable) {
+                if (!sentToClient && attempt < 2 && !closed && !flow.dead) {
+                    onBroken()
+                    retry = true
+                } else {
+                    onBroken()
+                    synchronized(flow) {
+                        if (!flow.dead) emitReset(flow)
+                        flow.dead = true
+                    }
                 }
             }
-        } catch (_: Throwable) {
+                if (retry) {
+                    runCatching { conn.close() }
+                    synchronized(flow) { if (flow.conn === conn) flow.conn = null }
+                } else {
+                    break
+                }
+            }
         } finally {
             synchronized(flow) {
                 if (!flow.finSent && !flow.dead) {
@@ -220,9 +263,21 @@ class TunRelay(
                 }
                 flow.dead = true
             }
-            runCatching { conn.close() }
+            runCatching { flow.conn?.close() }
             flows.remove(flow.key, flow)
         }
+    }
+
+    private fun concat(parts: List<ByteArray>): ByteArray {
+        val size = parts.sumOf { it.size }
+        if (size == 0) return ByteArray(0)
+        val out = ByteArray(size)
+        var at = 0
+        for (part in parts) {
+            part.copyInto(out, at)
+            at += part.size
+        }
+        return out
     }
 
     private fun writeToClient(flow: Flow, payload: ByteArray) {
@@ -311,6 +366,7 @@ class TunRelay(
         val pending = ArrayDeque<ByteArray>()
         @Volatile var dead = false
         var finSent = false
+        @Volatile var answered = false
 
         fun shutdown() {
             dead = true

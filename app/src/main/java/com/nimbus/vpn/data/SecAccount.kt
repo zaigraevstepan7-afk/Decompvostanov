@@ -48,9 +48,18 @@ class SecAccountStore(context: Context) {
         prefs?.edit()?.remove(KEY)?.apply()
     }
 
+    fun lastIp(region: String): String? = prefs?.getString(ipKey(region), null)?.takeIf { it.isNotBlank() }
+
+    fun rememberIp(region: String, ip: String) {
+        if (region.isBlank() || ip.isBlank()) return
+        prefs?.edit()?.putString(ipKey(region), ip)?.apply()
+    }
+
     companion object {
         private const val KEY = "account"
         private const val PREFS = "nimbus_sec_account"
+
+        private fun ipKey(region: String) = "ip-${region.trim().uppercase()}"
 
         private fun encrypted(context: Context): SharedPreferences {
             val master = MasterKey.Builder(context)

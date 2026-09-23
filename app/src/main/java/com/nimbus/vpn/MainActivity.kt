@@ -162,6 +162,10 @@ class MainActivity : ComponentActivity() {
                             onCoachReady = viewModel::onCoachWarpCreated,
                             onCoachCelebrateNext = viewModel::onCoachCelebrateNext,
                             onMoveDog = viewModel::moveDog,
+                            onRotate = viewModel::rotateExit,
+                            onFallback = {
+                                if (viewModel.prepareFallback()) requestConnect()
+                            },
                         )
                     }
                     composable("warp") {
@@ -222,6 +226,15 @@ class MainActivity : ComponentActivity() {
                             onCoachOpened = viewModel::onEnterSettings,
                             onMoveDog = viewModel::moveDog,
                             onBypass = { go("bypass") },
+                            onExport = {
+                                val text = viewModel.exportServers()
+                                val send = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, text)
+                                    putExtra(Intent.EXTRA_SUBJECT, "Bozya VPN")
+                                }
+                                startActivity(Intent.createChooser(send, "Экспорт серверов"))
+                            },
                         )
                     }
                     composable("bypass") {

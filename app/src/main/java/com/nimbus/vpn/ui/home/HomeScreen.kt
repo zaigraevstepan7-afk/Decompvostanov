@@ -1,5 +1,9 @@
 package com.nimbus.vpn.ui.home
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -50,6 +54,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -112,6 +117,8 @@ fun HomeScreen(
     onCoachReady: () -> Unit,
     onCoachCelebrateNext: () -> Unit,
     onMoveDog: (Float, Float) -> Unit,
+    onRotate: () -> Unit,
+    onFallback: () -> Unit,
 ) {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var pendingDelete by remember { mutableStateOf<Pair<String, String>?>(null) }
@@ -122,6 +129,7 @@ fun HomeScreen(
             delay(1000)
         }
     }
+    val context = LocalContext.current
     val active = profiles.profiles.firstOrNull { it.id == profiles.activeId } ?: state.profile
     val busy = state.status == ConnectionStatus.CONNECTING
     val step = CoachStep.from(settings.coachStep)
@@ -247,6 +255,22 @@ fun HomeScreen(
                     )
                 }
             }
+            val fallback = state.fallbackName
+            AnimatedVisibility(visible = state.status == ConnectionStatus.ERROR && !fallback.isNullOrBlank()) {
+                Text(
+                    "Включить $fallback",
+                    color = Accent,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier
+                        .padding(horizontal = 20.dp, vertical = 4.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Paper)
+                        .border(1.dp, Line, RoundedCornerShape(14.dp))
+                        .clickable(onClick = onFallback)
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                )
+            }
             if (profiles.profiles.isEmpty()) {
                 Box(Modifier.fillMaxSize().padding(bottom = 96.dp), contentAlignment = Alignment.Center) {
                     Text("Нет серверов", color = InkMuted, fontSize = 15.sp)
@@ -263,6 +287,9 @@ fun HomeScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     items(profiles.profiles, key = { it.id }) { profile ->
+                        val connectedHere = state.status == ConnectionStatus.CONNECTED &&
+                            profile.id == state.profile?.id
+                        val exitIp = state.exitIp?.takeIf { connectedHere && it.isNotBlank() }
                         ServerRow(
                             profile = profile,
                             active = profile.id == profiles.activeId,
@@ -272,14 +299,15 @@ fun HomeScreen(
                             onSelect = { onSelect(profile.id) },
                             onPing = onPing,
                             onDelete = { pendingDelete = profile.id to profile.name },
-                            livePlace = if (
-                                state.status == ConnectionStatus.CONNECTED &&
-                                profile.id == state.profile?.id
-                            ) {
-                                state.exitPlace
-                            } else {
-                                null
+                            livePlace = if (connectedHere) state.exitPlace else null,
+                            onCopyIp = exitIp?.let { ip ->
+                                {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    clipboard.setPrimaryClip(ClipData.newPlainText("exit", ip))
+                                    Toast.makeText(context, "IP скопирован", Toast.LENGTH_SHORT).show()
+                                }
                             },
+                            onRotate = if (connectedHere && SecTunnelProfile.isSec(profile.rawConfig)) onRotate else null,
                         )
                     }
                 }
@@ -374,6 +402,8 @@ private fun ServerRow(
     onPing: () -> Unit,
     onDelete: () -> Unit,
     livePlace: String? = null,
+    onCopyIp: (() -> Unit)? = null,
+    onRotate: (() -> Unit)? = null,
 ) {
     val endpoint = remember(profile.rawConfig) { ConfigParser.endpointOf(profile.rawConfig) }
     val sec = remember(profile.rawConfig) { SecTunnelProfile.read(profile.rawConfig) }
@@ -427,7 +457,17 @@ private fun ServerRow(
                 fontSize = 13.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                modifier = if (onCopyIp != null) Modifier.clickable(onClick = onCopyIp) else Modifier,
             )
+            if (onRotate != null) {
+                Text(
+                    "Другой адрес",
+                    color = Accent,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(top = 2.dp).clickable(onClick = onRotate),
+                )
+            }
         }
         Column(horizontalAlignment = Alignment.End) {
             Row(verticalAlignment = Alignment.CenterVertically) {

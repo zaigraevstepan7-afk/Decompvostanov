@@ -85,6 +85,7 @@ class SecRoster(
     private fun win(exit: SecExit) = synchronized(lock) {
         failures = 0
         cooledUntil.remove(exit.ip)
+        SecTunnelRuntime.publishedIp = exit.ip
         val index = exits.indexOfFirst { it.ip == exit.ip }
         if (index > 0) {
             val item = exits.removeAt(index)

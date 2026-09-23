@@ -10,6 +10,7 @@ import com.nimbus.vpn.data.AccessApi
 import com.nimbus.vpn.data.AppSettings
 import com.nimbus.vpn.data.ConfigParser
 import com.nimbus.vpn.data.DayStreak
+import com.nimbus.vpn.data.ProfileBundle
 import com.nimbus.vpn.data.SecTunnelApi
 import com.nimbus.vpn.data.SecTunnelProfile
 import com.nimbus.vpn.data.ServerPing
@@ -235,7 +236,28 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun rotateExit() {
+        app.container.tunnel.rotateExit()
+    }
+
+    fun prepareFallback(): Boolean {
+        val id = tunnel.value.fallbackId ?: return false
+        if (app.container.profiles.profiles.none { it.id == id }) return false
+        app.container.profiles.setActive(id)
+        return true
+    }
+
+    fun exportServers(): String = ProfileBundle.export(app.container.profiles.index.value)
+
     fun importText(name: String, raw: String): Result<VpnProfile> {
+        val bundle = ProfileBundle.parse(raw)
+        if (bundle != null) {
+            val current = app.container.profiles.index.value
+            val bare = current.profiles.all { it.id == "sec:AUTO" }
+            val active = if (bare) bundle.activeId ?: bundle.profiles.first().id else current.activeId
+            app.container.profiles.upsertAll(bundle.profiles, activeId = active)
+            return Result.success(bundle.profiles.first())
+        }
         val prepared = ConfigParser.withKeepaliveIfMissing(raw)
         val preview = ConfigParser.parse(prepared)
         if (!preview.canConnect) {
