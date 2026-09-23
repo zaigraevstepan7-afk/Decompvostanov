@@ -41,16 +41,13 @@ class SecTunnelService : VpnService() {
             return START_NOT_STICKY
         }
         if (!promote()) {
-            SecTunnelRuntime.fail(IllegalStateException("Не удалось показать уведомление VPN"))
+            SecTunnelRuntime.fail(token, IllegalStateException("Не удалось показать уведомление VPN"))
             stopSelf(startId)
             return START_NOT_STICKY
         }
         activeToken = token
+        if (worker != null) shutdown()
         stopped.set(false)
-        if (worker != null) {
-            shutdown()
-            stopped.set(false)
-        }
         val raw = intent?.getStringExtra(EXTRA_CONFIG).orEmpty()
         val bypass = intent?.getStringArrayListExtra(EXTRA_BYPASS).orEmpty()
         worker = Thread({
@@ -59,13 +56,18 @@ class SecTunnelService : VpnService() {
                 runTunnel(token, raw, bypass)
             } catch (error: Throwable) {
                 Log.e(TAG, "sec-tunnel failed", error)
-                if (SecTunnelRuntime.isCurrent(token)) SecTunnelRuntime.fail(error)
+                SecTunnelRuntime.fail(token, error)
             } finally {
                 unexpected = SecTunnelRuntime.active && SecTunnelRuntime.isCurrent(token)
-                if (activeToken == token) shutdown()
                 if (activeToken == token) {
-                    SecTunnelRuntime.markStopped()
-                    if (unexpected) SecTunnelRuntime.notifyDown()
+                    shutdown()
+                    if (!SecTunnelRuntime.active) {
+                        SecTunnelRuntime.fail(token, IllegalStateException("sec-tunnel остановился"))
+                    }
+                    if (unexpected) {
+                        SecTunnelRuntime.markStopped()
+                        SecTunnelRuntime.notifyDown()
+                    }
                     stopSelf()
                 }
             }
@@ -105,7 +107,7 @@ class SecTunnelService : VpnService() {
             emit = { packet -> writeTun(packet) },
         )
         relay = engine
-        SecTunnelRuntime.succeed()
+        SecTunnelRuntime.succeed(token)
         val input = FileInputStream(pfd.fileDescriptor)
         val buffer = ByteArray(32767)
         while (SecTunnelRuntime.isCurrent(token) && !stopped.get()) {

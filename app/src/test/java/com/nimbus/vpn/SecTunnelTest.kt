@@ -69,6 +69,22 @@ class SecTunnelTest {
     }
 
     @Test
+    fun digestUsesSha256WhenChallenged() {
+        val header = """Digest realm="testrealm@host.com", qop="auth", algorithm="SHA-256", nonce="dcd98b7102dd2f0e8b11d0f600bfb0c093", opaque="5ccc069c403ebaf9f0171e9517f40e41""""
+        val authorization = SecDigest.authorization(
+            method = "GET",
+            uri = "/dir/index.html",
+            username = "Mufasa",
+            password = "Circle Of Life",
+            challenge = header,
+            nc = "00000001",
+            cnonce = "0a4f113b",
+        )
+        assertThat(authorization).contains("algorithm=SHA-256")
+        assertThat(authorization).contains("response=\"5abdd07184ba512a22c53f41470e5eea7dcaa3a93a59b630c13dfe0a5dc6e38b\"")
+    }
+
+    @Test
     fun connectRequestAndStatusLine() {
         val bytes = SecConnect.request("203.0.113.10", 443, "USER", "secret")
         val text = bytes.toString(Charsets.ISO_8859_1)

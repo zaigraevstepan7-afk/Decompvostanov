@@ -42,7 +42,8 @@ object SecTunnelRuntime {
 
     fun awaitHandle(): CompletableDeferred<Result<Unit>>? = synchronized(lock) { pending }
 
-    fun succeed() {
+    fun succeed(token: Int) {
+        if (!isCurrent(token)) return
         active = true
         synchronized(lock) {
             pending?.let { current ->
@@ -51,7 +52,8 @@ object SecTunnelRuntime {
         }
     }
 
-    fun fail(error: Throwable) {
+    fun fail(token: Int, error: Throwable) {
+        if (!isCurrent(token)) return
         active = false
         synchronized(lock) {
             pending?.let { current ->

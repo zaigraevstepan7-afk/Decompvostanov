@@ -9,9 +9,14 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import java.net.HttpURLConnection
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
+import java.io.OutputStream
+import java.net.InetSocketAddress
 import java.net.URL
 import java.net.URLEncoder
+import javax.net.ssl.SSLContext
+import javax.net.ssl.SSLSocket
 import java.security.MessageDigest
 import java.security.SecureRandom
 
@@ -109,6 +114,14 @@ object SecTunnelApi {
 
     fun lease(region: String, http: SecHttp = SecHttp()): SecExit {
         val known = SecTunnelProfile.region(region) ?: error("Неизвестный регион: $region")
+        try {
+            return leaseOn(known, http)
+        } finally {
+            http.close()
+        }
+    }
+
+    private fun leaseOn(known: SecRegion, http: SecHttp): SecExit {
         val email = "${randomHex(32)}@se0316.best.vpn"
         http.post(
             REGISTER,
@@ -171,16 +184,17 @@ object SecDigest {
         val realm = param(challenge, "realm") ?: error("Нет realm")
         val nonce = param(challenge, "nonce") ?: error("Нет nonce")
         val opaque = param(challenge, "opaque")
+        val algorithm = param(challenge, "algorithm")?.uppercase()?.ifBlank { null } ?: "MD5"
         val qop = param(challenge, "qop")
             ?.split(',')
             ?.map { it.trim() }
             ?.firstOrNull { it.equals("auth", ignoreCase = true) }
-        val ha1 = md5("$username:$realm:$password")
-        val ha2 = md5("$method:$uri")
+        val ha1 = hash(algorithm, "$username:$realm:$password")
+        val ha2 = hash(algorithm, "$method:$uri")
         val response = if (qop != null) {
-            md5("$ha1:$nonce:$nc:$cnonce:$qop:$ha2")
+            hash(algorithm, "$ha1:$nonce:$nc:$cnonce:$qop:$ha2")
         } else {
-            md5("$ha1:$nonce:$ha2")
+            hash(algorithm, "$ha1:$nonce:$ha2")
         }
         val parts = mutableListOf(
             "Digest username=\"$username\"",
@@ -188,6 +202,9 @@ object SecDigest {
             "nonce=\"$nonce\"",
             "uri=\"$uri\"",
         )
+        if (!algorithm.equals("MD5", ignoreCase = true)) {
+            parts += "algorithm=$algorithm"
+        }
         if (qop != null) {
             parts += "qop=$qop"
             parts += "nc=$nc"
@@ -198,42 +215,81 @@ object SecDigest {
         return parts.joinToString(", ")
     }
 
+    fun hash(algorithm: String, text: String): String {
+        val name = when (algorithm.uppercase()) {
+            "SHA-256", "SHA-256-SESS" -> "SHA-256"
+            else -> "MD5"
+        }
+        val digest = MessageDigest.getInstance(name).digest(text.toByteArray(Charsets.ISO_8859_1))
+        return digest.joinToString("") { "%02x".format(it) }
+    }
+
     fun param(header: String, name: String): String? {
         val match = Regex("""(?i)\b${Regex.escape(name)}\s*=\s*("([^"]*)"|([^,\s]+))""").find(header)
             ?: return null
         return if (match.groupValues[1].startsWith("\"")) match.groupValues[2] else match.groupValues[3]
     }
 
-    fun md5(text: String): String {
-        val digest = MessageDigest.getInstance("MD5").digest(text.toByteArray(Charsets.ISO_8859_1))
-        return digest.joinToString("") { "%02x".format(it) }
-    }
+    fun md5(text: String): String = hash("MD5", text)
 }
 
-class SecHttp {
+/**
+ * Digest auth on api2.sec-tunnel.com is valid only for the TLS connection that
+ * received the challenge. One socket carries register, device and discover.
+ */
+class SecHttp : AutoCloseable {
     private val cookies = linkedMapOf<String, String>()
     private var challenge: String? = null
     private var nonce: String? = null
     private var nc = 0
+    private var socket: SSLSocket? = null
+    private var input: InputStream? = null
+    private var output: OutputStream? = null
 
     fun post(url: String, form: Map<String, String>): String {
         val body = form.entries.joinToString("&") { (key, value) ->
             URLEncoder.encode(key, Charsets.UTF_8.name()) + "=" + URLEncoder.encode(value, Charsets.UTF_8.name())
         }
         val uri = URL(url).path.ifBlank { "/" }
+        connect()
         val cached = challenge
         if (cached != null) {
-            val authed = exchange(url, body, authorization(uri, cached))
+            val authed = exchange(uri, body, authorization(uri, cached))
             if (authed.code != 401) return requireOk(authed)
             remember(authed.wwwAuthenticate)
         }
-        val probe = exchange(url, body, null)
+        val probe = exchange(uri, body, null)
         if (probe.code == 401) {
             val next = probe.wwwAuthenticate ?: error("sec-tunnel не прислал Digest")
             remember(next)
-            return requireOk(exchange(url, body, authorization(uri, next)))
+            return requireOk(exchange(uri, body, authorization(uri, next)))
         }
         return requireOk(probe)
+    }
+
+    override fun close() {
+        runCatching { socket?.close() }
+        socket = null
+        input = null
+        output = null
+    }
+
+    private fun connect() {
+        val current = socket
+        if (current != null && current.isConnected && !current.isClosed) return
+        close()
+        challenge = null
+        nonce = null
+        nc = 0
+        val context = SSLContext.getInstance("TLS")
+        context.init(null, null, SecureRandom())
+        val opened = context.socketFactory.createSocket() as SSLSocket
+        opened.soTimeout = 15_000
+        opened.connect(InetSocketAddress(HOST, 443), 12_000)
+        opened.startHandshake()
+        socket = opened
+        input = opened.inputStream
+        output = opened.outputStream
     }
 
     private fun remember(header: String?) {
@@ -260,38 +316,71 @@ class SecHttp {
     }
 
     private fun requireOk(result: HttpResult): String {
-        if (result.code !in 200..299) {
-            error("sec-tunnel HTTP ${result.code}")
-        }
+        if (result.code !in 200..299) error("sec-tunnel HTTP ${result.code}")
         return result.body
     }
 
-    private fun exchange(url: String, body: String, authorization: String?): HttpResult {
-        val connection = (URL(url).openConnection() as HttpURLConnection).apply {
-            requestMethod = "POST"
-            connectTimeout = 12_000
-            readTimeout = 15_000
-            doOutput = true
-            instanceFollowRedirects = false
-            setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
-            setRequestProperty("Accept", "application/json")
-            setRequestProperty("SE-Client-Version", SecApiAuth.CLIENT_VERSION)
-            setRequestProperty("SE-Operating-System", "Windows")
-            setRequestProperty("User-Agent", SecApiAuth.USER_AGENT)
-            authorization?.let { setRequestProperty("Authorization", it) }
-            cookieHeader()?.let { setRequestProperty("Cookie", it) }
-            setFixedLengthStreamingMode(body.toByteArray(Charsets.UTF_8).size)
+    private fun exchange(path: String, body: String, authorization: String?): HttpResult {
+        val payload = body.toByteArray(Charsets.UTF_8)
+        val request = buildString {
+            append("POST $path HTTP/1.1\r\n")
+            append("Host: $HOST\r\n")
+            append("Content-Type: application/x-www-form-urlencoded\r\n")
+            append("Content-Length: ${payload.size}\r\n")
+            append("Accept: application/json\r\n")
+            append("Connection: keep-alive\r\n")
+            append("SE-Client-Version: ${SecApiAuth.CLIENT_VERSION}\r\n")
+            append("SE-Operating-System: Windows\r\n")
+            append("User-Agent: ${SecApiAuth.USER_AGENT}\r\n")
+            if (authorization != null) append("Authorization: $authorization\r\n")
+            cookieHeader()?.let { append("Cookie: $it\r\n") }
+            append("\r\n")
+        }.toByteArray(Charsets.ISO_8859_1)
+        val out = output ?: error("Нет соединения с sec-tunnel")
+        out.write(request)
+        out.write(payload)
+        out.flush()
+        return readResponse()
+    }
+
+    private fun readResponse(): HttpResult {
+        val source = input ?: error("Нет соединения с sec-tunnel")
+        val headerBytes = ByteArrayOutputStream()
+        val one = ByteArray(1)
+        var end = -1
+        while (headerBytes.size() < 16_384) {
+            if (source.read(one) < 0) error("sec-tunnel закрыл соединение")
+            headerBytes.write(one, 0, 1)
+            end = headerEnd(headerBytes.toByteArray())
+            if (end >= 0) break
         }
-        try {
-            connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
-            val code = connection.responseCode
-            val stream = if (code in 200..299) connection.inputStream else connection.errorStream
-            val text = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
-            storeCookies(connection)
-            return HttpResult(code, text, connection.getHeaderField("WWW-Authenticate"))
-        } finally {
-            connection.disconnect()
+        if (end < 0) error("Слишком длинный ответ sec-tunnel")
+        val raw = headerBytes.toByteArray()
+        val headerText = raw.toString(Charsets.ISO_8859_1).substring(0, end - 4)
+        val lines = headerText.split("\r\n")
+        val status = lines.firstOrNull().orEmpty()
+        val code = status.split(' ').getOrNull(1)?.toIntOrNull() ?: 0
+        val headers = linkedMapOf<String, MutableList<String>>()
+        lines.drop(1).forEach { line ->
+            val colon = line.indexOf(':')
+            if (colon <= 0) return@forEach
+            val key = line.substring(0, colon).trim().lowercase()
+            headers.getOrPut(key) { mutableListOf() } += line.substring(colon + 1).trim()
         }
+        headers["set-cookie"].orEmpty().forEach { rawCookie ->
+            val pair = rawCookie.substringBefore(';').trim()
+            val eq = pair.indexOf('=')
+            if (eq > 0) cookies[pair.substring(0, eq)] = pair.substring(eq + 1)
+        }
+        val pipe = BytePipe(raw.copyOfRange(end, raw.size), source)
+        val body = when {
+            headers["transfer-encoding"]?.any { it.contains("chunked", true) } == true -> readChunked(pipe)
+            else -> {
+                val length = headers["content-length"]?.firstOrNull()?.toIntOrNull() ?: 0
+                if (length <= 0) ByteArray(0) else pipe.readFully(length)
+            }
+        }
+        return HttpResult(code, body.toString(Charsets.UTF_8), headers["www-authenticate"]?.firstOrNull())
     }
 
     private fun cookieHeader(): String? {
@@ -299,18 +388,83 @@ class SecHttp {
         return cookies.entries.joinToString("; ") { (name, value) -> "$name=$value" }
     }
 
-    private fun storeCookies(connection: HttpURLConnection) {
-        connection.headerFields.forEach { (key, values) ->
-            if (!key.equals("Set-Cookie", ignoreCase = true)) return@forEach
-            values.forEach { raw ->
-                val pair = raw.substringBefore(';').trim()
-                val eq = pair.indexOf('=')
-                if (eq > 0) cookies[pair.substring(0, eq)] = pair.substring(eq + 1)
+    private fun headerEnd(data: ByteArray): Int {
+        for (index in 0 until data.size - 3) {
+            if (data[index] == 13.toByte() && data[index + 1] == 10.toByte() &&
+                data[index + 2] == 13.toByte() && data[index + 3] == 10.toByte()
+            ) {
+                return index + 4
             }
+        }
+        return -1
+    }
+
+    private fun readChunked(pipe: BytePipe): ByteArray {
+        val out = ByteArrayOutputStream()
+        while (true) {
+            val line = pipe.readLine()
+            val size = line.substringBefore(';').trim().toIntOrNull(16) ?: error("Плохой ответ sec-tunnel")
+            if (size == 0) {
+                while (pipe.readLine().isNotEmpty()) Unit
+                break
+            }
+            out.write(pipe.readFully(size))
+            pipe.readLine()
+        }
+        return out.toByteArray()
+    }
+
+    private class BytePipe(
+        initial: ByteArray,
+        private val rest: InputStream,
+    ) {
+        private var extra = initial
+        private var position = 0
+
+        fun readLine(): String {
+            val line = ByteArrayOutputStream()
+            while (true) {
+                val value = readByte()
+                if (value < 0) break
+                if (value == '\n'.code) break
+                if (value != '\r'.code) line.write(value)
+            }
+            return line.toString(Charsets.ISO_8859_1)
+        }
+
+        fun readFully(count: Int): ByteArray {
+            val out = ByteArray(count)
+            var got = 0
+            while (got < count) {
+                val read = read(out, got, count - got)
+                if (read < 0) error("sec-tunnel оборвал ответ")
+                got += read
+            }
+            return out
+        }
+
+        private fun readByte(): Int {
+            val one = ByteArray(1)
+            val count = read(one, 0, 1)
+            return if (count < 0) -1 else one[0].toInt() and 0xff
+        }
+
+        private fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+            if (position < extra.size) {
+                val count = minOf(length, extra.size - position)
+                extra.copyInto(buffer, offset, position, position + count)
+                position += count
+                return count
+            }
+            return rest.read(buffer, offset, length)
         }
     }
 
     private data class HttpResult(val code: Int, val body: String, val wwwAuthenticate: String?)
+
+    companion object {
+        private const val HOST = "api2.sec-tunnel.com"
+    }
 }
 
 internal object SecApiAuth {

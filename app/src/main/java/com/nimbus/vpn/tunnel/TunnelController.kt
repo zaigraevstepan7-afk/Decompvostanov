@@ -84,6 +84,7 @@ class TunnelController(
     private var uiVisible = false
     private var activeEngine = Engine.NONE
     private var awgRunning = false
+    private var connectToken = 0
 
     private val tunnel = BozyaTunnel { state ->
         val token = stateToken
@@ -270,6 +271,7 @@ class TunnelController(
     suspend fun disconnect() {
         userStopped = true
         reconnectJob?.cancel()
+        connectToken = 0
         SecTunnelRuntime.requestStop(context)
         mutex.withLock {
         activeEngine = Engine.NONE
@@ -384,8 +386,8 @@ class TunnelController(
     ) {
         activeEngine = Engine.SEC
         downAwg()
-        SecTunnelRuntime.requestStop(context)
         val token = SecTunnelRuntime.arm()
+        connectToken = token
         val bypass = ArrayList(fresh.bypassPackages.filter(::isInstalledPackage))
         val intent = Intent(context, SecTunnelService::class.java).apply {
             action = SecTunnelService.ACTION_CONNECT
@@ -393,45 +395,52 @@ class TunnelController(
             putExtra(SecTunnelService.EXTRA_TOKEN, token)
             putStringArrayListExtra(SecTunnelService.EXTRA_BYPASS, bypass)
         }
-        runCatching {
+        val started = runCatching {
             if (Build.VERSION.SDK_INT >= 26) context.startForegroundService(intent)
             else context.startService(intent)
-        }.onFailure { error ->
-            activeEngine = Engine.NONE
-            failConnect(error, userInitiated)
-            return
         }
         val pending = SecTunnelRuntime.awaitHandle()
-        val result = if (pending == null) {
-            Result.failure(IllegalStateException("sec-tunnel не запустился"))
-        } else {
-            withTimeoutOrNull(35_000) { pending.await() }
-                ?: Result.failure(IllegalStateException("Таймаут sec-tunnel"))
-        }
-        if (userStopped || !SecTunnelRuntime.isCurrent(token)) {
+        if (started.isFailure || pending == null) {
+            connectToken = 0
             activeEngine = Engine.NONE
+            failConnect(
+                started.exceptionOrNull() ?: IllegalStateException("sec-tunnel не запустился"),
+                userInitiated,
+            )
             return
         }
-        result.onSuccess {
-            connectedSince = System.currentTimeMillis()
-            lastRx = 0
-            lastTx = 0
-            lastSampleAt = 0
-            activeEngine = Engine.SEC
-            _ui.update {
-                it.copy(
-                    status = ConnectionStatus.CONNECTED,
-                    error = null,
-                    connectedSince = connectedSince,
-                    backendLabel = "sec-tunnel",
-                )
+        // The button must stay usable. Waiting here holds the connect lock and
+        // leaves the screen on "Подключение…" until the API answers.
+        scope.launch {
+            val result = runCatching {
+                withTimeoutOrNull(20_000) { pending.await() }
+                    ?: Result.failure(IllegalStateException("Таймаут sec-tunnel"))
+            }.getOrElse { Result.failure(it) }
+            mutex.withLock {
+                if (connectToken != token || userStopped) return@withLock
+                result.onSuccess {
+                    connectedSince = System.currentTimeMillis()
+                    lastRx = 0
+                    lastTx = 0
+                    lastSampleAt = 0
+                    activeEngine = Engine.SEC
+                    _ui.update {
+                        it.copy(
+                            status = ConnectionStatus.CONNECTED,
+                            error = null,
+                            connectedSince = connectedSince,
+                            backendLabel = "sec-tunnel",
+                        )
+                    }
+                    BozyaKeepAliveService.start(context, profile.name)
+                    startStatsLoop()
+                }.onFailure { error ->
+                    connectToken = 0
+                    activeEngine = Engine.NONE
+                    SecTunnelRuntime.requestStop(context)
+                    failConnect(error, userInitiated)
+                }
             }
-            BozyaKeepAliveService.start(context, profile.name)
-            startStatsLoop()
-        }.onFailure { error ->
-            activeEngine = Engine.NONE
-            SecTunnelRuntime.requestStop(context)
-            failConnect(error, userInitiated)
         }
     }
 
