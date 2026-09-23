@@ -22,7 +22,7 @@ class ProfileStore(context: Context) {
     val index: StateFlow<ProfileIndex> = _index.asStateFlow()
 
     init {
-        ensureAuto()
+        dropSec()
     }
 
     val profiles: List<VpnProfile>
@@ -36,6 +36,7 @@ class ProfileStore(context: Context) {
         }
 
     fun upsert(profile: VpnProfile, makeActive: Boolean = true) = synchronized(this) {
+        if (SecTunnelProfile.isSec(profile.rawConfig)) return
         val current = _index.value
         val existing = current.profiles.indexOfFirst { it.id == profile.id }
         val nextProfiles = current.profiles.toMutableList()
@@ -68,26 +69,29 @@ class ProfileStore(context: Context) {
     }
 
     fun upsertAll(incoming: List<VpnProfile>, activeId: String? = incoming.firstOrNull()?.id) = synchronized(this) {
-        if (incoming.isEmpty()) return
+        val clean = incoming.filterNot { SecTunnelProfile.isSec(it.rawConfig) }
+        if (clean.isEmpty()) return
         val current = _index.value
-        val incomingIds = incoming.map { it.id }.toSet()
+        val incomingIds = clean.map { it.id }.toSet()
         val kept = current.profiles.filterNot { it.id in incomingIds }
         persist(
             ProfileIndex(
-                profiles = incoming + kept,
-                activeId = activeId ?: current.activeId ?: incoming.first().id,
+                profiles = clean + kept,
+                activeId = activeId?.takeIf { id -> clean.any { it.id == id } || kept.any { it.id == id } }
+                    ?: current.activeId
+                    ?: clean.first().id,
             ),
         )
     }
 
-    private fun ensureAuto() = synchronized(this) {
+    private fun dropSec() = synchronized(this) {
         val current = _index.value
-        if (current.profiles.any { it.id == "sec:AUTO" }) return
-        val auto = SecTunnelProfile.create("AUTO")
+        val kept = current.profiles.filterNot { SecTunnelProfile.isSec(it.rawConfig) }
+        if (kept.size == current.profiles.size) return
         persist(
             ProfileIndex(
-                profiles = listOf(auto) + current.profiles,
-                activeId = current.activeId ?: auto.id,
+                profiles = kept,
+                activeId = kept.firstOrNull { it.id == current.activeId }?.id ?: kept.firstOrNull()?.id,
             ),
         )
     }

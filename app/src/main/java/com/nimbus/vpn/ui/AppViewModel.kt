@@ -114,8 +114,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
                 runCatching {
-                    if (engine == "sec") SecTunnelProfile.create(id)
-                    else WarpGenerator.generateOne(id, lte)
+                    if (engine == "sec") error("Эти сервера убраны")
+                    WarpGenerator.generateOne(id, lte)
                 }
             }
             result.fold(
@@ -252,11 +252,21 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun importText(name: String, raw: String): Result<VpnProfile> {
         val bundle = ProfileBundle.parse(raw)
         if (bundle != null) {
+            val incoming = bundle.profiles.filterNot { SecTunnelProfile.isSec(it.rawConfig) }
+            if (incoming.isEmpty()) {
+                return Result.failure(IllegalArgumentException("Эти сервера убраны"))
+            }
             val current = app.container.profiles.index.value
-            val bare = current.profiles.all { it.id == "sec:AUTO" }
-            val active = if (bare) bundle.activeId ?: bundle.profiles.first().id else current.activeId
-            app.container.profiles.upsertAll(bundle.profiles, activeId = active)
-            return Result.success(bundle.profiles.first())
+            val active = if (current.profiles.isEmpty()) {
+                incoming.firstOrNull { it.id == bundle.activeId }?.id ?: incoming.first().id
+            } else {
+                current.activeId
+            }
+            app.container.profiles.upsertAll(incoming, activeId = active)
+            return Result.success(incoming.first())
+        }
+        if (SecTunnelProfile.isSec(raw)) {
+            return Result.failure(IllegalArgumentException("Эти сервера убраны"))
         }
         val prepared = ConfigParser.withKeepaliveIfMissing(raw)
         val preview = ConfigParser.parse(prepared)
