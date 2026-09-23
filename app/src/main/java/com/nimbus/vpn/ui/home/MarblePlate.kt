@@ -22,8 +22,8 @@ import kotlinx.coroutines.isActive
 import androidx.compose.runtime.withFrameNanos
 
 /**
- * Carrara marble from the shader pack, slowed so the veins drift instead of racing.
- * The pack used Moment * 0.09. This keeps the same veins and only turns the clock down.
+ * Carrara marble from the shader pack, fitted to a wide card.
+ * Each server gets its own phase, speed and slice of the stone.
  */
 object MarbleLook {
     const val SPEED = 0.072f
