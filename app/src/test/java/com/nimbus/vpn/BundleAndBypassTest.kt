@@ -7,6 +7,7 @@ import com.nimbus.vpn.data.ProfileIndex
 import com.nimbus.vpn.data.SecExit
 import com.nimbus.vpn.data.SecExitOrder
 import com.nimbus.vpn.data.VpnProfile
+import com.nimbus.vpn.tunnel.SecTunnelRuntime
 import org.junit.Test
 
 class BundleAndBypassTest {
@@ -40,5 +41,16 @@ class BundleAndBypassTest {
         val ordered = SecExitOrder.prefer(listOf(first, saved), "203.0.113.11")
         assertThat(ordered.map { it.ip }).containsExactly("203.0.113.11", "203.0.113.10").inOrder()
         assertThat(SecExitOrder.prefer(listOf(first, saved), "198.51.100.1")).isEqualTo(listOf(first, saved))
+        assertThat(SecExitOrder.prefer(listOf(first, saved), "203.0.113.11", aliveCount = 1))
+            .isEqualTo(listOf(first, saved))
+    }
+
+    @Test
+    fun oldStopCannotCancelTheNextSession() {
+        val epoch = SecTunnelRuntime.beginStop()
+        assertThat(SecTunnelRuntime.shouldHonorStop(epoch)).isTrue()
+        SecTunnelRuntime.arm()
+        assertThat(SecTunnelRuntime.shouldHonorStop(epoch)).isFalse()
+        assertThat(SecTunnelRuntime.shouldHonorStop(0)).isFalse()
     }
 }

@@ -30,6 +30,7 @@ class SecTunnelService : VpnService() {
     private var relay: TunRelay? = null
     private var worker: Thread? = null
     @Volatile private var activeToken = 0
+    private val life = Any()
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_LABEL) {
@@ -40,47 +41,65 @@ class SecTunnelService : VpnService() {
             return START_NOT_STICKY
         }
         if (intent?.action == ACTION_STOP) {
-            shutdown()
-            stopSelf(startId)
+            val epoch = intent.getIntExtra(EXTRA_EPOCH, 0)
+            val mine = synchronized(life) {
+                if (!SecTunnelRuntime.shouldHonorStop(epoch)) {
+                    false
+                } else {
+                    activeToken = 0
+                    shutdown()
+                    true
+                }
+            }
+            if (mine) stopSelf(startId)
             return START_NOT_STICKY
         }
         val token = intent?.getIntExtra(EXTRA_TOKEN, 0) ?: 0
         if (!SecTunnelRuntime.isCurrent(token)) {
-            stopSelf(startId)
+            if (activeToken == 0) stopSelf(startId)
             return START_NOT_STICKY
         }
         val label = intent?.getStringExtra(EXTRA_LABEL)?.takeIf { it.isNotBlank() } ?: "sec-tunnel"
         if (!promote(label)) {
             SecTunnelRuntime.fail(token, IllegalStateException("Не удалось показать уведомление VPN"))
-            stopSelf(startId)
+            if (activeToken == 0) stopSelf(startId)
             return START_NOT_STICKY
         }
-        activeToken = token
-        if (worker != null) shutdown()
-        stopped.set(false)
         val raw = intent?.getStringExtra(EXTRA_CONFIG).orEmpty()
         val bypass = intent?.getStringArrayListExtra(EXTRA_BYPASS).orEmpty()
+        synchronized(life) {
+            activeToken = token
+            shutdown()
+            stopped.set(false)
+        }
+        val commandId = startId
         worker = Thread({
             var running = false
             try {
                 runTunnel(token, raw, bypass)
-                running = SecTunnelRuntime.active
+                running = SecTunnelRuntime.active && SecTunnelRuntime.isCurrent(token)
             } catch (error: Throwable) {
-                running = SecTunnelRuntime.active
+                running = SecTunnelRuntime.active && SecTunnelRuntime.isCurrent(token)
                 Log.e(TAG, "sec-tunnel failed", error)
                 SecTunnelRuntime.fail(token, error)
             } finally {
-                val current = SecTunnelRuntime.isCurrent(token)
-                if (activeToken == token) {
-                    shutdown()
+                val stopThis = synchronized(life) {
+                    if (activeToken != token) {
+                        false
+                    } else {
+                        shutdown()
+                        true
+                    }
+                }
+                if (stopThis) {
                     if (!SecTunnelRuntime.active) {
                         SecTunnelRuntime.fail(token, IllegalStateException("sec-tunnel остановился"))
                     }
-                    if (running && current) {
+                    if (running && SecTunnelRuntime.isCurrent(token)) {
                         SecTunnelRuntime.markStopped()
                         SecTunnelRuntime.notifyDown()
                     }
-                    stopSelf()
+                    stopSelf(commandId)
                 }
             }
         }, "sec-tun")
@@ -90,14 +109,21 @@ class SecTunnelService : VpnService() {
 
     override fun onRevoke() {
         SecTunnelRuntime.abort = true
-        shutdown()
-        if (SecTunnelRuntime.active) SecTunnelRuntime.notifyDown()
+        val wasActive = synchronized(life) {
+            activeToken = 0
+            shutdown()
+            SecTunnelRuntime.active
+        }
+        if (wasActive) SecTunnelRuntime.notifyDown()
         SecTunnelRuntime.markStopped()
         stopSelf()
     }
 
     override fun onDestroy() {
-        shutdown()
+        synchronized(life) {
+            activeToken = 0
+            shutdown()
+        }
         super.onDestroy()
     }
 
@@ -107,7 +133,7 @@ class SecTunnelService : VpnService() {
             ?: error("Нет выхода sec-tunnel")
         if (!SecTunnelRuntime.isCurrent(token)) return
         val outside = pickNetwork()
-        val pfd = openTun(bypass)
+        val pfd = openTunWhenFree(bypass, token)
         if (!SecTunnelRuntime.isCurrent(token)) {
             pfd.close()
             return
@@ -146,6 +172,17 @@ class SecTunnelService : VpnService() {
         synchronized(writeLock) {
             tunOut?.write(packet)
             SecTunnelRuntime.addRx(packet.size)
+        }
+    }
+
+    private fun openTunWhenFree(bypass: List<String>, token: Int): ParcelFileDescriptor {
+        try {
+            return openTun(bypass)
+        } catch (error: Throwable) {
+            if (!SecTunnelRuntime.isCurrent(token)) throw error
+            Thread.sleep(300)
+            if (!SecTunnelRuntime.isCurrent(token)) throw error
+            return openTun(bypass)
         }
     }
 
@@ -250,6 +287,7 @@ class SecTunnelService : VpnService() {
         const val EXTRA_BYPASS = "bypass"
         const val EXTRA_TOKEN = "token"
         const val EXTRA_LABEL = "label"
+        const val EXTRA_EPOCH = "epoch"
         private const val CHANNEL_ID = "bozya.keepalive"
         private const val NOTIF_ID = 18
         private const val TAG = "Bozya/SecTunnel"

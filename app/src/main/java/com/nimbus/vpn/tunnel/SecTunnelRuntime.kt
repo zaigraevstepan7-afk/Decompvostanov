@@ -85,10 +85,11 @@ object SecTunnelRuntime {
         }
     }
 
-    fun requestStop(context: Context) {
+    fun beginStop(): Int {
+        val epoch = generation.incrementAndGet()
         abort = true
-        generation.incrementAndGet()
         active = false
+        onRotate = null
         synchronized(lock) {
             staged = null
             pending?.let { current ->
@@ -97,9 +98,18 @@ object SecTunnelRuntime {
                 }
             }
         }
+        return epoch
+    }
+
+    fun shouldHonorStop(epoch: Int): Boolean = epoch > 0 && abort && generation.get() == epoch
+
+    fun requestStop(context: Context) {
+        val epoch = beginStop()
         runCatching {
             context.startService(
-                Intent(context, SecTunnelService::class.java).setAction(SecTunnelService.ACTION_STOP),
+                Intent(context, SecTunnelService::class.java)
+                    .setAction(SecTunnelService.ACTION_STOP)
+                    .putExtra(SecTunnelService.EXTRA_EPOCH, epoch),
             )
         }
     }

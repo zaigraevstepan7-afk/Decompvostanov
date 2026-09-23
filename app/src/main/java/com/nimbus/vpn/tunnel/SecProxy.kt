@@ -63,6 +63,8 @@ object SecConnect {
     }
 }
 
+data class ProbedExits(val exits: List<SecExit>, val alive: Int)
+
 object SecProxy {
     @Volatile private var sniMode: Boolean? = null
 
@@ -135,20 +137,23 @@ object SecProxy {
         return out.toString(Charsets.UTF_8)
     }
 
-    fun preferAlive(exits: List<SecExit>): List<SecExit> {
-        if (exits.size <= 1) return exits
+    fun probe(exits: List<SecExit>): ProbedExits {
+        if (exits.size <= 1) return ProbedExits(exits, exits.size)
         val pool = Executors.newFixedThreadPool(minOf(3, exits.size))
         try {
             val checked = exits.take(3).map { exit ->
                 pool.submit<SecExit?> { if (alive(exit)) exit else null }
             }.mapNotNull { future -> runCatching { future.get(5, TimeUnit.SECONDS) }.getOrNull() }
-            if (checked.isEmpty()) return exits
+            if (checked.isEmpty()) return ProbedExits(exits, 0)
             val rest = exits.filter { exit -> checked.none { it.ip == exit.ip } }
-            return (checked + rest).distinctBy { it.ip }.take(6)
+            val merged = (checked + rest).distinctBy { it.ip }.take(6)
+            return ProbedExits(merged, checked.size.coerceAtMost(merged.size))
         } finally {
             pool.shutdownNow()
         }
     }
+
+    fun preferAlive(exits: List<SecExit>): List<SecExit> = probe(exits).exits
 
     private fun modes(): List<Boolean> {
         val known = sniMode

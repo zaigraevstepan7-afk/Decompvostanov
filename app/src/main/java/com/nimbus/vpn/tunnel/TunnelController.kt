@@ -361,7 +361,7 @@ class TunnelController(
             lastTx = tx
             lastSampleAt = now
             val since = connectedSince
-            if (!quietRotated && since != null && now - since > 8_000 && rx < 400) {
+            if (!quietRotated && since != null && now - since > 12_000 && tx > 4_000 && rx < 300) {
                 quietRotated = true
                 SecTunnelRuntime.requestRotate()
             }
@@ -476,6 +476,7 @@ class TunnelController(
     ) {
         activeEngine = Engine.SEC
         downAwg()
+        SecTunnelRuntime.requestStop(context)
         val spec = SecTunnelProfile.read(profile.rawConfig)
         secRegion = spec?.region
         if (spec == null) {
@@ -580,7 +581,7 @@ class TunnelController(
                 val exits = SecTunnelApi.reuse(region, saved)
                 if (exits.isEmpty()) error(if (region.equals("AUTO", true)) "Сейчас нет свободных выходов" else "Для региона сейчас нет выхода")
                 SecTunnelRuntime.account = saved
-                return SecExitOrder.prefer(SecProxy.preferAlive(exits), accounts.lastIp(region))
+                return ordered(exits, region)
             } catch (error: Throwable) {
                 val message = error.message.orEmpty()
                 if (message.startsWith("Для ") || message.startsWith("Сейчас нет")) throw error
@@ -591,7 +592,12 @@ class TunnelController(
         val lease = SecTunnelApi.registerLease(region)
         accounts.save(lease.account)
         SecTunnelRuntime.account = lease.account
-        return SecExitOrder.prefer(SecProxy.preferAlive(lease.exits), accounts.lastIp(region))
+        return ordered(lease.exits, region)
+    }
+
+    private fun ordered(exits: List<SecExit>, region: String): List<SecExit> {
+        val probed = SecProxy.probe(exits)
+        return SecExitOrder.prefer(probed.exits, accounts.lastIp(region), probed.alive)
     }
 
     private fun unwrap(error: Throwable): Throwable {

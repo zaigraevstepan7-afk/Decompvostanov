@@ -18,10 +18,10 @@ object ProfileBundle {
 }
 
 object SecExitOrder {
-    fun prefer(exits: List<SecExit>, ip: String?): List<SecExit> {
+    fun prefer(exits: List<SecExit>, ip: String?, aliveCount: Int = exits.size): List<SecExit> {
         if (ip.isNullOrBlank()) return exits
         val index = exits.indexOfFirst { it.ip == ip }
-        if (index <= 0) return exits
+        if (index <= 0 || index >= aliveCount) return exits
         val chosen = exits[index]
         return listOf(chosen) + exits.filterIndexed { at, _ -> at != index }
     }

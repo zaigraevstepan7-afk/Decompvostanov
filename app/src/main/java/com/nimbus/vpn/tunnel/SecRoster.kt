@@ -118,19 +118,8 @@ class SecRoster(
     }
 
     private fun loadFresh(): List<SecExit> {
-        val store = SecTunnelRuntime.accounts
-        val saved = store?.load()
-        if (saved != null) {
-            val reused = runCatching { SecTunnelApi.reuse(region, saved) }
-            if (reused.isSuccess && reused.getOrThrow().isNotEmpty()) return reused.getOrThrow()
-            val message = reused.exceptionOrNull()?.message.orEmpty()
-            if (message.startsWith("Для ") || message.startsWith("Сейчас нет")) return emptyList()
-            store.clear()
-        }
-        val lease = runCatching { SecTunnelApi.registerLease(region) }.getOrNull() ?: return emptyList()
-        store?.save(lease.account)
-        SecTunnelRuntime.account = lease.account
-        return lease.exits
+        val saved = SecTunnelRuntime.accounts?.load() ?: SecTunnelRuntime.account ?: return emptyList()
+        return runCatching { SecTunnelApi.reuse(region, saved) }.getOrNull()?.takeIf { it.isNotEmpty() }.orEmpty()
     }
 
     private fun race(
