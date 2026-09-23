@@ -78,6 +78,7 @@ fun SettingsScreen(
     onMoveDog: (Float, Float) -> Unit,
     onBypass: () -> Unit,
     onExport: () -> Unit,
+    onMarble: (Boolean) -> Unit,
 ) {
     val context = LocalContext.current
     val crash = remember { CrashLog.summary(context) }
@@ -135,6 +136,22 @@ fun SettingsScreen(
                     "Whitelist, appops, без разгона CPU",
                     settings.rootBatteryGuard,
                     onRootBattery,
+                )
+            }
+            Spacer(Modifier.height(22.dp))
+            SectionLabel("Вид")
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(Card)
+                    .background(Paper)
+                    .border(1.dp, Line, Card),
+            ) {
+                ToggleRow(
+                    "Мрамор",
+                    "Живой камень на карточках серверов",
+                    settings.marble,
+                    onMarble,
                 )
             }
             Spacer(Modifier.height(22.dp))

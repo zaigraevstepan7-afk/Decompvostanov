@@ -297,6 +297,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         app.container.tunnel.applyVpnPolicy(auto, value)
     }
     fun setRootBattery(value: Boolean) = viewModelScope.launch { app.container.settings.setRootBatteryGuard(value) }
+    fun setMarble(value: Boolean) = viewModelScope.launch { app.container.settings.setMarble(value) }
     fun setAccessLink(value: Int) = viewModelScope.launch {
         app.container.settings.setAccessLink(value)
         _access.value = AccessUiState()

@@ -56,13 +56,14 @@ private val Card = RoundedCornerShape(22.dp)
 @Composable
 fun ProfilesScreen(
     index: ProfileIndex,
+    marble: Boolean,
     onBack: () -> Unit,
     onSelect: (String) -> Unit,
     onDelete: (String) -> Unit,
     onImport: () -> Unit,
 ) {
     var pendingDelete by remember { mutableStateOf<Pair<String, String>?>(null) }
-    val marbleTime = rememberMarbleTime(animate = true)
+    val marbleTime = rememberMarbleTime(marble)
     Box(Modifier.fillMaxSize()) {
         MeshBackground(ConnectionStatus.DISCONNECTED, animate = true, modifier = Modifier.fillMaxSize())
         Column(
@@ -110,7 +111,9 @@ fun ProfilesScreen(
                             Modifier
                                 .fillMaxWidth()
                                 .clip(Card)
-                                .marble(marbleTime, motion)
+                                .then(
+                                    if (marble) Modifier.marble(marbleTime, motion) else Modifier.background(Paper),
+                                )
                                 .border(1.dp, if (active) Accent else Line, Card)
                                 .clickable { onSelect(profile.id) }
                                 .padding(14.dp),

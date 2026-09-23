@@ -83,6 +83,7 @@ import com.nimbus.vpn.ui.theme.Canvas
 import com.nimbus.vpn.ui.theme.Danger
 import com.nimbus.vpn.ui.theme.Ink
 import com.nimbus.vpn.ui.theme.InkMuted
+import com.nimbus.vpn.ui.theme.Lift
 import com.nimbus.vpn.ui.theme.Line
 import com.nimbus.vpn.ui.theme.Motion
 import com.nimbus.vpn.ui.theme.Paper
@@ -129,7 +130,8 @@ fun HomeScreen(
         }
     }
     val context = LocalContext.current
-    val marbleTime = rememberMarbleTime(animate)
+    val marbleOn = settings.marble
+    val marbleTime = rememberMarbleTime(animate && marbleOn)
     val active = profiles.profiles.firstOrNull { it.id == profiles.activeId } ?: state.profile
     val busy = state.status == ConnectionStatus.CONNECTING
     val step = CoachStep.from(settings.coachStep)
@@ -309,6 +311,7 @@ fun HomeScreen(
                             },
                             onRotate = if (connectedHere && SecTunnelProfile.isSec(profile.rawConfig)) onRotate else null,
                             marbleTime = marbleTime,
+                            marble = marbleOn,
                         )
                     }
                 }
@@ -406,6 +409,7 @@ private fun ServerRow(
     onCopyIp: (() -> Unit)? = null,
     onRotate: (() -> Unit)? = null,
     marbleTime: Float = 0f,
+    marble: Boolean = false,
 ) {
     val endpoint = remember(profile.rawConfig) { ConfigParser.endpointOf(profile.rawConfig) }
     val sec = remember(profile.rawConfig) { SecTunnelProfile.read(profile.rawConfig) }
@@ -428,7 +432,13 @@ private fun ServerRow(
             .fillMaxWidth()
             .pressScale(press.scale)
             .clip(CardShape)
-            .marble(marbleTime, motion)
+            .then(
+                if (marble) {
+                    Modifier.marble(marbleTime, motion)
+                } else {
+                    Modifier.background(if (active) Lift else Paper)
+                },
+            )
             .border(1.dp, stroke, CardShape)
             .clickable(
                 interactionSource = press.interaction,

@@ -28,6 +28,7 @@ class SettingsRepository(private val context: Context) {
             dogY = prefs[DOG_Y] ?: -1f,
             heardAccess = prefs[HEARD_ACCESS] ?: false,
             bypassPackages = prefs[BYPASS_APPS] ?: emptySet(),
+            marble = prefs[MARBLE] ?: false,
         )
     }
 
@@ -57,6 +58,8 @@ class SettingsRepository(private val context: Context) {
         context.settingsStore.edit { it[BYPASS_APPS] = clean }
     }
 
+    suspend fun setMarble(value: Boolean) = set(MARBLE, value)
+
     suspend fun setDogAnchor(x: Float, y: Float) {
         context.settingsStore.edit {
             it[DOG_X] = x
@@ -81,6 +84,7 @@ class SettingsRepository(private val context: Context) {
         val DOG_Y = floatPreferencesKey("dog_y")
         val HEARD_ACCESS = booleanPreferencesKey("heard_access")
         val BYPASS_APPS = stringSetPreferencesKey("bypass_apps")
+        val MARBLE = booleanPreferencesKey("marble")
     }
 }
 
@@ -97,4 +101,5 @@ data class AppSettings(
     val dogY: Float = -1f,
     val heardAccess: Boolean = false,
     val bypassPackages: Set<String> = emptySet(),
+    val marble: Boolean = false,
 )

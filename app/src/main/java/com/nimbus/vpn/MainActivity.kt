@@ -196,6 +196,7 @@ class MainActivity : ComponentActivity() {
                     composable("profiles") {
                         ProfilesScreen(
                             index = profiles,
+                            marble = settings.marble,
                             onBack = { nav.popBackStack() },
                             onSelect = {
                                 viewModel.selectProfile(it)
@@ -226,6 +227,7 @@ class MainActivity : ComponentActivity() {
                             onCoachOpened = viewModel::onEnterSettings,
                             onMoveDog = viewModel::moveDog,
                             onBypass = { go("bypass") },
+                            onMarble = viewModel::setMarble,
                             onExport = {
                                 val text = viewModel.exportServers()
                                 val send = Intent(Intent.ACTION_SEND).apply {
