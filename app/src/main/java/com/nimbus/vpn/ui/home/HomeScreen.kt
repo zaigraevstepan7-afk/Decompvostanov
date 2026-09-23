@@ -284,7 +284,7 @@ fun HomeScreen(
                         start = 16.dp,
                         end = 16.dp,
                         top = 8.dp,
-                        bottom = if (coachMessage != null) 250.dp else 148.dp,
+                        bottom = if (coachMessage != null) 302.dp else 200.dp,
                     ),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {

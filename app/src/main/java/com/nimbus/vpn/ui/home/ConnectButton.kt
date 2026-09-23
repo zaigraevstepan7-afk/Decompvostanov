@@ -128,7 +128,7 @@ fun ConnectButton(
     }
     Box(
         modifier
-            .size(116.dp)
+            .size(168.dp)
             .graphicsLayer {
                 val s = press.scale * bloom.value
                 scaleX = s
@@ -191,8 +191,8 @@ fun ConnectButton(
         }
         Box(
             Modifier
-                .size(68.dp)
-                .shadow(12.dp, CircleShape, clip = false, ambientColor = color.copy(alpha = 0.28f), spotColor = color.copy(alpha = 0.22f))
+                .size(100.dp)
+                .shadow(16.dp, CircleShape, clip = false, ambientColor = color.copy(alpha = 0.28f), spotColor = color.copy(alpha = 0.22f))
                 .clip(CircleShape)
                 .background(color)
                 .clickable(
@@ -230,7 +230,7 @@ fun ConnectButton(
                         ConnectGlyph.Off -> "Подключить"
                     },
                     tint = Canvas,
-                    modifier = Modifier.size(30.dp),
+                    modifier = Modifier.size(44.dp),
                 )
             }
         }
