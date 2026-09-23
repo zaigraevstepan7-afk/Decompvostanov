@@ -58,6 +58,21 @@ object WarpConfigBuilder {
 
     fun country(id: String): WarpCountry? = countries.firstOrNull { it.id == id }
 
+    /** Countries the Auto button measures. Russia stays a manual choice. */
+    fun autoCountries(): List<WarpCountry> = countries.filter { it.id != "ru" }
+
+    /**
+     * Lowest answered ping wins. Unanswered hosts and Russia are ignored.
+     * A tie keeps the earlier id so the choice is stable.
+     */
+    fun fastest(pings: Map<String, Int?>): String? {
+        return pings
+            .filterKeys { it != "ru" }
+            .mapNotNull { (id, ms) -> ms?.let { id to it } }
+            .minWithOrNull(compareBy<Pair<String, Int>> { it.second }.thenBy { it.first })
+            ?.first
+    }
+
     fun resolve(countryId: String, lte: Boolean): WarpEndpoint {
         val country = country(countryId) ?: error("Неизвестная страна: $countryId")
         val useLte = lte && country.hasLte

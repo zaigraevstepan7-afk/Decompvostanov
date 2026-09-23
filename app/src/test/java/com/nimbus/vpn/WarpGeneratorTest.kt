@@ -70,6 +70,19 @@ class WarpGeneratorTest {
     }
 
     @Test
+    fun autoSkipsRussiaAndKeepsTheFastest() {
+        val ids = WarpConfigBuilder.autoCountries().map { it.id }
+        assertThat(ids).containsExactly("de", "pl", "nl", "fi", "ee", "lv")
+        assertThat(ids).doesNotContain("ru")
+        assertThat(
+            WarpConfigBuilder.fastest(
+                mapOf("de" to 80, "pl" to 40, "nl" to null, "ru" to 5, "fi" to 40),
+            ),
+        ).isEqualTo("fi")
+        assertThat(WarpConfigBuilder.fastest(mapOf("de" to null, "ru" to 10))).isNull()
+    }
+
+    @Test
     fun ltePolandExcludesBlockedPort() {
         val ports = WarpConfigBuilder.portsFor(WarpConfigBuilder.resolve("pl", lte = true).excludedPorts)
         assertThat(ports).doesNotContain(988)
