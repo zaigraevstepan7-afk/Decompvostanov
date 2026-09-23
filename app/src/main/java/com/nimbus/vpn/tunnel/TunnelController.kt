@@ -399,8 +399,8 @@ class TunnelController(
             failConnect(IllegalStateException("Это не профиль sec-tunnel"), userInitiated)
             return
         }
-        val exit = try {
-            withContext(Dispatchers.IO) { fetchExit(spec.region) }
+        val exits = try {
+            withContext(Dispatchers.IO) { fetchExits(spec.region) }
         } catch (error: Throwable) {
             activeEngine = Engine.NONE
             failConnect(unwrap(error), userInitiated)
@@ -412,7 +412,7 @@ class TunnelController(
         }
         val token = SecTunnelRuntime.arm()
         connectToken = token
-        SecTunnelRuntime.stage(token, exit)
+        SecTunnelRuntime.stage(token, exits)
         val bypass = ArrayList(fresh.bypassPackages.filter(::isInstalledPackage))
         val intent = Intent(context, SecTunnelService::class.java).apply {
             action = SecTunnelService.ACTION_CONNECT
@@ -464,11 +464,13 @@ class TunnelController(
         }
     }
 
-    private fun fetchExit(region: String): SecExit {
+    private fun fetchExits(region: String): List<SecExit> {
         val http = SecHttp()
         val pool = Executors.newSingleThreadExecutor()
         return try {
-            val future = pool.submit<SecExit> { SecTunnelApi.lease(region, http) }
+            val future = pool.submit<List<SecExit>> {
+                SecProxy.preferAlive(SecTunnelApi.leaseMany(region, http))
+            }
             try {
                 future.get(30, TimeUnit.SECONDS)
             } catch (timeout: TimeoutException) {

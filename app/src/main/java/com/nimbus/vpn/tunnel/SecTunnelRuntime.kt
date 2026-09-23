@@ -22,7 +22,7 @@ object SecTunnelRuntime {
     private val generation = AtomicInteger()
     private val lock = Any()
     private var pending: CompletableDeferred<Result<Unit>>? = null
-    private var staged: Pair<Int, SecExit>? = null
+    private var staged: Pair<Int, List<SecExit>>? = null
 
     fun arm(): Int {
         val token = generation.incrementAndGet()
@@ -41,13 +41,13 @@ object SecTunnelRuntime {
         return token
     }
 
-    fun stage(token: Int, exit: SecExit) {
+    fun stage(token: Int, exits: List<SecExit>) {
         synchronized(lock) {
-            if (generation.get() == token) staged = token to exit
+            if (generation.get() == token) staged = token to exits
         }
     }
 
-    fun takeExit(token: Int): SecExit? = synchronized(lock) {
+    fun takeExits(token: Int): List<SecExit>? = synchronized(lock) {
         staged?.takeIf { it.first == token }?.second
     }
 

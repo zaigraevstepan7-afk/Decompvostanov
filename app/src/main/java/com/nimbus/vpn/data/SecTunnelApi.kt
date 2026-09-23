@@ -135,29 +135,40 @@ object SecTunnelApi {
         }
     }
 
-    fun lease(region: String, http: SecHttp = SecHttp()): SecExit {
+    fun lease(region: String, http: SecHttp = SecHttp()): SecExit = leaseMany(region, http).first()
+
+    fun leaseMany(region: String, http: SecHttp = SecHttp()): List<SecExit> {
         val known = SecTunnelProfile.region(region) ?: error("Неизвестный регион: $region")
         try {
-            return if (known.id == "AUTO") leaseAuto(http) else leaseOn(known, http)
+            return collect(known, http)
         } finally {
             http.close()
         }
     }
 
-    private fun leaseOn(known: SecRegion, http: SecHttp): SecExit {
+    private fun collect(known: SecRegion, http: SecHttp): List<SecExit> {
         val device = register(http)
-        val chosen = discoverReady(http, device, known.id).randomOrNull()
-            ?: error("Для ${known.name} сейчас нет выхода")
-        return exitOf(device, chosen, known.id)
-    }
-
-    private fun leaseAuto(http: SecHttp): SecExit {
-        val device = register(http)
-        val exits = geoCodes(http, device).flatMap { code ->
-            discoverReady(http, device, code).map { endpoint -> exitOf(device, endpoint, code) }
+        val home = if (known.id == "AUTO") geoCodes(http, device) else listOf(known.id)
+        val found = linkedMapOf<String, SecExit>()
+        fun take(code: String) {
+            discoverReady(http, device, code).forEach { endpoint ->
+                found.putIfAbsent(endpoint.ip, exitOf(device, endpoint, code))
+            }
         }
-        if (exits.isEmpty()) error("Сейчас нет свободных выходов")
-        return fastest(exits)
+        for (code in home) {
+            take(code)
+            if (known.id != "AUTO" && found.size >= 4) break
+        }
+        if (found.size < 2 && known.id != "AUTO") {
+            for (code in geoCodes(http, device).filter { it !in home }) {
+                take(code)
+                if (found.size >= 4) break
+            }
+        }
+        if (found.isEmpty()) {
+            error(if (known.id == "AUTO") "Сейчас нет свободных выходов" else "Для ${known.name} сейчас нет выхода")
+        }
+        return rank(found.values.toList())
     }
 
     private fun register(http: SecHttp): SecDevice {
@@ -182,7 +193,7 @@ object SecTunnelApi {
     }
 
     private fun discoverReady(http: SecHttp, device: SecDevice, region: String): List<SecEndpoint> {
-        repeat(3) {
+        repeat(2) {
             val found = parseDiscover(
                 http.post(
                     DISCOVER,
@@ -215,22 +226,25 @@ object SecTunnelApi {
             password = device.password,
         )
 
-    private fun fastest(exits: List<SecExit>): SecExit {
-        if (exits.size == 1) return exits.first()
+    private fun rank(exits: List<SecExit>): List<SecExit> {
+        if (exits.size <= 1) return exits
         val pool = Executors.newFixedThreadPool(minOf(4, exits.size))
         try {
-            val ranked = exits.map { exit ->
+            val timed = exits.map { exit ->
                 pool.submit<Pair<SecExit, Long>?> {
                     val start = System.nanoTime()
                     val ok = runCatching {
                         Socket().use { socket ->
-                            socket.connect(InetSocketAddress(exit.ip, exit.port), 1_200)
+                            socket.connect(InetSocketAddress(exit.ip, exit.port), 1_500)
                         }
                     }.isSuccess
                     if (!ok) null else exit to (System.nanoTime() - start) / 1_000_000
                 }
             }.mapNotNull { future -> runCatching { future.get(2, TimeUnit.SECONDS) }.getOrNull() }
-            return ranked.minByOrNull { it.second }?.first ?: exits.random()
+            val alive = timed.sortedBy { it.second }.map { it.first }
+            if (alive.isEmpty()) return exits.take(4)
+            val rest = exits.filter { exit -> alive.none { it.ip == exit.ip } }
+            return (alive + rest).take(6)
         } finally {
             pool.shutdownNow()
         }

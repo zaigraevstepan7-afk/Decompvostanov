@@ -4,8 +4,10 @@ import com.google.common.truth.Truth.assertThat
 import com.nimbus.vpn.data.SecDigest
 import com.nimbus.vpn.data.SecTunnelApi
 import com.nimbus.vpn.data.SecTunnelProfile
+import com.nimbus.vpn.data.SecExit
 import com.nimbus.vpn.tunnel.Packets
 import com.nimbus.vpn.tunnel.SecConnect
+import com.nimbus.vpn.tunnel.SecRoster
 import com.nimbus.vpn.tunnel.TunRelay
 import com.nimbus.vpn.tunnel.UpstreamConn
 import java.io.PipedInputStream
@@ -49,6 +51,16 @@ class SecTunnelTest {
         assertThat(auto.name).isEqualTo("Авто")
         assertThat(SecTunnelProfile.read(auto.rawConfig)!!.flag).isEqualTo("🌐")
         assertThat(SecTunnelProfile.regions.first().id).isEqualTo("AUTO")
+    }
+
+    @Test
+    fun rosterSkipsAnExitThatJustFailed() {
+        val slow = SecExit("203.0.113.10", 443, "eu0.sec-tunnel.com", "USER", "pw")
+        val next = SecExit("203.0.113.11", 443, "eu0.sec-tunnel.com", "USER", "pw")
+        val roster = SecRoster(listOf(slow, next), region = "")
+        assertThat(roster.peek().ip).isEqualTo("203.0.113.10")
+        roster.noteFailure(slow)
+        assertThat(roster.peek().ip).isEqualTo("203.0.113.11")
     }
 
     @Test

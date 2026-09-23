@@ -94,8 +94,9 @@ class SecTunnelService : VpnService() {
     }
 
     private fun runTunnel(token: Int, raw: String, bypass: List<String>) {
-        SecTunnelProfile.read(raw) ?: error("Это не профиль sec-tunnel")
-        val exit = SecTunnelRuntime.takeExit(token) ?: error("Нет выхода sec-tunnel")
+        val spec = SecTunnelProfile.read(raw) ?: error("Это не профиль sec-tunnel")
+        val exits = SecTunnelRuntime.takeExits(token)?.takeIf { it.isNotEmpty() }
+            ?: error("Нет выхода sec-tunnel")
         if (!SecTunnelRuntime.isCurrent(token)) return
         val outside = pickNetwork()
         val pfd = openTun(bypass)
@@ -110,9 +111,10 @@ class SecTunnelService : VpnService() {
             if (outside != null) runCatching { outside.bindSocket(socket) }
             this@SecTunnelService.protect(socket)
         }
+        val roster = SecRoster(exits, spec.region)
         val engine = TunRelay(
-            dial = { host, port -> SecProxy.open(guard, exit, host, port) },
-            dns = { query -> SecProxy.queryDns(guard, exit, query) },
+            dial = { host, port -> roster.open(guard, host, port) },
+            dns = { query -> roster.queryDns(guard, query) },
             emit = { packet -> writeTun(packet) },
         )
         relay = engine

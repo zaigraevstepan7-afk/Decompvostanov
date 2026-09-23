@@ -10,6 +10,8 @@ import java.net.InetSocketAddress
 import java.net.Socket
 import java.security.SecureRandom
 import java.util.Base64
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import javax.net.ssl.HttpsURLConnection
 import javax.net.ssl.SNIHostName
 import javax.net.ssl.SSLContext
@@ -61,25 +63,68 @@ object SecConnect {
 }
 
 object SecProxy {
+    @Volatile private var sniMode: Boolean? = null
+
     fun open(
         protect: (Socket) -> Boolean,
         exit: SecExit,
         host: String,
         port: Int,
-        timeoutMs: Int = 12_000,
+        timeoutMs: Int = 6_000,
         idleTimeoutMs: Int = 0,
     ): UpstreamConn {
         var last: Throwable? = null
-        // Portal's engine sends an empty SNI and checks the certificate against
-        // eu0.sec-tunnel.com afterwards. Trying a name in ClientHello first stalls.
-        for (useSni in listOf(false, true)) {
-            try {
-                return handshake(protect, exit, host, port, timeoutMs, idleTimeoutMs, useSni)
+        val modes = modes()
+        for ((index, useSni) in modes.withIndex()) {
+            val budget = if (index == 0) timeoutMs else minOf(timeoutMs, 4_000)
+            val ssl = try {
+                connectTls(protect, exit, budget, useSni)
             } catch (error: Throwable) {
                 last = error
+                if (sniMode == useSni) sniMode = null
+                continue
+            }
+            try {
+                ssl.soTimeout = budget
+                ssl.outputStream.write(SecConnect.request(host, port, exit.username, exit.password))
+                ssl.outputStream.flush()
+                val prefix = SecConnect.read(ssl.inputStream)
+                ssl.soTimeout = idleTimeoutMs
+                sniMode = useSni
+                return SocketUpstream(ssl, prefix)
+            } catch (error: Throwable) {
+                runCatching { ssl.close() }
+                throw error
             }
         }
         throw last ?: IllegalStateException("Не удалось открыть прокси")
+    }
+
+    fun alive(exit: SecExit, timeoutMs: Int = 4_000): Boolean {
+        return runCatching {
+            connectTls(protect = { true }, exit = exit, timeoutMs = timeoutMs, useSni = false).close()
+            sniMode = false
+        }.isSuccess
+    }
+
+    fun preferAlive(exits: List<SecExit>): List<SecExit> {
+        if (exits.size <= 1) return exits
+        val pool = Executors.newFixedThreadPool(minOf(3, exits.size))
+        try {
+            val checked = exits.take(3).map { exit ->
+                pool.submit<SecExit?> { if (alive(exit)) exit else null }
+            }.mapNotNull { future -> runCatching { future.get(5, TimeUnit.SECONDS) }.getOrNull() }
+            if (checked.isEmpty()) return exits
+            val rest = exits.filter { exit -> checked.none { it.ip == exit.ip } }
+            return (checked + rest).distinctBy { it.ip }.take(6)
+        } finally {
+            pool.shutdownNow()
+        }
+    }
+
+    private fun modes(): List<Boolean> {
+        val known = sniMode
+        return if (known == null) listOf(false, true) else listOf(known, !known)
     }
 
     fun queryDns(protect: (Socket) -> Boolean, exit: SecExit, query: ByteArray): ByteArray {
@@ -106,15 +151,12 @@ object SecProxy {
         throw last ?: IllegalStateException("DNS через sec-tunnel не ответил")
     }
 
-    private fun handshake(
+    private fun connectTls(
         protect: (Socket) -> Boolean,
         exit: SecExit,
-        host: String,
-        port: Int,
         timeoutMs: Int,
-        idleTimeoutMs: Int,
         useSni: Boolean,
-    ): UpstreamConn {
+    ): SSLSocket {
         val raw = Socket()
         raw.tcpNoDelay = true
         raw.keepAlive = true
@@ -153,12 +195,7 @@ object SecProxy {
                     error("Сертификат прокси не для ${exit.verifyName}")
                 }
             }
-            ssl.soTimeout = timeoutMs
-            ssl.outputStream.write(SecConnect.request(host, port, exit.username, exit.password))
-            ssl.outputStream.flush()
-            val prefix = SecConnect.read(ssl.inputStream)
-            ssl.soTimeout = idleTimeoutMs
-            return SocketUpstream(ssl, prefix)
+            return ssl
         } catch (error: Throwable) {
             runCatching { raw.close() }
             throw error
