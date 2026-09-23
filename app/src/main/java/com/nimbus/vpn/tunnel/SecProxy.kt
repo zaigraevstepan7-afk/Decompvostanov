@@ -41,10 +41,12 @@ object SecConnect {
 
     fun read(input: InputStream): ByteArray {
         val acc = ByteArrayOutputStream()
-        val one = ByteArray(1)
+        val buf = ByteArray(1024)
         while (acc.size() < 8192) {
-            if (input.read(one) < 0) error("Прокси закрыл CONNECT")
-            acc.write(one, 0, 1)
+            val count = input.read(buf)
+            if (count < 0) error("Прокси закрыл CONNECT")
+            if (count == 0) continue
+            acc.write(buf, 0, count)
             val all = acc.toByteArray()
             val end = headerEnd(all)
             if (end >= 0) {
@@ -117,7 +119,7 @@ object SecProxy {
         protect(raw)
         try {
             raw.connect(InetSocketAddress(exit.ip, exit.port), timeoutMs)
-            raw.soTimeout = timeoutMs
+            raw.soTimeout = 0
             val context = SSLContext.getInstance("TLS")
             context.init(null, null, SecureRandom())
             val ssl = context.socketFactory.createSocket(
@@ -140,7 +142,7 @@ object SecProxy {
                 }
             }
             ssl.sslParameters = params
-            ssl.startHandshake()
+            handshake(ssl, raw, timeoutMs)
             if (!useSni) {
                 val matches = HttpsURLConnection.getDefaultHostnameVerifier()
                     .verify(exit.verifyName, ssl.session)
@@ -149,6 +151,7 @@ object SecProxy {
                     error("Сертификат прокси не для ${exit.verifyName}")
                 }
             }
+            ssl.soTimeout = timeoutMs
             ssl.outputStream.write(SecConnect.request(host, port, exit.username, exit.password))
             ssl.outputStream.flush()
             val prefix = SecConnect.read(ssl.inputStream)
@@ -157,6 +160,23 @@ object SecProxy {
         } catch (error: Throwable) {
             runCatching { raw.close() }
             throw error
+        }
+    }
+
+    private fun handshake(ssl: SSLSocket, raw: Socket, timeoutMs: Int) {
+        val killer = Thread({
+            try {
+                Thread.sleep(timeoutMs.toLong())
+                runCatching { raw.close() }
+            } catch (_: InterruptedException) {
+            }
+        }, "sec-proxy-tls")
+        killer.isDaemon = true
+        killer.start()
+        try {
+            ssl.startHandshake()
+        } finally {
+            killer.interrupt()
         }
     }
 }

@@ -465,20 +465,27 @@ class TunnelController(
     }
 
     private fun fetchExit(region: String): SecExit {
-        val http = SecHttp()
-        val pool = Executors.newSingleThreadExecutor()
-        return try {
-            val future = pool.submit<SecExit> { SecTunnelApi.lease(region, http) }
+        var last: Throwable? = null
+        repeat(2) {
+            val http = SecHttp()
+            val pool = Executors.newSingleThreadExecutor()
             try {
-                future.get(18, TimeUnit.SECONDS)
-            } catch (timeout: TimeoutException) {
+                val future = pool.submit<SecExit> { SecTunnelApi.lease(region, http) }
+                try {
+                    return future.get(22, TimeUnit.SECONDS)
+                } catch (timeout: TimeoutException) {
+                    http.close()
+                    future.cancel(true)
+                    last = IllegalStateException("Таймаут sec-tunnel")
+                } catch (error: Throwable) {
+                    last = unwrap(error)
+                }
+            } finally {
+                pool.shutdownNow()
                 http.close()
-                future.cancel(true)
-                throw IllegalStateException("Таймаут sec-tunnel")
             }
-        } finally {
-            pool.shutdownNow()
         }
+        throw last ?: IllegalStateException("Таймаут sec-tunnel")
     }
 
     private fun unwrap(error: Throwable): Throwable {
@@ -532,6 +539,7 @@ class TunnelController(
             raw.contains("DNS_RESOLUTION", true) -> "Не удалось резолвить сервер"
             raw.contains("TUN_CREATION", true) -> "Не удалось создать туннель"
             raw.contains("GO_ACTIVATION", true) -> "AmneziaWG не поднялся — проверь конфиг"
+            raw.contains("timed out", true) -> "Сервер sec-tunnel не ответил"
             else -> raw.take(180)
         }
     }

@@ -12,6 +12,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.io.OutputStream
+import java.net.Inet4Address
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -19,6 +20,7 @@ import java.net.URL
 import java.net.URLEncoder
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import javax.net.ssl.HttpsURLConnection
 import javax.net.ssl.SNIHostName
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLSocket
@@ -286,28 +288,86 @@ class SecHttp : AutoCloseable {
         challenge = null
         nonce = null
         nc = 0
-        val tcp = Socket()
-        tcp.tcpNoDelay = true
-        tcp.connect(InetSocketAddress(resolveHost(), 443), 10_000)
-        tcp.soTimeout = 15_000
-        val context = SSLContext.getInstance("TLS")
-        context.init(null, null, SecureRandom())
-        val opened = context.socketFactory.createSocket(tcp, HOST, 443, true) as SSLSocket
-        val params = opened.sslParameters
-        params.serverNames = listOf(SNIHostName(HOST))
-        params.endpointIdentificationAlgorithm = "HTTPS"
-        opened.sslParameters = params
-        opened.soTimeout = 15_000
-        opened.startHandshake()
-        socket = opened
-        input = opened.inputStream
-        output = opened.outputStream
+        var last: Throwable? = null
+        for (address in resolveHosts()) {
+            for (useSni in listOf(true, false)) {
+                try {
+                    open(address, useSni)
+                    return
+                } catch (error: Throwable) {
+                    close()
+                    last = error
+                }
+            }
+        }
+        throw last ?: IllegalStateException("Нет соединения с $HOST")
     }
 
-    private fun resolveHost(): InetAddress {
+    private fun open(address: InetAddress, useSni: Boolean) {
+        val tcp = Socket()
+        try {
+            tcp.tcpNoDelay = true
+            tcp.connect(InetSocketAddress(address, 443), 10_000)
+            // A timeout set before the handshake makes the first response read
+            // fail on Android with "Read timed out" even when bytes are waiting.
+            tcp.soTimeout = 0
+            val context = SSLContext.getInstance("TLS")
+            context.init(null, null, SecureRandom())
+            val opened = context.socketFactory.createSocket(
+                tcp,
+                if (useSni) HOST else "",
+                443,
+                true,
+            ) as SSLSocket
+            val params = opened.sslParameters
+            if (useSni) {
+                params.serverNames = listOf(SNIHostName(HOST))
+                params.endpointIdentificationAlgorithm = "HTTPS"
+            } else {
+                params.endpointIdentificationAlgorithm = null
+                runCatching { params.serverNames = emptyList() }
+            }
+            opened.sslParameters = params
+            handshake(opened, tcp)
+            if (!useSni) {
+                val matches = HttpsURLConnection.getDefaultHostnameVerifier().verify(HOST, opened.session)
+                if (!matches) error("Сертификат sec-tunnel не совпал")
+            }
+            opened.soTimeout = 20_000
+            socket = opened
+            input = opened.inputStream
+            output = opened.outputStream
+        } catch (error: Throwable) {
+            if (socket == null) runCatching { tcp.close() }
+            throw error
+        }
+    }
+
+    private fun handshake(opened: SSLSocket, tcp: Socket) {
+        val killer = Thread({
+            try {
+                Thread.sleep(20_000)
+                runCatching { tcp.close() }
+            } catch (_: InterruptedException) {
+            }
+        }, "sec-tls")
+        killer.isDaemon = true
+        killer.start()
+        try {
+            opened.startHandshake()
+        } finally {
+            killer.interrupt()
+        }
+    }
+
+    private fun resolveHosts(): List<InetAddress> {
         val pool = Executors.newSingleThreadExecutor()
         return try {
-            pool.submit<InetAddress> { InetAddress.getByName(HOST) }.get(8, TimeUnit.SECONDS)
+            pool.submit<List<InetAddress>> {
+                val found = InetAddress.getAllByName(HOST).toList()
+                val v4 = found.filterIsInstance<Inet4Address>()
+                v4.ifEmpty { found }
+            }.get(8, TimeUnit.SECONDS)
         } catch (timeout: java.util.concurrent.TimeoutException) {
             throw IllegalStateException("Не удалось найти $HOST")
         } finally {
@@ -369,11 +429,13 @@ class SecHttp : AutoCloseable {
     private fun readResponse(): HttpResult {
         val source = input ?: error("Нет соединения с sec-tunnel")
         val headerBytes = ByteArrayOutputStream()
-        val one = ByteArray(1)
+        val chunk = ByteArray(2048)
         var end = -1
         while (headerBytes.size() < 16_384) {
-            if (source.read(one) < 0) error("sec-tunnel закрыл соединение")
-            headerBytes.write(one, 0, 1)
+            val count = source.read(chunk)
+            if (count < 0) error("sec-tunnel закрыл соединение")
+            if (count == 0) continue
+            headerBytes.write(chunk, 0, count)
             end = headerEnd(headerBytes.toByteArray())
             if (end >= 0) break
         }

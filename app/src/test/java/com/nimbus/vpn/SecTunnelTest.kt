@@ -93,6 +93,8 @@ class SecTunnelTest {
         assertThat(text).doesNotContain("secret\r\n")
         val raw = "HTTP/1.1 200 OK\r\n\r\nxyz".toByteArray(Charsets.ISO_8859_1)
         assertThat(SecConnect.headerEnd(raw)).isEqualTo(raw.size - 3)
+        val prefix = SecConnect.read(java.io.ByteArrayInputStream(raw))
+        assertThat(prefix.toString(Charsets.ISO_8859_1)).isEqualTo("xyz")
     }
 
     @Test
