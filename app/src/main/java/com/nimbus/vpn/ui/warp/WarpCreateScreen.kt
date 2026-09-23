@@ -32,7 +32,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,14 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.nimbus.vpn.data.ServerPing
 import com.nimbus.vpn.data.WarpConfigBuilder
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import com.nimbus.vpn.tunnel.ConnectionStatus
 import com.nimbus.vpn.ui.WarpUiState
 import com.nimbus.vpn.ui.coach.DogDock
@@ -83,10 +75,6 @@ fun WarpCreateScreen(
 ) {
     var countryId by remember { mutableStateOf("de") }
     var lte by remember { mutableStateOf(false) }
-    var scanning by remember { mutableStateOf(false) }
-    var pings by remember { mutableStateOf<Map<String, Int?>>(emptyMap()) }
-    var autoNote by remember { mutableStateOf<String?>(null) }
-    val scope = rememberCoroutineScope()
     val country = WarpConfigBuilder.country(countryId)
     val lteAvailable = country?.hasLte == true
     val previewName = WarpConfigBuilder.resolve(countryId, lte && lteAvailable).name
@@ -129,67 +117,6 @@ fun WarpCreateScreen(
             ) {
                 Spacer(Modifier.height(8.dp))
                 Text("WARP", color = InkMuted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
-                val autoPress = rememberPress(0.97f)
-                Button(
-                    interactionSource = autoPress.interaction,
-                    onClick = {
-                        if (scanning || warp.generating) return@Button
-                        scanning = true
-                        autoNote = null
-                        scope.launch {
-                            val measured = withContext(Dispatchers.IO) {
-                                coroutineScope {
-                                    WarpConfigBuilder.autoCountries().map { item ->
-                                        async { item.id to ServerPing.ping(item.host) }
-                                    }.awaitAll().toMap()
-                                }
-                            }
-                            pings = measured
-                            val winner = WarpConfigBuilder.fastest(measured)
-                            if (winner == null) {
-                                autoNote = "Никто не ответил"
-                            } else {
-                                countryId = winner
-                                lte = false
-                                val ms = measured[winner]
-                                val name = WarpConfigBuilder.country(winner)?.name ?: winner
-                                autoNote = "$name · $ms мс"
-                            }
-                            scanning = false
-                        }
-                    },
-                    enabled = !scanning && !warp.generating,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Paper,
-                        contentColor = Ink,
-                        disabledContainerColor = Line,
-                        disabledContentColor = InkMuted,
-                    ),
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp)
-                        .pressScale(autoPress.scale)
-                        .border(1.dp, Line, RoundedCornerShape(16.dp)),
-                ) {
-                    if (scanning) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.height(18.dp),
-                            color = Accent,
-                            strokeWidth = 2.dp,
-                        )
-                        Spacer(Modifier.padding(6.dp))
-                        Text("Пингую…", fontWeight = FontWeight.SemiBold)
-                    } else {
-                        Text("Авто", fontWeight = FontWeight.SemiBold)
-                    }
-                }
-                Text(
-                    autoNote ?: "Пинг всех стран, кроме России, и выбор самой быстрой",
-                    color = if (autoNote == "Никто не ответил") Danger else InkMuted,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(top = 6.dp, bottom = 12.dp),
-                )
                 WarpConfigBuilder.countries.chunked(2).forEach { row ->
                     Row(
                         Modifier
@@ -198,18 +125,12 @@ fun WarpCreateScreen(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         row.forEach { item ->
-                            val ping = pings[item.id]
                             CountryTile(
                                 flag = item.flag,
                                 name = item.name,
-                                detail = when {
-                                    ping != null -> "$ping мс"
-                                    item.id in pings -> "нет ответа"
-                                    item.hasLte -> "есть LTE"
-                                    else -> "обычный"
-                                },
+                                detail = if (item.hasLte) "есть LTE" else "обычный",
                                 selected = item.id == countryId,
-                                enabled = !warp.generating && !scanning,
+                                enabled = !warp.generating,
                                 onClick = { countryId = item.id },
                                 modifier = Modifier.weight(1f),
                             )
@@ -237,7 +158,7 @@ fun WarpCreateScreen(
                     Switch(
                         checked = lte && lteAvailable,
                         onCheckedChange = { lte = it },
-                        enabled = lteAvailable && !warp.generating && !scanning,
+                        enabled = lteAvailable && !warp.generating,
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Canvas,
                             checkedTrackColor = Accent,
@@ -264,7 +185,7 @@ fun WarpCreateScreen(
                     onClick = {
                         onCreate("warp", countryId, lte && lteAvailable)
                     },
-                    enabled = !warp.generating && !scanning,
+                    enabled = !warp.generating,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Accent,
                         contentColor = Canvas,

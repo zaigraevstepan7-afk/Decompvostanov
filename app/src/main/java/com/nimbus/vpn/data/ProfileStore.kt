@@ -23,6 +23,7 @@ class ProfileStore(context: Context) {
 
     init {
         dropSec()
+        ensureAuto()
     }
 
     val profiles: List<VpnProfile>
@@ -50,6 +51,7 @@ class ProfileStore(context: Context) {
     }
 
     fun delete(id: String) = synchronized(this) {
+        if (id == WarpAutoProfile.ID) return
         val current = _index.value
         val next = current.profiles.filterNot { it.id == id }
         persist(
@@ -69,7 +71,9 @@ class ProfileStore(context: Context) {
     }
 
     fun upsertAll(incoming: List<VpnProfile>, activeId: String? = incoming.firstOrNull()?.id) = synchronized(this) {
-        val clean = incoming.filterNot { SecTunnelProfile.isSec(it.rawConfig) }
+        val clean = incoming.filterNot {
+            SecTunnelProfile.isSec(it.rawConfig) || it.id == WarpAutoProfile.ID
+        }
         if (clean.isEmpty()) return
         val current = _index.value
         val incomingIds = clean.map { it.id }.toSet()
@@ -81,6 +85,21 @@ class ProfileStore(context: Context) {
                     ?: current.activeId
                     ?: clean.first().id,
             ),
+        )
+    }
+
+    private fun ensureAuto() = synchronized(this) {
+        val pinned = pinAuto(_index.value)
+        if (pinned != _index.value) persist(pinned)
+    }
+
+    private fun pinAuto(index: ProfileIndex): ProfileIndex {
+        val rest = index.profiles.filterNot { it.id == WarpAutoProfile.ID }
+        val kept = index.profiles.firstOrNull { it.id == WarpAutoProfile.ID && WarpAutoProfile.isAuto(it.rawConfig) }
+        val auto = kept ?: WarpAutoProfile.create()
+        return index.copy(
+            profiles = listOf(auto) + rest,
+            activeId = index.activeId ?: auto.id,
         )
     }
 
@@ -103,10 +122,11 @@ class ProfileStore(context: Context) {
     }
 
     private fun persist(index: ProfileIndex) {
+        val pinned = pinAuto(index)
         runCatching {
-            prefs.edit().putString(KEY, json.encodeToString(ProfileIndex.serializer(), index)).apply()
+            prefs.edit().putString(KEY, json.encodeToString(ProfileIndex.serializer(), pinned)).apply()
         }.onFailure { Log.e(TAG, "Failed to persist profiles", it) }
-        _index.value = index
+        _index.value = pinned
     }
 
     companion object {

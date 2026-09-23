@@ -13,6 +13,7 @@ import com.nimbus.vpn.data.SecTunnelProfile
 import com.nimbus.vpn.data.SettingsRepository
 import com.nimbus.vpn.data.SplitTunnel
 import com.nimbus.vpn.data.VpnProfile
+import com.nimbus.vpn.data.WarpAutoProfile
 import com.nimbus.vpn.CrashLog
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -236,10 +237,19 @@ class TunnelController(
         SecTunnelRuntime.requestStop(context)
 
         val gate = backendOnMain()
+        var sessionLabel = profile.name
         val result = withContext(Dispatchers.IO) {
             runCatching {
                 if (userStopped && !userInitiated) error("Остановлено")
-                val prepared = ConfigParser.withKeepaliveIfMissing(profile.rawConfig)
+                val raw = if (WarpAutoProfile.isAuto(profile.rawConfig)) {
+                    val choice = WarpAutoProfile.materialize()
+                    sessionLabel = "Авто · ${choice.country}"
+                    _ui.update { it.copy(exitPlace = "${choice.country} · ${choice.pingMs} мс") }
+                    choice.config
+                } else {
+                    profile.rawConfig
+                }
+                val prepared = ConfigParser.withKeepaliveIfMissing(raw)
                 val preview = ConfigParser.parse(prepared)
                 if (!preview.canConnect) {
                     error(preview.issues.joinToString("\n"))
@@ -276,7 +286,7 @@ class TunnelController(
                     backendLabel = _rootStatus.value.message,
                 )
             }
-            BozyaKeepAliveService.start(context, profile.name)
+            BozyaKeepAliveService.start(context, sessionLabel)
             startStatsLoop()
         }.onFailure { err ->
             Log.e(TAG, "Connect failed", err)

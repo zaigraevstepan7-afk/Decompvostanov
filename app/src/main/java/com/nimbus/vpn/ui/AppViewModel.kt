@@ -15,6 +15,7 @@ import com.nimbus.vpn.data.SecTunnelApi
 import com.nimbus.vpn.data.SecTunnelProfile
 import com.nimbus.vpn.data.ServerPing
 import com.nimbus.vpn.data.VpnProfile
+import com.nimbus.vpn.data.WarpAutoProfile
 import com.nimbus.vpn.data.WarpGenerator
 import com.nimbus.vpn.tunnel.ConnectionStatus
 import com.nimbus.vpn.ui.coach.CoachStep
@@ -152,6 +153,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun pingServers() {
         if (_ping.value.runningIds.isNotEmpty()) return
         val snapshot = app.container.profiles.profiles
+            .filterNot { WarpAutoProfile.isAuto(it.rawConfig) }
         if (snapshot.isEmpty()) return
         _ping.update { it.copy(runningIds = snapshot.map { profile -> profile.id }.toSet()) }
         viewModelScope.launch {
