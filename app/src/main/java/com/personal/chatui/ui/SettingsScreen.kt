@@ -16,42 +16,18 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.annotation.DrawableRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.outlined.Logout
-import androidx.compose.material.icons.outlined.AdminPanelSettings
-import androidx.compose.material.icons.outlined.Apps
-import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material.icons.outlined.BarChart
-import androidx.compose.material.icons.outlined.Brush
-import androidx.compose.material.icons.outlined.BugReport
-import androidx.compose.material.icons.outlined.Campaign
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Email
-import androidx.compose.material.icons.outlined.FamilyRestroom
-import androidx.compose.material.icons.outlined.GraphicEq
-import androidx.compose.material.icons.outlined.HealthAndSafety
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Laptop
-import androidx.compose.material.icons.automirrored.outlined.MenuBook
-import androidx.compose.material.icons.outlined.LightMode
-import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.SdStorage
-import androidx.compose.material.icons.outlined.SentimentSatisfied
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Shield
-import androidx.compose.material.icons.outlined.Storage
-import androidx.compose.material.icons.outlined.VerifiedUser
-import androidx.compose.material.icons.outlined.Work
 import androidx.compose.material3.Icon
+import com.personal.chatui.R
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -83,26 +59,26 @@ fun SettingsScreen(
             item { SectionLabel("Мой ChatGPT") }
             item {
                 CardBlock {
-                    IconRow(Icons.Outlined.SentimentSatisfied, "Персонализация", true) { onOpen(Routes.Personalization) }
-                    IconRow(Icons.AutoMirrored.Outlined.MenuBook, "Память", true) { onOpen(Routes.Memory) }
-                    IconRow(Icons.Outlined.Apps, "Плагины", false) { onOpen(Routes.Plugins) }
+                    IconRow(R.drawable.ic_personal, "Персонализация", true) { onOpen(Routes.Personalization) }
+                    IconRow(R.drawable.ic_memory, "Память", true) { onOpen(Routes.Memory) }
+                    IconRow(R.drawable.ic_plugins_set, "Плагины", false) { onOpen(Routes.Plugins) }
                 }
             }
             item { SectionLabel("Учетная запись") }
             item {
                 CardBlock {
-                    IconRow(Icons.Outlined.Work, "Рабочая область", true, subtitle = "Личное") { onOpen(Routes.Workspace) }
-                    IconRow(Icons.Outlined.AutoAwesome, "Изменить план", true) { onOpen(Routes.Plan) }
-                    IconRow(Icons.Outlined.BarChart, "Использование и лимиты", true) { onOpen(Routes.Usage) }
-                    IconRow(Icons.Outlined.FamilyRestroom, "Родительский контроль", true) { onOpen(Routes.Parental) }
-                    IconRow(Icons.Outlined.Email, "Электронная почта", true, subtitle = viewModel.email) { onOpen(Routes.Email) }
-                    IconRow(Icons.Outlined.AdminPanelSettings, "Проверка возраста", false) { onOpen(Routes.Age) }
+                    IconRow(R.drawable.ic_work, "Рабочая область", true, subtitle = "Личное") { onOpen(Routes.Workspace) }
+                    IconRow(R.drawable.ic_plan, "Изменить план", true) { onOpen(Routes.Plan) }
+                    IconRow(R.drawable.ic_usage, "Использование и лимиты", true) { onOpen(Routes.Usage) }
+                    IconRow(R.drawable.ic_parental, "Родительский контроль", true) { onOpen(Routes.Parental) }
+                    IconRow(R.drawable.ic_email, "Электронная почта", true, subtitle = viewModel.email) { onOpen(Routes.Email) }
+                    IconRow(R.drawable.ic_shield, "Проверка возраста", false) { onOpen(Routes.Age) }
                 }
             }
             item { ScreenGap() }
             item {
                 CardBlock {
-                    IconRow(Icons.Outlined.LightMode, "Внешний вид", false, trailing = { Chevron() }) {
+                    IconRow(R.drawable.ic_sun, "Внешний вид", false, trailing = { Chevron() }) {
                         onOpen(Routes.Appearance)
                     }
                 }
@@ -111,7 +87,7 @@ fun SettingsScreen(
             item {
                 CardBlock {
                     IconRow(
-                        icon = Icons.Outlined.Brush,
+                        iconRes = R.drawable.ic_brush,
                         title = "Акцентный цвет",
                         showDivider = false,
                         trailing = { AccentValue(viewModel.accent.label) },
@@ -121,18 +97,18 @@ fun SettingsScreen(
             item { ScreenGap() }
             item {
                 CardBlock {
-                    IconRow(Icons.Outlined.Settings, "Общие", true) { onOpen(Routes.General) }
-                    IconRow(Icons.Outlined.Notifications, "Уведомления", true) { onOpen(Routes.Notifications) }
-                    IconRow(Icons.Outlined.GraphicEq, "Голос", true) { onOpen(Routes.Voice) }
-                    IconRow(Icons.Outlined.HealthAndSafety, "Безопасность и благополучие", true) { onOpen(Routes.Wellbeing) }
-                    IconRow(Icons.Outlined.Shield, "Безопасность и вход", true) { onOpen(Routes.Security) }
-                    IconRow(Icons.Outlined.Laptop, "Удалённое управление", true) { onOpen(Routes.Remote) }
-                    IconRow(Icons.Outlined.SdStorage, "Хранилище", true) { onOpen(Routes.Storage) }
-                    IconRow(Icons.Outlined.VerifiedUser, "Центр конфиденциальности", true) { onOpen(Routes.Privacy) }
-                    IconRow(Icons.Outlined.Storage, "Управление данными", true) { onOpen(Routes.Data) }
-                    IconRow(Icons.Outlined.Campaign, "Управление рекламой", true) { onOpen(Routes.Ads) }
-                    IconRow(Icons.Outlined.BugReport, "Сообщить об ошибке", true) { onOpen(Routes.Bug) }
-                    IconRow(Icons.Outlined.Info, "Информация", false) { onOpen(Routes.About) }
+                    IconRow(R.drawable.ic_gear, "Общие", true) { onOpen(Routes.General) }
+                    IconRow(R.drawable.ic_bell, "Уведомления", true) { onOpen(Routes.Notifications) }
+                    IconRow(R.drawable.ic_voice, "Голос", true) { onOpen(Routes.Voice) }
+                    IconRow(R.drawable.ic_wellbeing, "Безопасность и благополучие", true) { onOpen(Routes.Wellbeing) }
+                    IconRow(R.drawable.ic_shield, "Безопасность и вход", true) { onOpen(Routes.Security) }
+                    IconRow(R.drawable.ic_laptop, "Удалённое управление", true) { onOpen(Routes.Remote) }
+                    IconRow(R.drawable.ic_storage, "Хранилище", true) { onOpen(Routes.Storage) }
+                    IconRow(R.drawable.ic_privacy, "Центр конфиденциальности", true) { onOpen(Routes.Privacy) }
+                    IconRow(R.drawable.ic_data, "Управление данными", true) { onOpen(Routes.Data) }
+                    IconRow(R.drawable.ic_ads, "Управление рекламой", true) { onOpen(Routes.Ads) }
+                    IconRow(R.drawable.ic_bug, "Сообщить об ошибке", true) { onOpen(Routes.Bug) }
+                    IconRow(R.drawable.ic_info, "Информация", false) { onOpen(Routes.About) }
                 }
             }
             item {
@@ -147,11 +123,10 @@ fun SettingsScreen(
                         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Icon(
-                            Icons.AutoMirrored.Outlined.Logout,
-                            contentDescription = null,
-                            tint = palette.logout,
+                        CutIcon(
+                            R.drawable.ic_logout,
                             modifier = Modifier.size(22.dp),
+                            tint = palette.logout,
                         )
                         Spacer(Modifier.width(14.dp))
                         Text("Выйти", color = palette.logout, fontSize = 16.sp)
@@ -188,7 +163,7 @@ private fun ProfileHeader(name: String, onEdit: () -> Unit) {
                     .background(palette.input),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Outlined.Edit, contentDescription = "Изменить", tint = palette.text, modifier = Modifier.size(14.dp))
+                CutIcon(R.drawable.ic_compose, modifier = Modifier.size(14.dp), description = "Изменить")
             }
         }
         Text(
@@ -203,7 +178,7 @@ private fun ProfileHeader(name: String, onEdit: () -> Unit) {
 
 @Composable
 private fun IconRow(
-    icon: ImageVector,
+    @DrawableRes iconRes: Int,
     title: String,
     showDivider: Boolean,
     subtitle: String? = null,
@@ -211,7 +186,7 @@ private fun IconRow(
     onClick: () -> Unit,
 ) {
     SettingRow(
-        icon = icon,
+        iconRes = iconRes,
         title = title,
         subtitle = subtitle,
         showDivider = showDivider,

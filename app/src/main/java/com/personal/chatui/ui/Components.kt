@@ -19,6 +19,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.Image
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.HorizontalDivider
@@ -31,7 +33,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -128,8 +133,24 @@ fun SectionLabel(text: String) {
 }
 
 @Composable
+fun CutIcon(
+    @DrawableRes res: Int,
+    modifier: Modifier = Modifier,
+    description: String? = null,
+    tint: Color = LocalPalette.current.text,
+) {
+    Image(
+        painter = painterResource(res),
+        contentDescription = description,
+        modifier = modifier,
+        contentScale = ContentScale.Fit,
+        colorFilter = ColorFilter.tint(tint),
+    )
+}
+
+@Composable
 fun SettingRow(
-    icon: ImageVector,
+    @DrawableRes iconRes: Int,
     title: String,
     onClick: () -> Unit,
     subtitle: String? = null,
@@ -143,10 +164,10 @@ fun SettingRow(
         Row(
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .padding(horizontal = 16.dp, vertical = 13.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(22.dp))
+            CutIcon(iconRes, modifier = Modifier.size(22.dp), tint = iconTint)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(title, color = titleColor, fontSize = 16.sp)
