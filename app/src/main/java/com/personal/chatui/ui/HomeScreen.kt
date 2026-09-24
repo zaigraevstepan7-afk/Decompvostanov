@@ -10,6 +10,8 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -42,6 +44,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -52,6 +55,7 @@ import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.PhotoLibrary
+import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -73,6 +77,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.TransformOrigin
@@ -87,7 +92,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
 import com.personal.chatui.R
+import java.io.ByteArrayOutputStream
 import com.personal.chatui.data.AppViewModel
 import com.personal.chatui.data.ChatMessage
 import com.personal.chatui.ui.theme.LocalPalette
@@ -131,6 +142,7 @@ fun HomeScreen(
                 snackbar = snackbar,
                 onMenu = { drawerOpen = true },
                 onConnect = { onNavigate(Routes.Connect) },
+                onPlugins = { onNavigate(Routes.Plugins) },
             )
             if (!drawerOpen) {
                 Box(
@@ -172,6 +184,7 @@ fun HomeScreen(
         ) {
             DrawerContent(
                 viewModel = viewModel,
+                shift = progress,
                 onNavigate = { route ->
                     drawerOpen = false
                     onNavigate(route)
@@ -222,6 +235,7 @@ fun HomeScreen(
 @Composable
 private fun DrawerContent(
     viewModel: AppViewModel,
+    shift: Float,
     onNavigate: (String) -> Unit,
     onChat: (Long) -> Unit,
     onNewChat: () -> Unit,
@@ -293,12 +307,17 @@ private fun DrawerContent(
             )
             Spacer(Modifier.height(screenH * 0.016f))
             LazyColumn(Modifier.weight(1f)) {
-                items(viewModel.chats, key = { it.id }) { chat ->
+                itemsIndexed(viewModel.chats, key = { _, chat -> chat.id }) { index, chat ->
                     val selected = chat.id == viewModel.currentChatId
+                    val appear = ((shift - index * 0.045f) / 0.42f).coerceIn(0f, 1f)
                     Box(
                         Modifier
                             .fillMaxWidth()
                             .height(rowH)
+                            .graphicsLayer {
+                                alpha = appear
+                                translationX = (1f - appear) * -36.dp.toPx()
+                            }
                             .padding(horizontal = screenW * 0.018f)
                             .clip(RoundedCornerShape(rowH / 2))
                             .background(if (selected) palette.input else Color.Transparent)
@@ -395,12 +414,47 @@ private fun ChatPane(
     snackbar: SnackbarHostState,
     onMenu: () -> Unit,
     onConnect: () -> Unit,
+    onPlugins: () -> Unit,
 ) {
     val palette = LocalPalette.current
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     val thread = viewModel.chats.firstOrNull { it.id == viewModel.currentChatId }
     var draft by remember(viewModel.currentChatId) { mutableStateOf("") }
-    var sheet by remember { mutableStateOf(false) }
+    var menu by remember { mutableStateOf(false) }
+    fun keepJpeg(bitmap: Bitmap?) {
+        if (bitmap == null) return
+        val scaled = if (bitmap.width > 1280) {
+            val height = (bitmap.height * 1280f / bitmap.width).toInt().coerceAtLeast(1)
+            Bitmap.createScaledBitmap(bitmap, 1280, height, true)
+        } else {
+            bitmap
+        }
+        val stream = ByteArrayOutputStream()
+        scaled.compress(Bitmap.CompressFormat.JPEG, 82, stream)
+        viewModel.pendingJpeg = stream.toByteArray()
+    }
+    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
+        menu = false
+        keepJpeg(bitmap)
+        if (bitmap != null && draft.isBlank()) draft = "Что на этом фото?"
+    }
+    val gallery = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        menu = false
+        if (uri == null) return@rememberLauncherForActivityResult
+        val bitmap = context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
+        keepJpeg(bitmap)
+        if (bitmap != null && draft.isBlank()) draft = "Что на этом фото?"
+    }
+    val files = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        menu = false
+        if (uri == null) return@rememberLauncherForActivityResult
+        val name = context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            val index = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+            if (index >= 0 && cursor.moveToFirst()) cursor.getString(index) else null
+        } ?: "файл"
+        draft = if (draft.isBlank()) "Файл: $name" else "$draft\nФайл: $name"
+    }
     val showSuggestions = viewModel.showSuggestions && draft.isEmpty() && (thread == null || thread.messages.isEmpty())
     val hint = if (thread != null && thread.messages.isNotEmpty()) "Ответить ChatGPT" else "Спросить ChatGPT"
 
@@ -474,6 +528,18 @@ private fun ChatPane(
                 }
             }
 
+            if (viewModel.deepThink) {
+                Text(
+                    "Размышлять глубже",
+                    color = palette.accent,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier
+                        .padding(start = side, bottom = 2.dp)
+                        .clickable { viewModel.deepThink = false },
+                )
+            }
+
             val hasText = draft.isNotBlank()
             Row(
                 Modifier
@@ -490,7 +556,7 @@ private fun ChatPane(
                     Modifier
                         .size(voice)
                         .clip(CircleShape)
-                        .clickable { sheet = true },
+                        .clickable { menu = !menu },
                     contentAlignment = Alignment.Center,
                 ) {
                     CutIcon(R.drawable.ic_plus, modifier = Modifier.size(voice * 0.46f), description = "Вложение")
@@ -569,27 +635,41 @@ private fun ChatPane(
                 }
             }
         }
-    }
-
-    if (sheet) {
-        ModalBottomSheet(
-            onDismissRequest = { sheet = false },
-            containerColor = palette.card,
-            contentColor = palette.text,
+        if (menu) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() },
+                    ) { menu = false },
+            )
+        }
+        AnimatedVisibility(
+            visible = menu,
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(start = side, end = screenWidth * 0.12f, bottom = 18.dp),
+            enter = fadeIn(tween(140)) +
+                scaleIn(tween(190), initialScale = 0.86f, transformOrigin = TransformOrigin(0f, 1f)) +
+                slideInVertically(tween(190)) { it / 4 },
+            exit = fadeOut(tween(110)) +
+                scaleOut(tween(120), targetScale = 0.92f, transformOrigin = TransformOrigin(0f, 1f)),
         ) {
-            SheetItem(Icons.Outlined.PhotoCamera, "Камера") {
-                sheet = false
-                tell("Камера в этой копии не открывается")
-            }
-            SheetItem(Icons.Outlined.PhotoLibrary, "Фотографии") {
-                sheet = false
-                tell("Галерея в этой копии не открывается")
-            }
-            SheetItem(Icons.Outlined.AttachFile, "Файл") {
-                sheet = false
-                tell("Файлы в этой копии не прикрепляются")
-            }
-            Spacer(Modifier.height(24.dp))
+            AttachCard(
+                onCamera = { camera.launch(null) },
+                onPhoto = { gallery.launch("image/*") },
+                onFile = { files.launch("*/*") },
+                onPlugins = {
+                    menu = false
+                    onPlugins()
+                },
+                onDeep = {
+                    viewModel.deepThink = !viewModel.deepThink
+                    menu = false
+                },
+            )
         }
     }
 }
@@ -669,17 +749,76 @@ private fun Suggestion(@DrawableRes icon: Int, title: String, onClick: () -> Uni
 }
 
 @Composable
-private fun SheetItem(icon: ImageVector, title: String, onClick: () -> Unit) {
+private fun AttachCard(
+    onCamera: () -> Unit,
+    onPhoto: () -> Unit,
+    onFile: () -> Unit,
+    onPlugins: () -> Unit,
+    onDeep: () -> Unit,
+) {
+    val palette = LocalPalette.current
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .shadow(18.dp, RoundedCornerShape(28.dp))
+            .clip(RoundedCornerShape(28.dp))
+            .background(palette.bg)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+    ) {
+        AttachRow(Icons.Outlined.PhotoCamera, "Камера", onCamera)
+        AttachRow(Icons.Outlined.PhotoLibrary, "Фото", onPhoto)
+        AttachRow(Icons.Outlined.AttachFile, "Файлы", onFile)
+        AttachPluginRow(onPlugins)
+        AttachRow(Icons.Outlined.Psychology, "Размышлять глубже", onDeep)
+    }
+}
+
+@Composable
+private fun AttachRow(icon: ImageVector, title: String, onClick: () -> Unit) {
     val palette = LocalPalette.current
     Row(
         Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 14.dp),
+            .padding(vertical = 7.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(icon, contentDescription = null, tint = palette.text, modifier = Modifier.size(22.dp))
+        Box(
+            Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(palette.input),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icon, contentDescription = null, tint = palette.text, modifier = Modifier.size(22.dp))
+        }
         Spacer(Modifier.width(14.dp))
-        Text(title, color = palette.text, fontSize = 16.sp)
+        Text(title, color = palette.text, fontSize = 17.sp)
+    }
+}
+
+@Composable
+private fun AttachPluginRow(onClick: () -> Unit) {
+    val palette = LocalPalette.current
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 7.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(palette.input),
+            contentAlignment = Alignment.Center,
+        ) {
+            CutIcon(R.drawable.ic_plugins, modifier = Modifier.size(22.dp))
+        }
+        Spacer(Modifier.width(14.dp))
+        Text("Плагины", color = palette.text, fontSize = 17.sp)
     }
 }

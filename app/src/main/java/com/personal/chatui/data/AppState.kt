@@ -1,11 +1,17 @@
 package com.personal.chatui.data
 
+import android.app.Application
+import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 enum class ThemeMode(val label: String) {
     System("Как в системе"),
@@ -38,7 +44,8 @@ data class Connector(
     val enabled: Boolean,
 )
 
-class AppViewModel : ViewModel() {
+class AppViewModel(app: Application) : AndroidViewModel(app) {
+    private val prefs = app.getSharedPreferences("chatui", Context.MODE_PRIVATE)
     var themeMode by mutableStateOf(ThemeMode.Light)
     var accent by mutableStateOf(Accent.Blue)
     var displayName by mutableStateOf("Степан")
@@ -59,6 +66,9 @@ class AppViewModel : ViewModel() {
     var analytics by mutableStateOf(false)
     var voice by mutableStateOf("Juniper")
     var signedIn by mutableStateOf(true)
+    var geminiKey by mutableStateOf(prefs.getString("gemini_key", "") ?: "")
+    var deepThink by mutableStateOf(false)
+    var pendingJpeg by mutableStateOf<ByteArray?>(null)
     var bugReport by mutableStateOf("")
     var bugSaved by mutableStateOf(false)
     var messagesSent by mutableIntStateOf(0)
@@ -79,30 +89,57 @@ class AppViewModel : ViewModel() {
     private var nextChatId = 100L
     private var nextMessageId = 1000L
 
+    fun saveGeminiKey(value: String) {
+        geminiKey = value.trim()
+        prefs.edit().putString("gemini_key", geminiKey).apply()
+    }
+
     fun send(raw: String) {
         val text = raw.trim()
         if (text.isEmpty()) return
         messagesSent++
         val userMessage = ChatMessage(nextMessageId++, true, text)
-        val notice = ChatMessage(
-            nextMessageId++,
-            false,
-            "Сообщение осталось на устройстве. Модель сюда не подключена.",
-        )
-        val id = currentChatId
-        if (id == null) {
+        val pendingId = nextMessageId++
+        val pending = ChatMessage(pendingId, false, "…")
+        val chatId = currentChatId
+        val jpeg = pendingJpeg
+        pendingJpeg = null
+        if (chatId == null) {
             val newId = nextChatId++
             val title = text.lineSequence().first().take(42)
-            chats = listOf(ChatThread(newId, title, listOf(userMessage, notice))) + chats
+            chats = listOf(ChatThread(newId, title, listOf(userMessage, pending))) + chats
             currentChatId = newId
+            ask(newId, pendingId, listOf(userMessage), jpeg)
         } else {
+            val prior = chats.firstOrNull { it.id == chatId }?.messages.orEmpty()
             chats = chats.map { thread ->
-                if (thread.id != id) {
+                if (thread.id != chatId) thread else thread.copy(messages = thread.messages + userMessage + pending)
+            }
+            ask(chatId, pendingId, prior + userMessage, jpeg)
+        }
+    }
+
+    private fun ask(chatId: Long, pendingId: Long, history: List<ChatMessage>, jpeg: ByteArray?) {
+        val key = geminiKey
+        val deep = deepThink
+        viewModelScope.launch {
+            val answer = withContext(Dispatchers.IO) {
+                if (key.isBlank()) {
+                    "Чтобы Gemini 3.8 Flash отвечал, открой «Подключить» и вставь свой ключ из Google AI Studio."
+                } else {
+                    runCatching { GeminiApi.complete(key, history, deep, jpeg) }
+                        .getOrElse { "Модель не ответила: ${it.message ?: "нет сети"}" }
+                }
+            }
+            chats = chats.map { thread ->
+                if (thread.id != chatId) {
                     thread
                 } else {
-                    val alreadyTold = thread.messages.any { !it.fromUser }
-                    val extra = if (alreadyTold) listOf(userMessage) else listOf(userMessage, notice)
-                    thread.copy(messages = thread.messages + extra)
+                    thread.copy(
+                        messages = thread.messages.map { message ->
+                            if (message.id == pendingId) message.copy(text = answer) else message
+                        },
+                    )
                 }
             }
         }

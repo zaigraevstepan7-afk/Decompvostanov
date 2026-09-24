@@ -45,8 +45,30 @@ import com.personal.chatui.ui.theme.LocalPalette
 
 @Composable
 fun ConnectPage(viewModel: AppViewModel, onBack: () -> Unit) {
+    val palette = LocalPalette.current
     Subpage("Подключить", onBack) {
-        Note("Переключатели хранятся на устройстве и никуда не отправляются.")
+        Note("Модель Gemini 3.8 Flash. Ключ хранится только на телефоне, вопросы уходят в Google, поиск включён.")
+        CardBlock {
+            OutlinedTextField(
+                value = viewModel.geminiKey,
+                onValueChange = viewModel::saveGeminiKey,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                singleLine = true,
+                label = { Text("Ключ Gemini") },
+                textStyle = TextStyle(color = palette.text, fontSize = 16.sp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = palette.text,
+                    unfocusedTextColor = palette.text,
+                    focusedBorderColor = palette.accent,
+                    unfocusedBorderColor = palette.hairline,
+                    cursorColor = palette.accent,
+                    focusedLabelColor = palette.accent,
+                    unfocusedLabelColor = palette.secondary,
+                ),
+            )
+        }
         CardBlock {
             viewModel.connectors.forEachIndexed { index, connector ->
                 ToggleRow(
