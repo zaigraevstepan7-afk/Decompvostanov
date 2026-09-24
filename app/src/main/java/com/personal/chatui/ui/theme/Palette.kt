@@ -34,14 +34,14 @@ fun darkPalette(accent: Accent) = Palette(
 
 fun lightPalette(accent: Accent) = Palette(
     bg = Color(0xFFFFFFFF),
-    card = Color(0xFFF2F2F7),
-    input = Color(0xFFE9E9EB),
-    text = Color(0xFF000000),
-    secondary = Color(0xFF6E6E73),
-    subtitle = Color(0xFF8E8E93),
-    hairline = Color(0xFFD1D1D6),
+    card = Color(0xFFF3F3F3),
+    input = Color(0xFFEFEFEF),
+    text = Color(0xFF111111),
+    secondary = Color(0xFF6D6D6D),
+    subtitle = Color(0xFF8A8A8A),
+    hairline = Color(0xFFE6E6E6),
     accent = accent.color,
-    bubble = Color(0xFFE9E9EB),
+    bubble = Color(0xFFECECEC),
     avatar = Color(0xFFA94136),
     logout = Color(0xFFE5484D),
 )

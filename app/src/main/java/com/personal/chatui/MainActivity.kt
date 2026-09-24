@@ -1,5 +1,6 @@
 package com.personal.chatui
 
+import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -81,6 +82,9 @@ private fun ChatApp(viewModel: AppViewModel) {
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as ComponentActivity).window
+            window.statusBarColor = Color.TRANSPARENT
+            window.navigationBarColor = Color.TRANSPARENT
+            window.decorView.setBackgroundColor(if (dark) Color.BLACK else Color.WHITE)
             WindowCompat.getInsetsController(window, view).apply {
                 isAppearanceLightStatusBars = !dark
                 isAppearanceLightNavigationBars = !dark

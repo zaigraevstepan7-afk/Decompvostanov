@@ -112,19 +112,19 @@ fun HomeScreen(
     )
     BackHandler(enabled = drawerOpen) { drawerOpen = false }
 
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
+    Box(Modifier.fillMaxSize().background(palette.bg)) {
         Box(
             Modifier
                 .fillMaxSize()
                 .graphicsLayer {
                     val shift = progress
-                    scaleX = 1f - 0.045f * shift
-                    scaleY = 1f - 0.045f * shift
+                    scaleX = 1f - 0.015f * shift
+                    scaleY = 1f - 0.015f * shift
                     transformOrigin = TransformOrigin(0.5f, 0.5f)
-                    shape = RoundedCornerShape((26f * shift).dp)
+                    shape = RoundedCornerShape((18f * shift).dp)
                     clip = shift > 0.01f
                 }
-                .blur((18f * progress).dp),
+                .blur((8f * progress).dp),
         ) {
             ChatPane(
                 viewModel = viewModel,
@@ -150,7 +150,7 @@ fun HomeScreen(
             Box(
                 Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.28f * progress))
+                    .background(Color.Black.copy(alpha = 0.50f * progress))
                     .clickable(
                         enabled = drawerOpen,
                         indication = null,
@@ -160,7 +160,9 @@ fun HomeScreen(
         }
         Box(
             Modifier
-                .fillMaxSize()
+                .align(Alignment.CenterStart)
+                .fillMaxHeight()
+                .fillMaxWidth(0.8f)
                 .graphicsLayer { translationX = size.width * (progress - 1f) }
                 .pointerInput(drawerOpen) {
                     detectHorizontalDragGestures { _, drag ->
@@ -226,113 +228,163 @@ private fun DrawerContent(
     onLongChat: (Long) -> Unit,
 ) {
     val palette = LocalPalette.current
-    Column(
-        Modifier
-            .fillMaxSize()
-            .background(Color.Black)
-            .statusBarsPadding()
-            .windowInsetsPadding(WindowInsets.navigationBars),
-    ) {
-        Row(
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        // Fractions taken from the light drawer screenshot (909×2000, panel ends at 80%).
+        val screenW = maxWidth / 0.8f
+        val screenH = maxHeight
+        val side = screenW * 0.0924f
+        val iconSize = screenW * 0.062f
+        val textGap = screenW * 0.026f
+        val rowH = screenH * 0.0585f
+        val searchSize = screenW * 0.060f
+        val pillH = screenH * 0.060f
+        val pillW = screenW * 0.287f
+        val gear = screenW * 0.054f
+        Column(
             Modifier
-                .fillMaxWidth()
-                .padding(start = 22.dp, end = 8.dp, top = 18.dp, bottom = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                "ChatGPT",
-                color = palette.text,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.weight(1f),
-            )
-            HeaderGlyph(R.drawable.ic_search, "Поиск") { onNavigate(Routes.Search) }
-            HeaderGlyph(R.drawable.ic_compose, "Новый чат", onNewChat)
-        }
-        DrawerItem(R.drawable.ic_images, "Изображения") { onNavigate(Routes.Images) }
-        DrawerItem(R.drawable.ic_library, "Библиотека") { onNavigate(Routes.Library) }
-        DrawerItem(R.drawable.ic_folder, "Проекты") { onNavigate(Routes.Projects) }
-        DrawerItem(R.drawable.ic_remote, "Remote") { onNavigate(Routes.Remote) }
-        DrawerItem(R.drawable.ic_clock, "Запланировано") { onNavigate(Routes.Scheduled) }
-        DrawerItem(R.drawable.ic_plugins, "Плагины") { onNavigate(Routes.Plugins) }
-        HorizontalDivider(
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-            color = Color(0xFF2A2A2A),
-            thickness = 0.5.dp,
-        )
-        LazyColumn(Modifier.weight(1f)) {
-            items(viewModel.chats, key = { it.id }) { chat ->
-                val selected = chat.id == viewModel.currentChatId
-                Text(
-                    text = chat.title,
-                    color = palette.text,
-                    fontSize = 16.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier
-                        .padding(horizontal = 10.dp, vertical = 1.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(if (selected) palette.input else Color.Transparent)
-                        .combinedClickable(
-                            onClick = { onChat(chat.id) },
-                            onLongClick = { onLongChat(chat.id) },
-                        )
-                        .padding(horizontal = 14.dp, vertical = 13.dp)
-                        .fillMaxWidth(),
-                )
-            }
-        }
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
+                .fillMaxSize()
+                .background(palette.bg)
+                .statusBarsPadding()
+                .windowInsetsPadding(WindowInsets.navigationBars),
         ) {
             Row(
                 Modifier
-                    .height(48.dp)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(palette.accent)
-                    .clickable(onClick = onNewChat)
-                    .padding(horizontal = 18.dp),
+                    .fillMaxWidth()
+                    .padding(
+                        start = side,
+                        end = screenW * 0.100f,
+                        top = screenH * 0.016f,
+                        bottom = screenH * 0.041f,
+                    ),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                CutIcon(R.drawable.ic_compose, modifier = Modifier.size(18.dp), tint = Color.White)
-                Spacer(Modifier.width(8.dp))
-                Text("Чат", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                Text(
+                    "ChatGPT",
+                    color = palette.text,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                Box(
+                    Modifier
+                        .size(searchSize)
+                        .clip(CircleShape)
+                        .clickable { onNavigate(Routes.Search) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CutIcon(
+                        R.drawable.ic_search,
+                        modifier = Modifier.fillMaxSize(),
+                        description = "Поиск",
+                    )
+                }
             }
-            Spacer(Modifier.weight(1f))
-            PhotoCircle(R.drawable.ic_settings, "Настройки", 46.dp) { onNavigate(Routes.Settings) }
+            DrawerItem(R.drawable.ic_images, "Изображения", iconSize, side, textGap, rowH) { onNavigate(Routes.Images) }
+            DrawerItem(R.drawable.ic_library, "Библиотека", iconSize, side, textGap, rowH) { onNavigate(Routes.Library) }
+            DrawerItem(R.drawable.ic_folder, "Проекты", iconSize, side, textGap, rowH) { onNavigate(Routes.Projects) }
+            DrawerItem(R.drawable.ic_remote, "Remote", iconSize, side, textGap, rowH) { onNavigate(Routes.Remote) }
+            DrawerItem(R.drawable.ic_clock, "Запланировано", iconSize, side, textGap, rowH) { onNavigate(Routes.Scheduled) }
+            DrawerItem(R.drawable.ic_plugins, "Плагины", iconSize, side, textGap, rowH) { onNavigate(Routes.Plugins) }
+            Spacer(Modifier.height(screenH * 0.063f))
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = side),
+                color = palette.hairline,
+                thickness = 0.5.dp,
+            )
+            Spacer(Modifier.height(screenH * 0.016f))
+            LazyColumn(Modifier.weight(1f)) {
+                items(viewModel.chats, key = { it.id }) { chat ->
+                    val selected = chat.id == viewModel.currentChatId
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(rowH)
+                            .padding(horizontal = screenW * 0.018f)
+                            .clip(RoundedCornerShape(rowH / 2))
+                            .background(if (selected) palette.input else Color.Transparent)
+                            .combinedClickable(
+                                onClick = { onChat(chat.id) },
+                                onLongClick = { onLongChat(chat.id) },
+                            )
+                            .padding(horizontal = side - screenW * 0.018f),
+                        contentAlignment = Alignment.CenterStart,
+                    ) {
+                        Text(
+                            text = chat.title,
+                            color = palette.text,
+                            fontSize = 17.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            }
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        start = screenW * 0.088f,
+                        end = screenW * 0.093f,
+                        top = screenH * 0.008f,
+                        bottom = screenH * 0.012f,
+                    ),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(
+                    Modifier
+                        .width(pillW)
+                        .height(pillH)
+                        .clip(RoundedCornerShape(50))
+                        .background(palette.accent)
+                        .clickable(onClick = onNewChat),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CutIcon(R.drawable.ic_compose, modifier = Modifier.size(pillH * 0.34f), tint = Color.White)
+                    Spacer(Modifier.width(pillH * 0.14f))
+                    Text("Чат", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                }
+                Spacer(Modifier.weight(1f))
+                Box(
+                    Modifier
+                        .size(gear * 1.35f)
+                        .clip(CircleShape)
+                        .clickable { onNavigate(Routes.Settings) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CutIcon(
+                        R.drawable.ic_settings,
+                        modifier = Modifier.size(gear),
+                        description = "Настройки",
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun HeaderGlyph(@DrawableRes icon: Int, description: String, onClick: () -> Unit) {
-    Box(
-        Modifier
-            .size(44.dp)
-            .clip(CircleShape)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        CutIcon(icon, modifier = Modifier.size(22.dp), description = description)
-    }
-}
-
-@Composable
-private fun DrawerItem(@DrawableRes icon: Int, title: String, onClick: () -> Unit) {
+private fun DrawerItem(
+    @DrawableRes icon: Int,
+    title: String,
+    iconSize: Dp,
+    side: Dp,
+    gap: Dp,
+    rowH: Dp,
+    onClick: () -> Unit,
+) {
     val palette = LocalPalette.current
     Row(
         Modifier
             .fillMaxWidth()
+            .height(rowH)
             .clickable(onClick = onClick)
-            .padding(horizontal = 22.dp, vertical = 12.dp),
+            .padding(start = side),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        CutIcon(icon, modifier = Modifier.size(22.dp))
-        Spacer(Modifier.width(16.dp))
-        Text(title, color = palette.text, fontSize = 16.sp)
+        CutIcon(icon, modifier = Modifier.size(iconSize))
+        Spacer(Modifier.width(gap))
+        Text(title, color = palette.text, fontSize = 17.sp)
     }
 }
 
@@ -358,9 +410,9 @@ private fun ChatPane(
 
     BoxWithConstraints(Modifier.fillMaxSize().background(palette.bg)) {
         val screenWidth = maxWidth
-        val side = screenWidth * 0.08f
-        val circle = screenWidth * 0.112f
-        val composerHeight = screenWidth * 0.128f
+        val side = screenWidth * 0.093f
+        val circle = screenWidth * 0.108f
+        val composerHeight = screenWidth * 0.132f
         val voice = composerHeight * 0.66f
         Column(Modifier.fillMaxSize()) {
             Row(
@@ -376,7 +428,7 @@ private fun ChatPane(
                     Modifier
                         .height(circle * 0.82f)
                         .clip(RoundedCornerShape(50))
-                        .background(Color(0xFF1A1C1E))
+                        .background(palette.input)
                         .clickable(onClick = onConnect)
                         .padding(horizontal = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -522,8 +574,8 @@ private fun ChatPane(
     if (sheet) {
         ModalBottomSheet(
             onDismissRequest = { sheet = false },
-            containerColor = Color(0xFF1C1C1E),
-            contentColor = Color.White,
+            containerColor = palette.card,
+            contentColor = palette.text,
         ) {
             SheetItem(Icons.Outlined.PhotoCamera, "Камера") {
                 sheet = false
@@ -553,7 +605,7 @@ private fun PhotoCircle(@DrawableRes icon: Int, description: String, size: Dp, o
             .background(palette.input)
             .clickable(
                 interactionSource = pressed,
-                indication = ripple(bounded = true, color = Color.White),
+                indication = ripple(bounded = true, color = palette.text),
                 onClick = onClick,
             ),
         contentAlignment = Alignment.Center,
@@ -575,16 +627,17 @@ private fun Appearing(enabled: Boolean, content: @Composable () -> Unit) {
 @Composable
 private fun Bubble(message: ChatMessage, maxWidth: Dp) {
     val palette = LocalPalette.current
+    val onLight = palette.bg.red > 0.5f
     if (message.fromUser) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             Text(
                 text = message.text,
-                color = Color.White,
+                color = if (onLight) palette.text else Color.White,
                 fontSize = 16.sp,
                 modifier = Modifier
                     .widthIn(max = maxWidth)
                     .clip(RoundedCornerShape(22.dp))
-                    .background(UserBubble)
+                    .background(if (onLight) Color(0xFFF2F2F2) else UserBubble)
                     .padding(horizontal = 14.dp, vertical = 10.dp),
             )
         }
@@ -617,6 +670,7 @@ private fun Suggestion(@DrawableRes icon: Int, title: String, onClick: () -> Uni
 
 @Composable
 private fun SheetItem(icon: ImageVector, title: String, onClick: () -> Unit) {
+    val palette = LocalPalette.current
     Row(
         Modifier
             .fillMaxWidth()
@@ -624,8 +678,8 @@ private fun SheetItem(icon: ImageVector, title: String, onClick: () -> Unit) {
             .padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
+        Icon(icon, contentDescription = null, tint = palette.text, modifier = Modifier.size(22.dp))
         Spacer(Modifier.width(14.dp))
-        Text(title, color = Color.White, fontSize = 16.sp)
+        Text(title, color = palette.text, fontSize = 16.sp)
     }
 }

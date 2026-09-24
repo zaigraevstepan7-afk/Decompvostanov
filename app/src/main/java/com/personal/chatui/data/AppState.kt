@@ -39,7 +39,7 @@ data class Connector(
 )
 
 class AppViewModel : ViewModel() {
-    var themeMode by mutableStateOf(ThemeMode.Dark)
+    var themeMode by mutableStateOf(ThemeMode.Light)
     var accent by mutableStateOf(Accent.Blue)
     var displayName by mutableStateOf("Степан")
     var aboutYou by mutableStateOf("")
