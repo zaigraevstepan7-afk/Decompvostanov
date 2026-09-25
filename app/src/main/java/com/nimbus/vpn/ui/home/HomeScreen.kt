@@ -15,6 +15,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -39,7 +40,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -54,7 +57,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -64,6 +74,7 @@ import com.nimbus.vpn.data.ConfigParser
 import com.nimbus.vpn.data.SecTunnelProfile
 import com.nimbus.vpn.data.ProfileIndex
 import com.nimbus.vpn.data.VpnProfile
+import com.nimbus.vpn.data.WhitelistProfile
 import com.nimbus.vpn.tunnel.ConnectionStatus
 import com.nimbus.vpn.tunnel.TunnelUiState
 import com.nimbus.vpn.ui.AccessStatus
@@ -109,6 +120,9 @@ fun HomeScreen(
     onConfirmAccess: () -> Unit,
     ping: ServerPingState,
     onPing: () -> Unit,
+    subscriptionNote: String?,
+    subscriptionRefreshing: Boolean,
+    onRefreshSubscription: () -> Unit,
     settings: AppSettings,
     joyPulse: Int,
     onCoachYes: () -> Unit,
@@ -129,7 +143,6 @@ fun HomeScreen(
             delay(1000)
         }
     }
-    val context = LocalContext.current
     val active = profiles.profiles.firstOrNull { it.id == profiles.activeId } ?: state.profile
     val busy = state.status == ConnectionStatus.CONNECTING
     val step = CoachStep.from(settings.coachStep)
@@ -180,14 +193,7 @@ fun HomeScreen(
                     onClick = onConfirmAccess,
                     glow = teachAccess,
                 )
-                Text(
-                    "Bozya",
-                    color = Ink,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(start = 12.dp).weight(1f),
-                    maxLines = 1,
-                )
+                Spacer(Modifier.weight(1f))
                 if (settings.streak > 0) {
                     Text(
                         "${settings.streak} дн.",
@@ -271,65 +277,122 @@ fun HomeScreen(
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                 )
             }
-            if (profiles.profiles.isEmpty()) {
-                Box(Modifier.fillMaxSize().padding(bottom = 96.dp), contentAlignment = Alignment.Center) {
-                    Text("Нет серверов", color = InkMuted, fontSize = 15.sp)
+            val regular = profiles.profiles.filterNot { WhitelistProfile.isOne(it.rawConfig) }
+            val whitelist = profiles.profiles.filter { WhitelistProfile.isOne(it.rawConfig) }
+            LazyColumn(
+                Modifier.fillMaxSize(),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 8.dp,
+                    bottom = if (coachMessage != null) 302.dp else 200.dp,
+                ),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                item(key = "section-regular") {
+                    SectionHeader(whitelist = false, title = "Обычные", count = regular.size)
                 }
-            } else {
-                LazyColumn(
-                    Modifier.fillMaxSize(),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                        start = 16.dp,
-                        end = 16.dp,
-                        top = 8.dp,
-                        bottom = if (coachMessage != null) 302.dp else 200.dp,
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    items(profiles.profiles, key = { it.id }) { profile ->
-                        val connectedHere = state.status == ConnectionStatus.CONNECTED &&
-                            profile.id == state.profile?.id
-                        val exitIp = state.exitIp?.takeIf { connectedHere && it.isNotBlank() }
-                        ServerRow(
-                            profile = profile,
-                            active = profile.id == profiles.activeId,
-                            pingMs = ping.millis[profile.id],
-                            pingKnown = ping.millis.containsKey(profile.id),
-                            pinging = profile.id in ping.runningIds,
-                            onSelect = { onSelect(profile.id) },
-                            onPing = onPing,
-                            onDelete = { pendingDelete = profile.id to profile.name },
-                            livePlace = if (connectedHere) state.exitPlace else null,
-                            onCopyIp = exitIp?.let { ip ->
-                                {
-                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                    clipboard.setPrimaryClip(ClipData.newPlainText("exit", ip))
-                                    Toast.makeText(context, "IP скопирован", Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            onRotate = if (connectedHere && SecTunnelProfile.isSec(profile.rawConfig)) onRotate else null,
+                if (regular.isEmpty()) {
+                    item(key = "empty-regular") {
+                        Text(
+                            "Пока пусто. Нажми «+» и создай WARP.",
+                            color = InkMuted,
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(start = 42.dp, bottom = 6.dp),
                         )
                     }
                 }
+                items(regular, key = { it.id }) { profile ->
+                    ListedServer(
+                        profile = profile,
+                        profiles = profiles,
+                        state = state,
+                        ping = ping,
+                        onSelect = onSelect,
+                        onDelete = { pendingDelete = profile.id to profile.name },
+                        onRotate = onRotate,
+                    )
+                }
+                item(key = "section-whitelist") {
+                    SectionHeader(whitelist = true, title = "Белые списки", count = whitelist.size)
+                }
+                if (!subscriptionNote.isNullOrBlank()) {
+                    item(key = "subscription-note") {
+                        Text(
+                            subscriptionNote,
+                            color = InkMuted,
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(start = 42.dp),
+                        )
+                    }
+                }
+                if (whitelist.isEmpty()) {
+                    item(key = "empty-whitelist") {
+                        Text(
+                            "Пока пусто. Слева внизу — обновить подписку.",
+                            color = InkMuted,
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(start = 42.dp, bottom = 6.dp),
+                        )
+                    }
+                }
+                items(whitelist, key = { it.id }) { profile ->
+                    ListedServer(
+                        profile = profile,
+                        profiles = profiles,
+                        state = state,
+                        ping = ping,
+                        onSelect = onSelect,
+                        onDelete = { pendingDelete = profile.id to profile.name },
+                        onRotate = onRotate,
+                    )
+                }
             }
         }
-        ConnectButton(
-            status = state.status,
-            hasProfile = active != null,
-            animate = animate,
-            modifier = Modifier
+        Row(
+            Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
-                .padding(bottom = 18.dp)
-                .coachGlow(step == CoachStep.CONNECT && !teachAccess),
-            onClick = {
-                when {
-                    busy -> Unit
-                    active == null -> onCreateWarp()
-                    else -> onToggle()
+                .padding(bottom = 18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            SideAction(
+                onClick = onRefreshSubscription,
+                enabled = !subscriptionRefreshing,
+                description = "Обновить подписку",
+            ) {
+                if (subscriptionRefreshing) {
+                    CircularProgressIndicator(
+                        color = Accent,
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(22.dp),
+                    )
+                } else {
+                    Icon(Icons.Rounded.Sync, contentDescription = null, tint = Ink, modifier = Modifier.size(26.dp))
                 }
-            },
-        )
+            }
+            ConnectButton(
+                status = state.status,
+                hasProfile = active != null,
+                animate = animate,
+                modifier = Modifier.coachGlow(step == CoachStep.CONNECT && !teachAccess),
+                onClick = {
+                    when {
+                        busy -> Unit
+                        active == null -> onCreateWarp()
+                        else -> onToggle()
+                    }
+                },
+            )
+            SideAction(
+                onClick = onPing,
+                enabled = ping.runningIds.isEmpty() && profiles.profiles.isNotEmpty(),
+                description = "Пинг",
+            ) {
+                Icon(Icons.Rounded.Timer, contentDescription = null, tint = Ink, modifier = Modifier.size(26.dp))
+            }
+        }
         DogDock(
             mood = mood,
             message = coachMessage,
@@ -392,6 +455,113 @@ private fun AccessChip(access: AccessUiState, onClick: () -> Unit, glow: Boolean
 }
 
 @Composable
+private fun ListedServer(
+    profile: VpnProfile,
+    profiles: ProfileIndex,
+    state: TunnelUiState,
+    ping: ServerPingState,
+    onSelect: (String) -> Unit,
+    onDelete: () -> Unit,
+    onRotate: () -> Unit,
+) {
+    val context = LocalContext.current
+    val connectedHere = state.status == ConnectionStatus.CONNECTED && profile.id == state.profile?.id
+    val exitIp = state.exitIp?.takeIf { connectedHere && it.isNotBlank() }
+    ServerRow(
+        profile = profile,
+        active = profile.id == profiles.activeId,
+        pingMs = ping.millis[profile.id],
+        pingKnown = ping.millis.containsKey(profile.id),
+        pinging = profile.id in ping.runningIds,
+        onSelect = { onSelect(profile.id) },
+        onDelete = onDelete,
+        livePlace = if (connectedHere) state.exitPlace else null,
+        onCopyIp = exitIp?.let { ip ->
+            {
+                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                clipboard.setPrimaryClip(ClipData.newPlainText("exit", ip))
+                Toast.makeText(context, "IP скопирован", Toast.LENGTH_SHORT).show()
+            }
+        },
+        onRotate = if (connectedHere && SecTunnelProfile.isSec(profile.rawConfig)) onRotate else null,
+    )
+}
+
+@Composable
+private fun SectionHeader(whitelist: Boolean, title: String, count: Int) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+        GroupLogo(whitelist)
+        Spacer(Modifier.width(10.dp))
+        Text(title, color = Ink, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+        if (count > 0) {
+            Text("$count", color = InkMuted, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        }
+    }
+}
+
+@Composable
+private fun GroupLogo(whitelist: Boolean) {
+    val background = if (whitelist) Accent else Ink
+    Box(
+        Modifier.size(32.dp).clip(CircleShape).background(background),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (whitelist) {
+            Text("БС", color = Paper, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        } else {
+            Canvas(Modifier.size(18.dp)) {
+                val stroke = Stroke(width = 2.2.dp.toPx(), cap = StrokeCap.Round)
+                drawArc(
+                    color = Paper,
+                    startAngle = 200f,
+                    sweepAngle = 220f,
+                    useCenter = false,
+                    style = stroke,
+                )
+                drawArc(
+                    color = Paper,
+                    startAngle = 20f,
+                    sweepAngle = 140f,
+                    useCenter = false,
+                    topLeft = Offset(size.width * 0.22f, size.height * 0.22f),
+                    size = Size(size.width * 0.56f, size.height * 0.56f),
+                    style = stroke,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SideAction(
+    onClick: () -> Unit,
+    enabled: Boolean,
+    description: String,
+    content: @Composable () -> Unit,
+) {
+    val press = rememberPress(0.9f)
+    Box(
+        Modifier
+            .size(56.dp)
+            .pressScale(press.scale)
+            .shadow(8.dp, CircleShape)
+            .clip(CircleShape)
+            .background(Paper)
+            .border(1.dp, Line, CircleShape)
+            .semantics { contentDescription = description }
+            .clickable(
+                interactionSource = press.interaction,
+                indication = ripple(),
+                enabled = enabled,
+                onClick = onClick,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        content()
+    }
+}
+
+@Composable
 private fun ServerRow(
     profile: VpnProfile,
     active: Boolean,
@@ -399,21 +569,28 @@ private fun ServerRow(
     pingKnown: Boolean,
     pinging: Boolean,
     onSelect: () -> Unit,
-    onPing: () -> Unit,
     onDelete: () -> Unit,
     livePlace: String? = null,
     onCopyIp: (() -> Unit)? = null,
     onRotate: (() -> Unit)? = null,
 ) {
-    val endpoint = remember(profile.rawConfig) { ConfigParser.endpointOf(profile.rawConfig) }
+    val whitelist = remember(profile.rawConfig) { WhitelistProfile.isOne(profile.rawConfig) }
+    val endpoint = remember(profile.rawConfig) {
+        if (whitelist) WhitelistProfile.endpoint(profile.rawConfig) else ConfigParser.endpointOf(profile.rawConfig)
+    }
     val sec = remember(profile.rawConfig) { SecTunnelProfile.read(profile.rawConfig) }
+    val flag = if (whitelist) WhitelistProfile.flagEmoji(profile.name) else sec?.flag
     val press = rememberPress(0.975f)
     val stroke by animateColorAsState(
         if (active) Accent.copy(alpha = 0.7f) else Line,
         Motion.color(460),
         label = "row-stroke",
     )
-    val proto = if (ConfigParser.isAmneziaHint(profile.rawConfig)) "AmneziaWG" else "WireGuard"
+    val proto = when {
+        whitelist -> "белые списки"
+        ConfigParser.isAmneziaHint(profile.rawConfig) -> "AmneziaWG"
+        else -> "WireGuard"
+    }
     val pingLabel = when {
         pinging -> "…"
         pingMs != null -> "$pingMs мс"
@@ -435,7 +612,7 @@ private fun ServerRow(
             .padding(start = 12.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        FlagBadge(endpoint, emoji = sec?.flag, badge = 36.dp)
+        FlagBadge(endpoint, emoji = flag, badge = 36.dp)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(
@@ -448,6 +625,7 @@ private fun ServerRow(
             )
             Text(
                 when {
+                    whitelist -> listOfNotNull(endpoint, proto).joinToString(" · ")
                     sec == null -> endpoint ?: proto
                     !livePlace.isNullOrBlank() -> "$livePlace · sec-tunnel"
                     else -> "${sec.place} · sec-tunnel"
@@ -469,12 +647,7 @@ private fun ServerRow(
             }
         }
         Column(horizontalAlignment = Alignment.End) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                PressIconButton(onClick = onPing, modifier = Modifier.size(36.dp), enabled = !pinging) {
-                    Icon(Icons.Rounded.Timer, contentDescription = "Пинг", tint = Ink, modifier = Modifier.size(18.dp))
-                }
-                DeleteServerButton(onClick = onDelete, modifier = Modifier.size(36.dp))
-            }
+            DeleteServerButton(onClick = onDelete, modifier = Modifier.size(36.dp))
             if (pingLabel.isNotEmpty()) {
                 Text(
                     pingLabel,

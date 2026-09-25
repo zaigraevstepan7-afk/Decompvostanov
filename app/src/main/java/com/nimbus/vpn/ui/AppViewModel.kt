@@ -16,6 +16,8 @@ import com.nimbus.vpn.data.SecTunnelProfile
 import com.nimbus.vpn.data.ServerPing
 import com.nimbus.vpn.data.VpnProfile
 import com.nimbus.vpn.data.WarpGenerator
+import com.nimbus.vpn.data.WhitelistProfile
+import com.nimbus.vpn.data.WhitelistSubscription
 import com.nimbus.vpn.tunnel.ConnectionStatus
 import com.nimbus.vpn.ui.coach.CoachStep
 import java.time.LocalDate
@@ -60,6 +62,11 @@ data class ServerPingState(
     val millis: Map<String, Int?> = emptyMap(),
 )
 
+data class SubscriptionUiState(
+    val refreshing: Boolean = false,
+    val note: String? = null,
+)
+
 class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val app = application as BozyaApp
     val tunnel = app.container.tunnel.ui
@@ -79,6 +86,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _ping = MutableStateFlow(ServerPingState())
     val ping: StateFlow<ServerPingState> = _ping.asStateFlow()
+
+    private val _subscription = MutableStateFlow(SubscriptionUiState())
+    val subscription: StateFlow<SubscriptionUiState> = _subscription.asStateFlow()
     private val _joy = MutableStateFlow(0)
     val joy: StateFlow<Int> = _joy.asStateFlow()
     private val opMutex = Mutex()
@@ -149,6 +159,31 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun refreshSubscription() {
+        if (_subscription.value.refreshing) return
+        _subscription.value = SubscriptionUiState(refreshing = true, note = "Скачиваю подписку…")
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching { WhitelistSubscription.download() }
+            }
+            result.fold(
+                onSuccess = { fetched ->
+                    if (fetched.isEmpty()) {
+                        _subscription.value = SubscriptionUiState(note = "В подписке нет серверов")
+                        return@fold
+                    }
+                    opMutex.withLock { app.container.profiles.replaceWhitelist(fetched) }
+                    _subscription.value = SubscriptionUiState(note = "Белые списки: ${fetched.size}")
+                },
+                onFailure = { error ->
+                    _subscription.value = SubscriptionUiState(
+                        note = error.message ?: "Не удалось скачать подписку",
+                    )
+                },
+            )
+        }
+    }
+
     fun pingServers() {
         if (_ping.value.runningIds.isNotEmpty()) return
         val snapshot = app.container.profiles.profiles
@@ -164,10 +199,19 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                                 SecTunnelProfile.read(profile.rawConfig)?.region?.let { region ->
                                     runCatching { SecTunnelApi.lease(region).ip }.getOrNull()
                                 }
+                            } else if (WhitelistProfile.isOne(profile.rawConfig)) {
+                                ServerPing.hostOf(WhitelistProfile.endpoint(profile.rawConfig))
                             } else {
                                 ServerPing.hostOf(ConfigParser.endpointOf(profile.rawConfig))
                             }
-                            val ms = if (host == null) null else ServerPing.ping(host)
+                            val ms = if (host == null) {
+                                null
+                            } else if (WhitelistProfile.isOne(profile.rawConfig)) {
+                                val port = ServerPing.portOf(WhitelistProfile.endpoint(profile.rawConfig))
+                                if (port == null) ServerPing.ping(host) else ServerPing.pingEndpoint(host, port)
+                            } else {
+                                ServerPing.ping(host)
+                            }
                             _ping.update { state ->
                                 state.copy(
                                     runningIds = state.runningIds - profile.id,

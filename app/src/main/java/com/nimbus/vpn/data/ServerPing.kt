@@ -36,6 +36,20 @@ object ServerPing {
             ?: runCatching { tcpRtt(host, 80, timeoutMs) }.getOrNull()
     }
 
+    /** Probe the port from the subscription first. A refused connect still counts. */
+    fun pingEndpoint(host: String, port: Int, timeoutMs: Int = 2_000): Int? {
+        if (host.isBlank() || port !in 1..65535) return null
+        return runCatching { tcpRtt(host, port, timeoutMs) }.getOrNull()
+            ?: runCatching { icmp(host, timeoutMs) }.getOrNull()
+    }
+
+    fun portOf(endpoint: String?): Int? {
+        val raw = endpoint?.trim().orEmpty()
+        if (raw.isEmpty()) return null
+        val tail = if (raw.startsWith("[")) raw.substringAfter("]:", "") else raw.substringAfterLast(':', "")
+        return tail.toIntOrNull()?.takeIf { it in 1..65535 }
+    }
+
     private fun icmp(host: String, timeoutMs: Int): Int? {
         val seconds = (timeoutMs / 1000).coerceAtLeast(1).toString()
         val process = ProcessBuilder("ping", "-c", "1", "-w", seconds, host)

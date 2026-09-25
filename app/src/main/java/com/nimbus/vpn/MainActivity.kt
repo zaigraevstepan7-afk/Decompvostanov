@@ -64,6 +64,7 @@ class MainActivity : ComponentActivity() {
                 val warp by viewModel.warp.collectAsStateWithLifecycle()
                 val access by viewModel.access.collectAsStateWithLifecycle()
                 val ping by viewModel.ping.collectAsStateWithLifecycle()
+                val subscription by viewModel.subscription.collectAsStateWithLifecycle()
                 val joy by viewModel.joy.collectAsStateWithLifecycle()
                 val lifecycleState by androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
                 val animate = lifecycleState.isAtLeast(Lifecycle.State.STARTED)
@@ -149,6 +150,9 @@ class MainActivity : ComponentActivity() {
                             onConfirmAccess = viewModel::activateAccess,
                             ping = ping,
                             onPing = viewModel::pingServers,
+                            subscriptionNote = subscription.note,
+                            subscriptionRefreshing = subscription.refreshing,
+                            onRefreshSubscription = viewModel::refreshSubscription,
                             settings = settings,
                             joyPulse = joy,
                             onCoachYes = { viewModel.coachYes() },

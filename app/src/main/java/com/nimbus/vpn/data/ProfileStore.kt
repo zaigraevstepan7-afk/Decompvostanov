@@ -68,6 +68,25 @@ class ProfileStore(context: Context) {
         persist(_index.value.copy(activeId = id))
     }
 
+    fun replaceWhitelist(incoming: List<VpnProfile>) = synchronized(this) {
+        val clean = incoming.filter { WhitelistProfile.isOne(it.rawConfig) && !isRemoved(it) }
+        if (clean.isEmpty()) return
+        val current = _index.value
+        val kept = current.profiles.filterNot { profile ->
+            WhitelistProfile.isOne(profile.rawConfig) || profile.id.startsWith("bs:")
+        }
+        val next = kept + clean
+        persist(
+            ProfileIndex(
+                profiles = next,
+                activeId = when {
+                    next.any { it.id == current.activeId } -> current.activeId
+                    else -> kept.firstOrNull()?.id ?: clean.first().id
+                },
+            ),
+        )
+    }
+
     fun upsertAll(incoming: List<VpnProfile>, activeId: String? = incoming.firstOrNull()?.id) = synchronized(this) {
         val clean = incoming.filterNot { isRemoved(it) }
         if (clean.isEmpty()) return

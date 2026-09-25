@@ -13,6 +13,7 @@ import com.nimbus.vpn.data.SecTunnelProfile
 import com.nimbus.vpn.data.SettingsRepository
 import com.nimbus.vpn.data.SplitTunnel
 import com.nimbus.vpn.data.VpnProfile
+import com.nimbus.vpn.data.WhitelistProfile
 import com.nimbus.vpn.CrashLog
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -194,6 +195,18 @@ class TunnelController(
     }
 
     suspend fun connect(profile: VpnProfile, userInitiated: Boolean = true) = mutex.withLock {
+        if (WhitelistProfile.isOne(profile.rawConfig)) {
+            _ui.update {
+                it.copy(
+                    status = ConnectionStatus.ERROR,
+                    error = "Белые списки пингуются. Включается обычный WARP — выбери его.",
+                    profile = profile,
+                    exitPlace = null,
+                    exitIp = null,
+                )
+            }
+            return@withLock
+        }
         if (userInitiated) {
             userStopped = false
             reconnectJob?.cancel()
