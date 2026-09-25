@@ -43,6 +43,18 @@ object WhitelistProfile {
         return "[Bozya]\nEngine = $ENGINE\nEndpoint = $endpoint\nLink = $link\n"
     }
 
+    fun configCore(endpoint: String, core: String): String {
+        val encoded = Base64.getEncoder().encodeToString(core.toByteArray(StandardCharsets.UTF_8))
+        return "[Bozya]\nEngine = $ENGINE\nEndpoint = $endpoint\nCore = $encoded\n"
+    }
+
+    fun core(raw: String): String? {
+        val encoded = value(raw, "Core") ?: return null
+        return runCatching {
+            String(Base64.getDecoder().decode(encoded), StandardCharsets.UTF_8)
+        }.getOrNull()?.takeIf { it.isNotBlank() }
+    }
+
     fun flagEmoji(name: String): String? {
         val trimmed = name.trim()
         if (trimmed.length < 4) return null
@@ -69,7 +81,7 @@ object WhitelistProfile {
 
 object WhitelistSubscription {
     /** Bumped when the feeds change so the next launch replaces old white-list cards. */
-    const val SOURCE = "bs-lte-liberty-2"
+    const val SOURCE = "bs-lte-liberty-3"
 
     private val feeds = listOf(
         Feed(
@@ -261,17 +273,17 @@ object WhitelistSubscription {
         configs.forEach { element ->
             if (profiles.size >= MAX_PROFILES) return@forEach
             val config = element as? JsonObject ?: return@forEach
-            val name = config.text("remarks").trim()
+            val name = config.text("remarks").trim().take(80)
+            if (name.isNotEmpty() && isNoticeName(name)) return@forEach
             if (onlyWhitelistNames && !isWhitelistName(name)) return@forEach
-            val outbound = pickVless(config) ?: return@forEach
-            val link = vlessLink(name, outbound) ?: return@forEach
-            val parsed = parseLink(link) ?: return@forEach
-            val id = idFor(link)
+            val endpoint = WhitelistConfig.hopEndpoint(config) ?: return@forEach
+            val core = WhitelistConfig.adaptSubscription(config)
+            val id = idFor(core)
             if (!seen.add(id)) return@forEach
             profiles += VpnProfile(
                 id = id,
-                name = parsed.name,
-                rawConfig = WhitelistProfile.config(parsed.endpoint, link),
+                name = name.ifBlank { endpoint },
+                rawConfig = WhitelistProfile.configCore(endpoint, core),
             )
         }
         return profiles
@@ -360,9 +372,13 @@ object WhitelistSubscription {
         return (this[key] as? JsonPrimitive)?.contentOrNull?.toIntOrNull() ?: 0
     }
 
-    private fun isNotice(name: String, host: String, port: Int): Boolean {
+    private fun isNoticeName(name: String): Boolean {
         val low = name.lowercase()
-        if ("устарел" in low || "обновите" in low || "github.com" in low || "t.me/" in low) return true
+        return "устарел" in low || "обновите" in low || "github.com" in low || "t.me/" in low
+    }
+
+    private fun isNotice(name: String, host: String, port: Int): Boolean {
+        if (isNoticeName(name)) return true
         return host.equals("zieng2.org", ignoreCase = true) && port <= 10
     }
 

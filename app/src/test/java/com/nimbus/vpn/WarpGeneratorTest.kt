@@ -2,6 +2,7 @@ package com.nimbus.vpn
 
 import com.google.common.truth.Truth.assertThat
 import com.nimbus.vpn.data.ConfigParser
+import com.nimbus.vpn.data.DnsProfile
 import com.nimbus.vpn.data.WarpApi
 import com.nimbus.vpn.data.WarpConfigBuilder
 import com.nimbus.vpn.data.WarpGenerator
@@ -67,6 +68,22 @@ class WarpGeneratorTest {
         assertThat(flagForEndpoint(preview.endpoint)).isEqualTo("🇩🇪")
         assertThat(flagForEndpoint("tel.pl.tribukvy.ltd:500")).isEqualTo("🇵🇱")
         assertThat(flagForEndpoint("ru0.tribukvy.ltd:4500")).isEqualTo("🇷🇺")
+    }
+
+    @Test
+    fun aiUltraIsDnsOnly() {
+        var called = false
+        val profile = WarpGenerator.generateOne("ai", fetchKeys = {
+            called = true
+            fakeKeys
+        })
+        assertThat(called).isFalse()
+        assertThat(profile.name).isEqualTo("AI Ultra")
+        assertThat(profile.id).isEqualTo("warp:ai")
+        assertThat(DnsProfile.isOne(profile.rawConfig)).isTrue()
+        assertThat(DnsProfile.servers(profile.rawConfig)).containsExactly("111.88.96.56", "111.88.96.57").inOrder()
+        assertThat(profile.rawConfig).contains("xbox-dns.ru")
+        assertThat(profile.rawConfig).doesNotContain("PrivateKey")
     }
 
     @Test

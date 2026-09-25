@@ -75,9 +75,14 @@ fun WarpCreateScreen(
 ) {
     var countryId by remember { mutableStateOf("de") }
     var lte by remember { mutableStateOf(false) }
+    val aiUltra = countryId == com.nimbus.vpn.data.DnsProfile.ID
     val country = WarpConfigBuilder.country(countryId)
-    val lteAvailable = country?.hasLte == true
-    val previewName = WarpConfigBuilder.resolve(countryId, lte && lteAvailable).name
+    val lteAvailable = country?.hasLte == true && !aiUltra
+    val previewName = if (aiUltra) {
+        com.nimbus.vpn.data.DnsProfile.NAME
+    } else {
+        WarpConfigBuilder.resolve(countryId, lte && lteAvailable).name
+    }
 
     LaunchedEffect(lteAvailable) {
         if (!lteAvailable) lte = false
@@ -117,6 +122,17 @@ fun WarpCreateScreen(
             ) {
                 Spacer(Modifier.height(8.dp))
                 Text("WARP", color = InkMuted, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
+                CountryTile(
+                    flag = "✦",
+                    name = "AI Ultra",
+                    detail = "только DNS",
+                    selected = countryId == com.nimbus.vpn.data.DnsProfile.ID,
+                    enabled = !warp.generating,
+                    onClick = { countryId = com.nimbus.vpn.data.DnsProfile.ID },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 10.dp),
+                )
                 WarpConfigBuilder.countries.chunked(2).forEach { row ->
                     Row(
                         Modifier
@@ -150,7 +166,11 @@ fun WarpCreateScreen(
                     Column(Modifier.weight(1f)) {
                         Text("LTE", color = Ink, fontWeight = FontWeight.Medium)
                         Text(
-                            if (lteAvailable) "Мобильный адрес ${country?.lteHost}" else "У ${country?.name} нет LTE",
+                            when {
+                                aiUltra -> "Здесь только DNS, без сервера"
+                                lteAvailable -> "Мобильный адрес ${country?.lteHost}"
+                                else -> "У ${country?.name} нет LTE"
+                            },
                             color = InkMuted,
                             fontSize = 12.sp,
                         )

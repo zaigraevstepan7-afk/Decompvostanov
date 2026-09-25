@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.PowerManager
 import android.util.Log
 import com.nimbus.vpn.data.ConfigParser
+import com.nimbus.vpn.data.DnsProfile
 import com.nimbus.vpn.data.ProfileStore
 import com.nimbus.vpn.data.SecTunnelProfile
 import com.nimbus.vpn.data.SettingsRepository
@@ -136,7 +137,7 @@ class TunnelController(
                     )
                 }
                 BozyaKeepAliveService.stop(context)
-                scheduleReconnect()
+                scheduleReconnect(fromDrop = true)
             }
         }
         scope.launch {
@@ -240,8 +241,13 @@ class TunnelController(
             connectWhitelist(profile, fresh)
             return@withLock
         }
+        if (DnsProfile.isOne(profile.rawConfig)) {
+            connectDns(profile)
+            return@withLock
+        }
         activeEngine = Engine.AWG
         SecTunnelRuntime.requestStop(context)
+        DnsTunnelService.stop(context)
         releaseWhitelist()
 
         val gate = backendOnMain()
@@ -313,6 +319,7 @@ class TunnelController(
         connectToken = 0
         SecTunnelRuntime.requestStop(context)
         WhitelistTunnelService.stop(context)
+        DnsTunnelService.stop(context)
         mutex.withLock {
         activeEngine = Engine.NONE
         statsJob?.cancel()
@@ -345,7 +352,7 @@ class TunnelController(
         if (state == Tunnel.State.DOWN && _ui.value.status == ConnectionStatus.CONNECTED) {
             _ui.update { it.copy(status = ConnectionStatus.DISCONNECTED, connectedSince = null) }
             BozyaKeepAliveService.stop(context)
-            scheduleReconnect()
+            scheduleReconnect(fromDrop = true)
         }
     }
 
@@ -408,6 +415,25 @@ class TunnelController(
                     )
                 }
                 BozyaKeepAliveService.stop(context)
+                scheduleReconnect(fromDrop = true)
+            }
+            return
+        }
+        if (activeEngine == Engine.DNS) {
+            if (!DnsRuntime.active && !userStopped) {
+                activeEngine = Engine.NONE
+                connectedSince = null
+                _ui.update {
+                    it.copy(
+                        status = ConnectionStatus.DISCONNECTED,
+                        error = null,
+                        connectedSince = null,
+                        rxRate = 0,
+                        txRate = 0,
+                    )
+                }
+                BozyaKeepAliveService.stop(context)
+                scheduleReconnect(fromDrop = true)
             }
             return
         }
@@ -470,8 +496,9 @@ class TunnelController(
         }
     }
 
-    private fun scheduleReconnect() {
-        if (!appSettings.autoConnect || userStopped) return
+    private fun scheduleReconnect(fromDrop: Boolean = false) {
+        if (userStopped) return
+        if (!fromDrop && !appSettings.autoConnect) return
         reconnectJob?.cancel()
         reconnectJob = scope.launch {
             var attempt = 0
@@ -503,6 +530,7 @@ class TunnelController(
     ) {
         activeEngine = Engine.SEC
         downAwg()
+        DnsTunnelService.stop(context)
         SecTunnelRuntime.requestStop(context)
         val spec = SecTunnelProfile.read(profile.rawConfig)
         secRegion = spec?.region
@@ -699,9 +727,12 @@ class TunnelController(
         try {
             activeEngine = Engine.WL
             SecTunnelRuntime.requestStop(context)
+            DnsTunnelService.stop(context)
             downAwg()
-            val link = WhitelistProfile.link(profile.rawConfig) ?: error("В карточке нет ссылки")
-            val json = WhitelistConfig.toCoreJson(link)
+            val json = WhitelistProfile.core(profile.rawConfig)
+                ?: WhitelistConfig.toCoreJson(
+                    WhitelistProfile.link(profile.rawConfig) ?: error("В карточке нет ссылки"),
+                )
             val armed = WhitelistRuntime.arm()
             ticket = armed.first
             val gate = armed.second
@@ -764,7 +795,68 @@ class TunnelController(
         withTimeoutOrNull(3_000) { done.await() }
     }
 
-    private enum class Engine { NONE, AWG, SEC, WL }
+    private suspend fun connectDns(profile: VpnProfile) {
+        var ticket = 0
+        try {
+            activeEngine = Engine.DNS
+            SecTunnelRuntime.requestStop(context)
+            downAwg()
+            releaseWhitelist()
+            val armed = DnsRuntime.arm()
+            ticket = armed.first
+            val gate = armed.second
+            val intent = Intent(context, DnsTunnelService::class.java)
+                .putExtra(DnsTunnelService.EXTRA_LABEL, profile.name)
+                .putExtra(DnsTunnelService.EXTRA_TICKET, ticket)
+                .putStringArrayListExtra(DnsTunnelService.EXTRA_SERVERS, ArrayList(DnsProfile.servers(profile.rawConfig)))
+            androidx.core.content.ContextCompat.startForegroundService(context, intent)
+            val failure = withTimeoutOrNull(8_000) { gate.await() }
+            if (userStopped) {
+                DnsTunnelService.stop(context)
+                return
+            }
+            if (failure == null) {
+                DnsTunnelService.stop(context)
+                error("DNS не поднялся")
+            }
+            if (failure.isNotEmpty()) error(failure)
+            connectedSince = System.currentTimeMillis()
+            lastRx = 0
+            lastTx = 0
+            lastSampleAt = 0
+            _ui.update {
+                it.copy(
+                    status = ConnectionStatus.CONNECTED,
+                    error = null,
+                    connectedSince = connectedSince,
+                    backendLabel = profile.name,
+                )
+            }
+            BozyaKeepAliveService.start(context, profile.name)
+            startStatsLoop()
+        } catch (err: Throwable) {
+            if (err is CancellationException) throw err
+            if (userStopped) return
+            Log.e(TAG, "dns connect failed", err)
+            activeEngine = Engine.NONE
+            if (ticket != 0) DnsRuntime.fail(ticket, err.message ?: "Не удалось включить DNS")
+            DnsTunnelService.stop(context)
+            connectedSince = null
+            _ui.update {
+                it.copy(
+                    status = ConnectionStatus.ERROR,
+                    error = humanError(err),
+                    exitPlace = null,
+                    exitIp = null,
+                    fallbackId = null,
+                    fallbackName = null,
+                )
+            }
+            BozyaKeepAliveService.stop(context)
+        }
+    }
+
+    private enum class Engine { NONE, AWG, SEC, WL, DNS }
 
     companion object {
         private const val TAG = "Bozya/Tunnel"

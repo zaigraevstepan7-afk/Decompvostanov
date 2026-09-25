@@ -614,7 +614,12 @@ private fun ServerRow(
         if (whitelist) WhitelistProfile.endpoint(profile.rawConfig) else ConfigParser.endpointOf(profile.rawConfig)
     }
     val sec = remember(profile.rawConfig) { SecTunnelProfile.read(profile.rawConfig) }
-    val flag = if (whitelist) WhitelistProfile.flagEmoji(profile.name) else sec?.flag
+    val dnsOnly = remember(profile.rawConfig) { com.nimbus.vpn.data.DnsProfile.isOne(profile.rawConfig) }
+    val flag = when {
+        whitelist -> WhitelistProfile.flagEmoji(profile.name)
+        dnsOnly -> "✦"
+        else -> sec?.flag
+    }
     val press = rememberPress(0.975f)
     val stroke by animateColorAsState(
         if (active) Accent.copy(alpha = 0.7f) else Line,
@@ -623,6 +628,7 @@ private fun ServerRow(
     )
     val proto = when {
         whitelist -> "белые списки"
+        dnsOnly -> "только DNS · xbox-dns.ru"
         ConfigParser.isAmneziaHint(profile.rawConfig) -> "AmneziaWG"
         else -> "WireGuard"
     }
@@ -660,6 +666,7 @@ private fun ServerRow(
             )
             Text(
                 when {
+                    dnsOnly -> proto
                     whitelist -> listOfNotNull(endpoint, proto).joinToString(" · ")
                     sec == null -> endpoint ?: proto
                     !livePlace.isNullOrBlank() -> "$livePlace · sec-tunnel"

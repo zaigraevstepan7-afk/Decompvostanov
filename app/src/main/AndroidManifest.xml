@@ -102,6 +102,20 @@
         </service>
 
         <service
+            android:name=".tunnel.DnsTunnelService"
+            android:permission="android.permission.BIND_VPN_SERVICE"
+            android:exported="false"
+            android:directBootAware="true"
+            android:foregroundServiceType="specialUse">
+            <intent-filter>
+                <action android:name="android.net.VpnService" />
+            </intent-filter>
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="vpn" />
+        </service>
+
+        <service
             android:name=".tunnel.BozyaKeepAliveService"
             android:exported="false"
             android:foregroundServiceType="specialUse">

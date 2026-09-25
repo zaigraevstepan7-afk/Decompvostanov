@@ -92,7 +92,7 @@ class WhitelistSubscriptionTest {
         val body = """
             [
               {"remarks":"🇧🇪 Бельгия","outbounds":[${vlessOutbound("proxy", "be.example.com", 443, "00000000-0000-0000-0000-000000000021", "tcp", "DECOY")}]},
-              {"remarks":"🇨🇭 Швейцария (БС-1)","outbounds":[
+              {"remarks":"🇨🇭 Швейцария (БС-1)","routing":{"balancers":[{"tag":"WL_Balancer","fallbackTag":"proxy-wl"}]},"outbounds":[
                 ${vlessOutbound("proxy-decoy", "decoy.example.com", 443, "00000000-0000-0000-0000-000000000022", "tcp", "DECOY")},
                 ${vlessOutbound("proxy-wl", "wl.example.com", 10443, "00000000-0000-0000-0000-000000000023", "xhttp", "WLKEY")}
               ]}
@@ -100,14 +100,14 @@ class WhitelistSubscriptionTest {
         """.trimIndent()
         val profiles = WhitelistSubscription.profilesFrom(body, onlyWhitelistNames = true)
         assertThat(profiles.map { it.name }).containsExactly("🇨🇭 Швейцария (БС-1)")
-        val link = WhitelistProfile.link(profiles[0].rawConfig)!!
-        assertThat(link).contains("wl.example.com:10443")
-        assertThat(link).doesNotContain("decoy.example.com")
-        val json = WhitelistConfig.toCoreJson(link)
-        assertThat(json).contains("\"network\":\"xhttp\"")
+        val json = WhitelistProfile.core(profiles[0].rawConfig)!!
+        assertThat(json).contains("\"name\":\"xray0\"")
+        assertThat(json).contains("wl.example.com")
+        assertThat(json).contains("decoy.example.com")
+        assertThat(json).contains("\"protocol\":\"dns\"")
+        assertThat(json).contains("WL_Balancer")
+        assertThat(json).doesNotContain("\"protocol\":\"socks\"")
         assertThat(json).contains("\"publicKey\":\"WLKEY\"")
-        assertThat(json).contains("\"xPaddingBytes\":\"50-150\"")
-        assertThat(json).contains("\"fingerprint\":\"firefox\"")
         assertThat(WhitelistProfile.endpoint(profiles[0].rawConfig)).isEqualTo("wl.example.com:10443")
     }
 

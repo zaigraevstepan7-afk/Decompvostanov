@@ -126,7 +126,7 @@ fun SettingsScreen(
                     .background(Paper)
                     .border(1.dp, Line, Card),
             ) {
-                ToggleRow("Автоподключение", "После перезагрузки и обрыва", settings.autoConnect, onAutoConnect)
+                ToggleRow("Автоподключение", "После перезагрузки. Обрыв поднимается сам.", settings.autoConnect, onAutoConnect)
                 HorizontalDivider(color = Line, thickness = 1.dp)
                 ToggleRow("Kill switch", killSubtitle, settings.killSwitch, onKillSwitch)
                 HorizontalDivider(color = Line, thickness = 1.dp)

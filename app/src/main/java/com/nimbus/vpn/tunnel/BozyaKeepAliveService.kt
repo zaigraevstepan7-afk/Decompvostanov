@@ -38,7 +38,11 @@ class BozyaKeepAliveService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
-        val title = intent?.getStringExtra(EXTRA_TITLE) ?: getString(R.string.notification_idle)
+        val title = intent?.getStringExtra(EXTRA_TITLE)?.takeIf { it.isNotBlank() }
+        if (title == null) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
         ensureChannel()
         // Promote before any bitmap work. A late startForeground kills the process.
         if (!goForeground(buildNotification(title, withLargeIcon = false))) {
@@ -49,7 +53,7 @@ class BozyaKeepAliveService : Service() {
             val decorated = runCatching { buildNotification(title, withLargeIcon = true) }.getOrNull() ?: return@launch
             runCatching { getSystemService(NotificationManager::class.java)?.notify(NOTIF_ID, decorated) }
         }
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
     private fun goForeground(notification: Notification): Boolean {

@@ -3,10 +3,12 @@ package com.nimbus.vpn.data
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.put
 
 /**
@@ -15,6 +17,72 @@ import kotlinx.serialization.json.put
  */
 object WhitelistConfig {
     fun toCoreJson(link: String): String = core(parse(link)).toString()
+
+    /**
+     * v2rayNG and INCY run the subscription document as-is and only swap the
+     * inbound for tun. The balancer, decoy and whitelist hop all stay.
+     */
+    fun adaptSubscription(config: JsonObject): String {
+        val map = config.toMutableMap()
+        map.remove("remarks")
+        map["inbounds"] = buildJsonArray { add(tunInbound()) }
+        val dns = (map["dns"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
+        dns["tag"] = JsonPrimitive("dns")
+        dns["queryStrategy"] = JsonPrimitive("UseIPv4")
+        map["dns"] = JsonObject(dns)
+        val outbounds = (map["outbounds"] as? JsonArray)?.toMutableList() ?: mutableListOf()
+        val hasDnsOut = outbounds.any { outbound ->
+            (outbound as? JsonObject)?.text("protocol").equals("dns", ignoreCase = true)
+        }
+        if (!hasDnsOut) {
+            outbounds += buildJsonObject {
+                put("tag", "dns-out")
+                put("protocol", "dns")
+            }
+        }
+        map["outbounds"] = JsonArray(outbounds)
+        val routing = (map["routing"] as? JsonObject)?.toMutableMap() ?: mutableMapOf()
+        val balancer = ((routing["balancers"] as? JsonArray)?.firstOrNull() as? JsonObject)?.text("tag")
+        val existing = (routing["rules"] as? JsonArray)?.toList().orEmpty()
+        val dnsHop = buildJsonObject {
+            put("type", "field")
+            put("inboundTag", buildJsonArray { add(JsonPrimitive("dns")) })
+            if (!balancer.isNullOrBlank()) put("balancerTag", balancer) else put("outboundTag", "proxy")
+        }
+        val portHop = buildJsonObject {
+            put("type", "field")
+            put("inboundTag", buildJsonArray { add(JsonPrimitive("tun")) })
+            put("port", "53")
+            put("outboundTag", "dns-out")
+        }
+        routing["domainStrategy"] = JsonPrimitive("AsIs")
+        routing["rules"] = JsonArray(listOf(portHop, dnsHop) + existing)
+        map["routing"] = JsonObject(routing)
+        return JsonObject(map).toString()
+    }
+
+    fun hopEndpoint(config: JsonObject): String? {
+        val vless = (config["outbounds"] as? JsonArray).orEmpty().mapNotNull { it as? JsonObject }.filter { outbound ->
+            outbound.text("protocol").equals("vless", ignoreCase = true)
+        }
+        val routing = config["routing"] as? JsonObject
+        val fallback = ((routing?.get("balancers") as? JsonArray)?.firstOrNull() as? JsonObject)?.text("fallbackTag")
+        val chosen = vless.firstOrNull { it.text("tag") == fallback && fallback.isNotBlank() }
+            ?: vless.firstOrNull { it.text("tag").contains("wl", ignoreCase = true) }
+            ?: vless.firstOrNull { it.text("tag").equals("proxy", ignoreCase = true) }
+            ?: vless.firstOrNull()
+            ?: return null
+        val vnext = ((chosen["settings"] as? JsonObject)?.get("vnext") as? JsonArray)?.firstOrNull() as? JsonObject
+            ?: return null
+        val host = vnext.text("address")
+        val port = vnext.text("port").toIntOrNull() ?: return null
+        if (host.isBlank() || port !in 1..65535) return null
+        return "$host:$port"
+    }
+
+    private fun JsonObject.text(key: String): String {
+        return (this[key] as? JsonPrimitive)?.contentOrNull.orEmpty()
+    }
 
     internal fun parse(link: String): Node {
         val hash = link.lastIndexOf('#')
@@ -75,6 +143,23 @@ object WhitelistConfig {
         )
     }
 
+    private fun tunInbound() = buildJsonObject {
+        put("tag", "tun")
+        put("protocol", "tun")
+        put("settings", buildJsonObject {
+            put("name", "xray0")
+            put("mtu", 1500)
+        })
+        put("sniffing", buildJsonObject {
+            put("enabled", true)
+            put("destOverride", buildJsonArray {
+                add(JsonPrimitive("http"))
+                add(JsonPrimitive("tls"))
+                add(JsonPrimitive("quic"))
+            })
+        })
+    }
+
     private fun core(node: Node): JsonObject {
         val user = buildJsonObject {
             put("id", node.id)
@@ -123,23 +208,7 @@ object WhitelistConfig {
         }
         return buildJsonObject {
             put("log", buildJsonObject { put("loglevel", "warning") })
-            put("inbounds", buildJsonArray {
-                add(buildJsonObject {
-                    put("tag", "tun")
-                    put("protocol", "tun")
-                    put("settings", buildJsonObject {
-                        put("name", "xray0")
-                        put("mtu", 1500)
-                    })
-                    put("sniffing", buildJsonObject {
-                        put("enabled", true)
-                        put("destOverride", buildJsonArray {
-                            add(kotlinx.serialization.json.JsonPrimitive("http"))
-                            add(kotlinx.serialization.json.JsonPrimitive("tls"))
-                        })
-                    })
-                })
-            })
+            put("inbounds", buildJsonArray { add(tunInbound()) })
             put("outbounds", buildJsonArray {
                 add(buildJsonObject {
                     put("tag", "proxy")

@@ -172,6 +172,7 @@ object WarpGenerator {
         fetchKeys: () -> WarpKeys = { WarpApi.fetch() },
         port: Int? = null,
     ): VpnProfile {
+        if (countryId == DnsProfile.ID) return DnsProfile.create()
         val endpoint = WarpConfigBuilder.resolve(countryId, lte)
         val chosenPort = port ?: WarpConfigBuilder.randomPort(endpoint.excludedPorts)
         val conf = WarpConfigBuilder.build(fetchKeys(), endpoint.host, chosenPort)
