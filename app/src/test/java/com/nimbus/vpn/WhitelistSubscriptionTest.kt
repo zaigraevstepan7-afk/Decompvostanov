@@ -77,6 +77,7 @@ class WhitelistSubscriptionTest {
             vless://00000000-0000-0000-0000-000000000012@de.example.com:443#${encode("🇩🇪 Германия")}
             vless://00000000-0000-0000-0000-000000000013@fi.example.com:443#${encode("Белые списки 1")}
             vless://00000000-0000-0000-0000-000000000014@pl.example.com:443#${encode("🇵🇱 БС Польша")}
+            vless://00000000-0000-0000-0000-000000000015@be.example.com:443#${encode("🇧🇪 Бельгия")}
         """.trimIndent()
         val kept = WhitelistSubscription.profilesFrom(body, onlyWhitelistNames = true)
         assertThat(kept.map { it.name }).containsExactly(
@@ -84,6 +85,30 @@ class WhitelistSubscriptionTest {
             "Белые списки 1",
             "🇵🇱 БС Польша",
         ).inOrder()
+    }
+
+    @Test
+    fun readsXrayJsonAndKeepsWhitelistHop() {
+        val body = """
+            [
+              {"remarks":"🇧🇪 Бельгия","outbounds":[${vlessOutbound("proxy", "be.example.com", 443, "00000000-0000-0000-0000-000000000021", "tcp", "DECOY")}]},
+              {"remarks":"🇨🇭 Швейцария (БС-1)","outbounds":[
+                ${vlessOutbound("proxy-decoy", "decoy.example.com", 443, "00000000-0000-0000-0000-000000000022", "tcp", "DECOY")},
+                ${vlessOutbound("proxy-wl", "wl.example.com", 10443, "00000000-0000-0000-0000-000000000023", "xhttp", "WLKEY")}
+              ]}
+            ]
+        """.trimIndent()
+        val profiles = WhitelistSubscription.profilesFrom(body, onlyWhitelistNames = true)
+        assertThat(profiles.map { it.name }).containsExactly("🇨🇭 Швейцария (БС-1)")
+        val link = WhitelistProfile.link(profiles[0].rawConfig)!!
+        assertThat(link).contains("wl.example.com:10443")
+        assertThat(link).doesNotContain("decoy.example.com")
+        val json = WhitelistConfig.toCoreJson(link)
+        assertThat(json).contains("\"network\":\"xhttp\"")
+        assertThat(json).contains("\"publicKey\":\"WLKEY\"")
+        assertThat(json).contains("\"xPaddingBytes\":\"50-150\"")
+        assertThat(json).contains("\"fingerprint\":\"firefox\"")
+        assertThat(WhitelistProfile.endpoint(profiles[0].rawConfig)).isEqualTo("wl.example.com:10443")
     }
 
     @Test
@@ -107,6 +132,24 @@ class WhitelistSubscriptionTest {
     }
 
     private fun profilesFromAgain(body: String) = WhitelistSubscription.profilesFrom(body)
+
+    private fun vlessOutbound(
+        tag: String,
+        host: String,
+        port: Int,
+        id: String,
+        network: String,
+        publicKey: String,
+    ): String {
+        val transport = if (network == "xhttp") {
+            """"xhttpSettings":{"path":"/ray","host":"","mode":"stream-one","extra":{"xPaddingBytes":"50-150"}}"""
+        } else {
+            """"tcpSettings":{}"""
+        }
+        return """
+            {"tag":"$tag","protocol":"vless","settings":{"vnext":[{"address":"$host","port":$port,"users":[{"id":"$id","encryption":"none","flow":"xtls-rprx-vision"}]}]},"streamSettings":{"network":"$network",$transport,"security":"reality","realitySettings":{"serverName":"ya.ru","publicKey":"$publicKey","shortId":"ab","fingerprint":"firefox"}}}
+        """.trimIndent()
+    }
 
     private fun encode(text: String): String = java.net.URLEncoder.encode(text, Charsets.UTF_8)
 }

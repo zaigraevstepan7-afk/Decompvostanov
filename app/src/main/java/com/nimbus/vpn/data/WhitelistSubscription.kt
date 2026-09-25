@@ -3,9 +3,15 @@ package com.nimbus.vpn.data
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLDecoder
+import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.util.Base64
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 
 /**
  * White-list cards are downloaded on the phone. The LTE subscription is all
@@ -63,7 +69,7 @@ object WhitelistProfile {
 
 object WhitelistSubscription {
     /** Bumped when the feeds change so the next launch replaces old white-list cards. */
-    const val SOURCE = "bs-lte-liberty-1"
+    const val SOURCE = "bs-lte-liberty-2"
 
     private val feeds = listOf(
         Feed(
@@ -72,7 +78,7 @@ object WhitelistSubscription {
             onlyWhitelistNames = false,
         ),
         Feed(
-            url = "https://connliberty.com/connection/subs/dcf2b960",
+            url = "https://connliberty.com/connection/subs/dcf2b960-d490-40dd-a18b-1718550f939e",
             label = "вторая",
             onlyWhitelistNames = true,
         ),
@@ -84,6 +90,8 @@ object WhitelistSubscription {
         """(?i)vless://[^\s"'#]+(?:#[^\r\n"']*)?""",
     )
     private val WHITELIST_MARK = Regex("""(?<!\p{L})бс(?!\p{L})""")
+    private val WHITE_WORD = Regex("""белы[ейхм]""")
+    private val JSON = Json { ignoreUnknownKeys = true }
 
     data class Fetch(val profiles: List<VpnProfile>, val note: String)
 
@@ -162,6 +170,10 @@ object WhitelistSubscription {
 
     fun profilesFrom(body: String, onlyWhitelistNames: Boolean = false): List<VpnProfile> {
         val text = unwrap(body)
+        val trimmed = text.trim()
+        if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+            return profilesFromXray(trimmed, onlyWhitelistNames)
+        }
         val seen = LinkedHashSet<String>()
         val profiles = ArrayList<VpnProfile>()
         LINK.findAll(text).forEach { match ->
@@ -231,9 +243,121 @@ object WhitelistSubscription {
 
     internal fun isWhitelistName(name: String): Boolean {
         val low = name.lowercase()
-        if ("lte" in low || "бел" in low || "вайт" in low || "обход" in low) return true
+        if ("lte" in low || "вайт" in low || "обход" in low) return true
         if ("whitelist" in low || "white list" in low || "white-list" in low) return true
-        return WHITELIST_MARK.containsMatchIn(low)
+        if (WHITELIST_MARK.containsMatchIn(low)) return true
+        return WHITE_WORD.containsMatchIn(low)
+    }
+
+    private fun profilesFromXray(text: String, onlyWhitelistNames: Boolean): List<VpnProfile> {
+        val root = runCatching { JSON.parseToJsonElement(text) }.getOrNull() ?: return emptyList()
+        val configs = when (root) {
+            is JsonArray -> root
+            is JsonObject -> JsonArray(listOf(root))
+            else -> return emptyList()
+        }
+        val seen = LinkedHashSet<String>()
+        val profiles = ArrayList<VpnProfile>()
+        configs.forEach { element ->
+            if (profiles.size >= MAX_PROFILES) return@forEach
+            val config = element as? JsonObject ?: return@forEach
+            val name = config.text("remarks").trim()
+            if (onlyWhitelistNames && !isWhitelistName(name)) return@forEach
+            val outbound = pickVless(config) ?: return@forEach
+            val link = vlessLink(name, outbound) ?: return@forEach
+            val parsed = parseLink(link) ?: return@forEach
+            val id = idFor(link)
+            if (!seen.add(id)) return@forEach
+            profiles += VpnProfile(
+                id = id,
+                name = parsed.name,
+                rawConfig = WhitelistProfile.config(parsed.endpoint, link),
+            )
+        }
+        return profiles
+    }
+
+    private fun pickVless(config: JsonObject): JsonObject? {
+        val outbounds = config["outbounds"] as? JsonArray ?: return null
+        val vless = outbounds.mapNotNull { it as? JsonObject }.filter { outbound ->
+            outbound.text("protocol").equals("vless", ignoreCase = true)
+        }
+        return vless.firstOrNull { it.text("tag").contains("wl", ignoreCase = true) }
+            ?: vless.firstOrNull { it.text("tag").equals("proxy", ignoreCase = true) }
+            ?: vless.firstOrNull()
+    }
+
+    private fun vlessLink(name: String, outbound: JsonObject): String? {
+        val settings = outbound["settings"] as? JsonObject ?: return null
+        val vnext = (settings["vnext"] as? JsonArray)?.firstOrNull() as? JsonObject ?: return null
+        val host = vnext.text("address")
+        val port = vnext.int("port")
+        val user = (vnext["users"] as? JsonArray)?.firstOrNull() as? JsonObject ?: return null
+        val id = user.text("id")
+        if (host.isBlank() || id.isBlank() || port !in 1..65535) return null
+        val stream = outbound["streamSettings"] as? JsonObject
+        val network = stream?.text("network").orEmpty().ifBlank { "tcp" }
+        val security = stream?.text("security").orEmpty()
+        val tls = when (security) {
+            "reality" -> stream?.get("realitySettings") as? JsonObject
+            "tls" -> stream?.get("tlsSettings") as? JsonObject
+            else -> null
+        }
+        val params = LinkedHashMap<String, String>()
+        params["encryption"] = user.text("encryption").ifBlank { "none" }
+        params["type"] = network
+        val flow = user.text("flow")
+        if (flow.isNotBlank() && (network == "tcp" || network == "raw")) params["flow"] = flow
+        if (security.isNotBlank()) params["security"] = security
+        if (tls != null) {
+            putIfPresent(params, "sni", tls.text("serverName"))
+            putIfPresent(params, "fp", tls.text("fingerprint"))
+            putIfPresent(params, "pbk", tls.text("publicKey"))
+            putIfPresent(params, "sid", tls.text("shortId"))
+            putIfPresent(params, "spx", tls.text("spiderX"))
+            val alpn = (tls["alpn"] as? JsonArray)
+                ?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
+                ?.filter { it.isNotBlank() }
+                .orEmpty()
+            if (alpn.isNotEmpty()) params["alpn"] = alpn.joinToString(",")
+        }
+        val transport = stream?.get("${network}Settings") as? JsonObject
+            ?: stream?.get("xhttpSettings") as? JsonObject
+        if (transport != null) {
+            putIfPresent(params, "path", transport.text("path"))
+            putIfPresent(params, "host", transport.text("host"))
+            putIfPresent(params, "mode", transport.text("mode"))
+            putIfPresent(params, "serviceName", transport.text("serviceName"))
+            putIfPresent(params, "authority", transport.text("authority"))
+            val extra = transport["extra"]
+            if (extra != null && extra !is JsonPrimitive) {
+                params["extra"] = extra.toString()
+            } else if (extra is JsonPrimitive && !extra.contentOrNull.isNullOrBlank()) {
+                params["extra"] = extra.content
+            }
+        }
+        val query = params.entries.joinToString("&") { (key, value) ->
+            "${formEncode(key)}=${formEncode(value)}"
+        }
+        val hostPort = if (host.contains(':') && !host.startsWith("[")) "[$host]:$port" else "$host:$port"
+        val display = name.ifBlank { host }
+        return "vless://$id@$hostPort?$query#${formEncode(display)}"
+    }
+
+    private fun putIfPresent(params: MutableMap<String, String>, key: String, value: String) {
+        if (value.isNotBlank()) params[key] = value
+    }
+
+    private fun formEncode(value: String): String {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20")
+    }
+
+    private fun JsonObject.text(key: String): String {
+        return (this[key] as? JsonPrimitive)?.contentOrNull.orEmpty()
+    }
+
+    private fun JsonObject.int(key: String): Int {
+        return (this[key] as? JsonPrimitive)?.contentOrNull?.toIntOrNull() ?: 0
     }
 
     private fun isNotice(name: String, host: String, port: Int): Boolean {
