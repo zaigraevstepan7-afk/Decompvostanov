@@ -186,6 +186,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                         app.container.profiles.rememberWhitelistSource(WhitelistSubscription.SOURCE)
                     }
                     _subscription.value = SubscriptionUiState(note = fetched.note)
+                    pingEpoch.incrementAndGet()
+                    pingJob?.cancel()
+                    pingJob = null
+                    ServerPing.cancel()
+                    _ping.value = ServerPingState()
+                    pingServers()
                 },
                 onFailure = { error ->
                     _subscription.value = SubscriptionUiState(
