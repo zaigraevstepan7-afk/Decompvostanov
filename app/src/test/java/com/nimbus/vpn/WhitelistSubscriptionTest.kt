@@ -36,6 +36,9 @@ class WhitelistSubscriptionTest {
         val link = "vless://00000000-0000-0000-0000-000000000001@de.example.com:443?type=raw&security=reality&pbk=PUBLIC&sid=ab&fp=firefox&sni=ya.ru&flow=xtls-rprx-vision#Germany"
         val json = WhitelistConfig.toCoreJson(link)
         assertThat(json).contains("\"name\":\"xray0\"")
+        assertThat(json).contains("\"protocol\":\"dns\"")
+        assertThat(json).contains("https://1.1.1.1/dns-query")
+        assertThat(json).contains("\"outboundTag\":\"dns-out\"")
         assertThat(json).contains("\"protocol\":\"vless\"")
         assertThat(json).contains("\"address\":\"de.example.com\"")
         assertThat(json).contains("\"port\":443")

@@ -394,7 +394,23 @@ class TunnelController(
             if (ip != null && ip != previousIp) publishExit(ip)
             return
         }
-        if (activeEngine == Engine.WL) return
+        if (activeEngine == Engine.WL) {
+            if (!WhitelistRuntime.active && !userStopped) {
+                activeEngine = Engine.NONE
+                connectedSince = null
+                _ui.update {
+                    it.copy(
+                        status = ConnectionStatus.DISCONNECTED,
+                        error = null,
+                        connectedSince = null,
+                        rxRate = 0,
+                        txRate = 0,
+                    )
+                }
+                BozyaKeepAliveService.stop(context)
+            }
+            return
+        }
         val stats = runCatching {
             withContext(Dispatchers.IO) { backend.getStatistics(tunnel) }
         }.getOrNull() ?: return
@@ -718,6 +734,7 @@ class TunnelController(
                 )
             }
             BozyaKeepAliveService.start(context, profile.name)
+            startStatsLoop()
         } catch (err: Throwable) {
             if (err is CancellationException) throw err
             if (userStopped) return

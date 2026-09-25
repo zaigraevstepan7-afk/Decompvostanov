@@ -156,13 +156,36 @@ object WhitelistConfig {
                     put("streamSettings", stream)
                 })
                 add(buildJsonObject {
+                    put("tag", "dns-out")
+                    put("protocol", "dns")
+                })
+                add(buildJsonObject {
                     put("tag", "direct")
                     put("protocol", "freedom")
+                })
+            })
+            put("dns", buildJsonObject {
+                put("tag", "dns")
+                put("queryStrategy", "UseIPv4")
+                put("servers", buildJsonArray {
+                    add(JsonPrimitive("https://1.1.1.1/dns-query"))
+                    add(JsonPrimitive("https://8.8.8.8/dns-query"))
                 })
             })
             put("routing", buildJsonObject {
                 put("domainStrategy", "AsIs")
                 put("rules", buildJsonArray {
+                    add(buildJsonObject {
+                        put("type", "field")
+                        put("inboundTag", buildJsonArray { add(JsonPrimitive("tun")) })
+                        put("port", "53")
+                        put("outboundTag", "dns-out")
+                    })
+                    add(buildJsonObject {
+                        put("type", "field")
+                        put("inboundTag", buildJsonArray { add(JsonPrimitive("dns")) })
+                        put("outboundTag", "proxy")
+                    })
                     add(buildJsonObject {
                         put("type", "field")
                         put("network", "tcp,udp")

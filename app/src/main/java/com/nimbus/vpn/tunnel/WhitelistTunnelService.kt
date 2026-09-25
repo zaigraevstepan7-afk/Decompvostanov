@@ -64,7 +64,7 @@ class WhitelistTunnelService : VpnService() {
             val mine = synchronized(life) { generation == token }
             if (!mine) return@Thread
             try {
-                shutdownLocked()
+                releaseCore()
                 val fd = openTun(label, bypass)
                 prepareCore()
                 val controller = Libv2ray.newCoreController(Callbacks())
@@ -85,6 +85,7 @@ class WhitelistTunnelService : VpnService() {
                 }
                 if (!controller.isRunning) error("Ядро не запустилось")
                 WhitelistRuntime.succeed(ticket)
+                promote(label)
             } catch (error: Throwable) {
                 Log.e(TAG, "whitelist start failed", error)
                 if (synchronized(life) { generation == token }) {
@@ -121,6 +122,10 @@ class WhitelistTunnelService : VpnService() {
             .addDnsServer("1.1.1.1")
             .addDnsServer("8.8.8.8")
         if (Build.VERSION.SDK_INT >= 29) builder.setMetered(false)
+        runCatching {
+            builder.addAddress("fd00:1::2", 126)
+            builder.addRoute("::", 0)
+        }
         val excluded = LinkedHashSet<String>()
         excluded += packageName
         bypass.forEach { name -> if (name.isNotBlank()) excluded += name }
@@ -137,12 +142,16 @@ class WhitelistTunnelService : VpnService() {
         }
     }
 
-    private fun shutdownLocked() {
+    private fun releaseCore() {
         val controller = core
         core = null
         runCatching { controller?.stopLoop() }
         runCatching { tun?.close() }
         tun = null
+    }
+
+    private fun shutdownLocked() {
+        releaseCore()
         runCatching { stopForeground(STOP_FOREGROUND_REMOVE) }
     }
 
