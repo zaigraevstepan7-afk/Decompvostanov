@@ -127,7 +127,10 @@ object WhitelistConfig {
                 add(buildJsonObject {
                     put("tag", "tun")
                     put("protocol", "tun")
-                    put("settings", buildJsonObject { put("mtu", 1500) })
+                    put("settings", buildJsonObject {
+                        put("name", "xray0")
+                        put("mtu", 1500)
+                    })
                     put("sniffing", buildJsonObject {
                         put("enabled", true)
                         put("destOverride", buildJsonArray {

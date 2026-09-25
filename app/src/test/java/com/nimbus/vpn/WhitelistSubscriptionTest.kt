@@ -35,6 +35,7 @@ class WhitelistSubscriptionTest {
     fun buildsCoreConfigWithoutWaitingForPing() {
         val link = "vless://00000000-0000-0000-0000-000000000001@de.example.com:443?type=raw&security=reality&pbk=PUBLIC&sid=ab&fp=firefox&sni=ya.ru&flow=xtls-rprx-vision#Germany"
         val json = WhitelistConfig.toCoreJson(link)
+        assertThat(json).contains("\"name\":\"xray0\"")
         assertThat(json).contains("\"protocol\":\"vless\"")
         assertThat(json).contains("\"address\":\"de.example.com\"")
         assertThat(json).contains("\"port\":443")

@@ -674,7 +674,7 @@ class TunnelController(
             raw.contains("GO_ACTIVATION", true) -> "AmneziaWG не поднялся — проверь конфиг"
             raw.contains("timed out", true) -> "Сервер sec-tunnel не ответил"
             raw.contains("No Available Proxies", true) -> "Для этого региона сейчас нет выхода"
-            else -> raw.take(180)
+            else -> raw.take(360)
         }
     }
 
