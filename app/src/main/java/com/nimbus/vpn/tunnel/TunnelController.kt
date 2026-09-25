@@ -14,6 +14,7 @@ import com.nimbus.vpn.data.SecTunnelProfile
 import com.nimbus.vpn.data.SettingsRepository
 import com.nimbus.vpn.data.SplitTunnel
 import com.nimbus.vpn.data.VpnProfile
+import com.nimbus.vpn.data.WarpConfigBuilder
 import com.nimbus.vpn.data.WhitelistConfig
 import com.nimbus.vpn.data.WhitelistProfile
 import com.nimbus.vpn.CrashLog
@@ -254,7 +255,9 @@ class TunnelController(
         val result = withContext(Dispatchers.IO) {
             runCatching {
                 if (userStopped && !userInitiated) error("Остановлено")
-                val prepared = ConfigParser.withKeepaliveIfMissing(profile.rawConfig)
+                val prepared = WarpConfigBuilder.rewriteDeadRelays(
+                    ConfigParser.withKeepaliveIfMissing(profile.rawConfig),
+                )
                 val preview = ConfigParser.parse(prepared)
                 if (!preview.canConnect) {
                     error(preview.issues.joinToString("\n"))

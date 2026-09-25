@@ -53,8 +53,35 @@ class WarpGeneratorTest {
     fun ignoresLteWhenCountryHasNone() {
         val endpoint = WarpConfigBuilder.resolve("nl", lte = true)
         assertThat(endpoint.id).isEqualTo("nl")
-        assertThat(endpoint.host).isEqualTo("nl.tribukvy.ltd")
+        assertThat(endpoint.host).isEqualTo(WarpConfigBuilder.CLOUDFLARE_HOST)
         assertThat(endpoint.name).isEqualTo("Нидерланды")
+    }
+
+    @Test
+    fun plainGermanyUsesTheLiveRelay() {
+        val endpoint = WarpConfigBuilder.resolve("de", lte = false)
+        assertThat(endpoint.host).isEqualTo("tel.de.tribukvy.ltd")
+        val poland = WarpConfigBuilder.resolve("pl", lte = false)
+        assertThat(poland.host).isEqualTo("tel.pl.tribukvy.ltd")
+        assertThat(poland.excludedPorts).contains(988)
+    }
+
+    @Test
+    fun rewritesDeadCountryRelays() {
+        val raw = """
+            [Peer]
+            Endpoint = de.tribukvy.ltd:4500
+            Endpoint = pl.tribukvy.ltd:988
+        """.trimIndent() + "\n"
+        val rewritten = WarpConfigBuilder.rewriteDeadRelays(raw)
+        assertThat(rewritten).contains("Endpoint = tel.de.tribukvy.ltd:4500")
+        assertThat(rewritten).contains("Endpoint = tel.pl.tribukvy.ltd:4500")
+        assertThat(rewritten).doesNotContain("Endpoint = de.tribukvy.ltd")
+        assertThat(rewritten).doesNotContain("Endpoint = pl.tribukvy.ltd")
+        val finland = WarpConfigBuilder.rewriteDeadRelays("Endpoint = tel.fi.tribukvy.ltd:2408\n")
+        assertThat(finland).isEqualTo("Endpoint = ${WarpConfigBuilder.CLOUDFLARE_HOST}:2408\n")
+        val alreadyLive = "Endpoint = tel.de.tribukvy.ltd:4500\n"
+        assertThat(WarpConfigBuilder.rewriteDeadRelays(alreadyLive)).isEqualTo(alreadyLive)
     }
 
     @Test
@@ -91,6 +118,8 @@ class WarpGeneratorTest {
         val ports = WarpConfigBuilder.portsFor(WarpConfigBuilder.resolve("pl", lte = true).excludedPorts)
         assertThat(ports).doesNotContain(988)
         assertThat(ports).contains(4500)
+        val plain = WarpConfigBuilder.portsFor(WarpConfigBuilder.resolve("pl", lte = false).excludedPorts)
+        assertThat(plain).doesNotContain(988)
         val picked = WarpConfigBuilder.randomPort(setOf(988), Random(1))
         assertThat(picked).isNotEqualTo(988)
     }
