@@ -13,8 +13,10 @@ import com.nimbus.vpn.data.SecTunnelProfile
 import com.nimbus.vpn.data.SettingsRepository
 import com.nimbus.vpn.data.SplitTunnel
 import com.nimbus.vpn.data.VpnProfile
+import com.nimbus.vpn.data.WhitelistConfig
 import com.nimbus.vpn.data.WhitelistProfile
 import com.nimbus.vpn.CrashLog
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -44,6 +46,7 @@ import com.nimbus.vpn.data.SecExit
 import com.nimbus.vpn.data.SecExitOrder
 import com.nimbus.vpn.data.SecTunnelApi
 import java.io.BufferedReader
+import java.util.ArrayList
 import java.io.StringReader
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executors
@@ -195,18 +198,6 @@ class TunnelController(
     }
 
     suspend fun connect(profile: VpnProfile, userInitiated: Boolean = true) = mutex.withLock {
-        if (WhitelistProfile.isOne(profile.rawConfig)) {
-            _ui.update {
-                it.copy(
-                    status = ConnectionStatus.ERROR,
-                    error = "Белые списки пингуются. Включается обычный WARP — выбери его.",
-                    profile = profile,
-                    exitPlace = null,
-                    exitIp = null,
-                )
-            }
-            return@withLock
-        }
         if (userInitiated) {
             userStopped = false
             reconnectJob?.cancel()
@@ -245,8 +236,13 @@ class TunnelController(
             connectSec(profile, fresh, userInitiated)
             return@withLock
         }
+        if (WhitelistProfile.isOne(profile.rawConfig)) {
+            connectWhitelist(profile, fresh)
+            return@withLock
+        }
         activeEngine = Engine.AWG
         SecTunnelRuntime.requestStop(context)
+        releaseWhitelist()
 
         val gate = backendOnMain()
         val result = withContext(Dispatchers.IO) {
@@ -316,6 +312,7 @@ class TunnelController(
         reconnectJob?.cancel()
         connectToken = 0
         SecTunnelRuntime.requestStop(context)
+        WhitelistTunnelService.stop(context)
         mutex.withLock {
         activeEngine = Engine.NONE
         statsJob?.cancel()
@@ -397,6 +394,7 @@ class TunnelController(
             if (ip != null && ip != previousIp) publishExit(ip)
             return
         }
+        if (activeEngine == Engine.WL) return
         val stats = runCatching {
             withContext(Dispatchers.IO) { backend.getStatistics(tunnel) }
         }.getOrNull() ?: return
@@ -680,7 +678,76 @@ class TunnelController(
         }
     }
 
-    private enum class Engine { NONE, AWG, SEC }
+    private suspend fun connectWhitelist(profile: VpnProfile, fresh: com.nimbus.vpn.data.AppSettings) {
+        var ticket = 0
+        try {
+            activeEngine = Engine.WL
+            SecTunnelRuntime.requestStop(context)
+            downAwg()
+            val link = WhitelistProfile.link(profile.rawConfig) ?: error("В карточке нет ссылки")
+            val json = WhitelistConfig.toCoreJson(link)
+            val armed = WhitelistRuntime.arm()
+            ticket = armed.first
+            val gate = armed.second
+            val intent = Intent(context, WhitelistTunnelService::class.java)
+                .putExtra(WhitelistTunnelService.EXTRA_CONFIG, json)
+                .putExtra(WhitelistTunnelService.EXTRA_LABEL, profile.name)
+                .putExtra(WhitelistTunnelService.EXTRA_TICKET, ticket)
+                .putStringArrayListExtra(WhitelistTunnelService.EXTRA_BYPASS, ArrayList(fresh.bypassPackages))
+            androidx.core.content.ContextCompat.startForegroundService(context, intent)
+            val failure = withTimeoutOrNull(25_000) { gate.await() }
+            if (userStopped) {
+                WhitelistTunnelService.stop(context)
+                return
+            }
+            if (failure == null) {
+                WhitelistTunnelService.stop(context)
+                error("Сервер не ответил")
+            }
+            if (failure.isNotEmpty()) error(failure)
+            connectedSince = System.currentTimeMillis()
+            lastRx = 0
+            lastTx = 0
+            lastSampleAt = 0
+            _ui.update {
+                it.copy(
+                    status = ConnectionStatus.CONNECTED,
+                    error = null,
+                    connectedSince = connectedSince,
+                    backendLabel = profile.name,
+                )
+            }
+            BozyaKeepAliveService.start(context, profile.name)
+        } catch (err: Throwable) {
+            if (err is CancellationException) throw err
+            if (userStopped) return
+            Log.e(TAG, "whitelist connect failed", err)
+            activeEngine = Engine.NONE
+            if (ticket != 0) WhitelistRuntime.fail(ticket, err.message ?: "Не удалось подключиться")
+            WhitelistTunnelService.stop(context)
+            connectedSince = null
+            _ui.update {
+                it.copy(
+                    status = ConnectionStatus.ERROR,
+                    error = humanError(err),
+                    exitPlace = null,
+                    exitIp = null,
+                    fallbackId = null,
+                    fallbackName = null,
+                )
+            }
+            BozyaKeepAliveService.stop(context)
+        }
+    }
+
+    private suspend fun releaseWhitelist() {
+        if (!WhitelistRuntime.active) return
+        val done = WhitelistRuntime.expectDown()
+        WhitelistTunnelService.stop(context)
+        withTimeoutOrNull(3_000) { done.await() }
+    }
+
+    private enum class Engine { NONE, AWG, SEC, WL }
 
     companion object {
         private const val TAG = "Bozya/Tunnel"

@@ -21,6 +21,7 @@ import com.nimbus.vpn.data.WhitelistSubscription
 import com.nimbus.vpn.tunnel.ConnectionStatus
 import com.nimbus.vpn.ui.coach.CoachStep
 import java.time.LocalDate
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -94,6 +95,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val opMutex = Mutex()
     private val toggleGate = AtomicBoolean(false)
     private var switchJob: Job? = null
+    private var pingJob: Job? = null
+    private val pingEpoch = AtomicInteger(0)
 
     fun activateAccess() {
         if (_access.value.status == AccessStatus.WORKING) return
@@ -184,12 +187,21 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun cancelPing() {
+        pingEpoch.incrementAndGet()
+        pingJob?.cancel()
+        pingJob = null
+        ServerPing.cancel()
+        _ping.update { it.copy(runningIds = emptySet()) }
+    }
+
     fun pingServers() {
         if (_ping.value.runningIds.isNotEmpty()) return
         val snapshot = app.container.profiles.profiles.filter { WhitelistProfile.isOne(it.rawConfig) }
         if (snapshot.isEmpty()) return
+        val epoch = pingEpoch.incrementAndGet()
         _ping.update { it.copy(runningIds = snapshot.map { profile -> profile.id }.toSet()) }
-        viewModelScope.launch {
+        pingJob = viewModelScope.launch {
             val gate = Semaphore(4)
             coroutineScope {
                 snapshot.map { profile ->
@@ -212,6 +224,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                             } else {
                                 ServerPing.ping(host)
                             }
+                            if (epoch != pingEpoch.get()) return@async
                             _ping.update { state ->
                                 state.copy(
                                     runningIds = state.runningIds - profile.id,
@@ -232,6 +245,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun batteryIntent(): Intent? = app.container.tunnel.requestBatteryExemption()
 
     fun toggle() {
+        cancelPing()
         if (!toggleGate.compareAndSet(false, true)) return
         viewModelScope.launch {
             try {
@@ -244,6 +258,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun connect() = viewModelScope.launch {
+        cancelPing()
         opMutex.withLock { runCatching { app.container.tunnel.connectActive() } }
     }
 
@@ -257,6 +272,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             opMutex.withLock {
                 val running = tunnel.value.status == ConnectionStatus.CONNECTED ||
                     tunnel.value.status == ConnectionStatus.CONNECTING
+                if (running) cancelPing()
                 app.container.profiles.setActive(id)
                 if (running) {
                     runCatching { app.container.tunnel.disconnect() }

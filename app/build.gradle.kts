@@ -13,8 +13,8 @@ android {
         applicationId = "com.nimbus.vpn"
         minSdk = 26
         targetSdk = 35
-        versionCode = 52
-        versionName = "1.0.51"
+        versionCode = 53
+        versionName = "1.0.52"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
         ndk {
@@ -91,6 +91,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 
     implementation("com.zaneschepke:amneziawg-android:2.3.7")
+    implementation(files("libs/libv2ray.aar"))
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")

@@ -3,6 +3,7 @@ package com.nimbus.vpn
 import com.google.common.truth.Truth.assertThat
 import com.nimbus.vpn.data.ServerPing
 import com.nimbus.vpn.data.VpnProfile
+import com.nimbus.vpn.data.WhitelistConfig
 import com.nimbus.vpn.data.WhitelistProfile
 import com.nimbus.vpn.data.WhitelistSubscription
 import java.util.Base64
@@ -28,6 +29,25 @@ class WhitelistSubscriptionTest {
         assertThat(WhitelistProfile.link(profiles[0].rawConfig)).contains("de.example.com:443")
         assertThat(profiles[0].id).isEqualTo(profilesFromAgain(body)[0].id)
         assertThat(ServerPing.portOf(WhitelistProfile.endpoint(profiles[1].rawConfig))).isEqualTo(8443)
+    }
+
+    @Test
+    fun buildsCoreConfigWithoutWaitingForPing() {
+        val link = "vless://00000000-0000-0000-0000-000000000001@de.example.com:443?type=raw&security=reality&pbk=PUBLIC&sid=ab&fp=firefox&sni=ya.ru&flow=xtls-rprx-vision#Germany"
+        val json = WhitelistConfig.toCoreJson(link)
+        assertThat(json).contains("\"protocol\":\"vless\"")
+        assertThat(json).contains("\"address\":\"de.example.com\"")
+        assertThat(json).contains("\"port\":443")
+        assertThat(json).contains("\"network\":\"raw\"")
+        assertThat(json).contains("\"security\":\"reality\"")
+        assertThat(json).contains("\"publicKey\":\"PUBLIC\"")
+        assertThat(json).contains("\"flow\":\"xtls-rprx-vision\"")
+        val extraLink = "vless://00000000-0000-0000-0000-000000000005@lt.example.com:443?type=xhttp&security=tls&sni=ya.ru&path=/ray&extra=${encode("{\"scMaxEachPostBytes\":\"100-200\"}")}&alpn=h2"
+        val extraJson = WhitelistConfig.toCoreJson(extraLink)
+        assertThat(extraJson).contains("\"network\":\"xhttp\"")
+        assertThat(extraJson).contains("\"scMaxEachPostBytes\":\"100-200\"")
+        assertThat(extraJson).contains("\"fingerprint\":\"chrome\"")
+        assertThat(extraJson).contains("\"alpn\":[\"h2\"]")
     }
 
     @Test

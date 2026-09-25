@@ -3,13 +3,28 @@ package com.nimbus.vpn.data
 import java.net.ConnectException
 import java.net.InetSocketAddress
 import java.net.Socket
+import java.util.Collections
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Latency to a relay. ICMP first, then a short TCP connect: "connection refused"
  * still means the host answered, so it counts as a round trip.
  */
 object ServerPing {
+    private val generation = AtomicInteger(0)
+    private val processes = Collections.synchronizedList(mutableListOf<Process>())
+    private val sockets = Collections.synchronizedList(mutableListOf<Socket>())
+
+    /** Drop in-flight probes so a connect does not wait on them. */
+    fun cancel() {
+        generation.incrementAndGet()
+        processes.toList().forEach { runCatching { it.destroyForcibly() } }
+        processes.clear()
+        sockets.toList().forEach { runCatching { it.close() } }
+        sockets.clear()
+    }
+
     fun hostOf(endpoint: String?): String? {
         val raw = endpoint?.trim()?.substringBefore(' ')?.trim().orEmpty()
         if (raw.isEmpty()) return null
@@ -51,31 +66,45 @@ object ServerPing {
     }
 
     private fun icmp(host: String, timeoutMs: Int): Int? {
+        val stamp = generation.get()
         val seconds = (timeoutMs / 1000).coerceAtLeast(1).toString()
         val process = ProcessBuilder("ping", "-c", "1", "-w", seconds, host)
             .redirectErrorStream(true)
             .start()
-        val finished = process.waitFor(timeoutMs + 500L, TimeUnit.MILLISECONDS)
-        if (!finished) {
-            process.destroyForcibly()
-            return null
+        processes += process
+        try {
+            if (generation.get() != stamp) return null
+            val finished = process.waitFor(timeoutMs + 500L, TimeUnit.MILLISECONDS)
+            if (!finished || generation.get() != stamp) {
+                process.destroyForcibly()
+                return null
+            }
+            val output = process.inputStream.bufferedReader().use { it.readText() }
+            if (process.exitValue() != 0) return null
+            return parseRttMs(output)
+        } finally {
+            processes.remove(process)
         }
-        val output = process.inputStream.bufferedReader().use { it.readText() }
-        if (process.exitValue() != 0) return null
-        return parseRttMs(output)
     }
 
     private fun tcpRtt(host: String, port: Int, timeoutMs: Int): Int? {
+        val stamp = generation.get()
         val started = System.nanoTime()
+        val socket = Socket()
+        sockets += socket
         try {
-            Socket().use { socket ->
-                socket.connect(InetSocketAddress(host, port), timeoutMs)
-            }
+            if (generation.get() != stamp) return null
+            socket.connect(InetSocketAddress(host, port), timeoutMs)
+            if (generation.get() != stamp) return null
             return elapsedMs(started)
         } catch (refused: ConnectException) {
+            if (generation.get() != stamp) return null
             val message = refused.message.orEmpty()
             if (!message.contains("refused", ignoreCase = true)) return null
             return elapsedMs(started)
+        } finally {
+            sockets.remove(socket)
+            runCatching { socket.close() }
         }
     }
 
