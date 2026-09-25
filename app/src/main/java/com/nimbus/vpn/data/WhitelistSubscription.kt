@@ -8,9 +8,9 @@ import java.security.MessageDigest
 import java.util.Base64
 
 /**
- * White-list servers are not generated here. A tap downloads a short public
- * list aimed at mobile white-lists and replaces the previous cards. WARP stays.
- * Only VLESS is kept: that is what this app can start.
+ * White-list cards are downloaded on the phone. The LTE subscription is all
+ * white-list. The other subscription is mixed, so ordinary names are skipped.
+ * Only VLESS is kept. WARP profiles stay.
  */
 object WhitelistProfile {
     const val ENGINE = "whitelist"
@@ -62,16 +62,55 @@ object WhitelistProfile {
 }
 
 object WhitelistSubscription {
-    const val URL =
-        "https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/main/Vless-Reality-White-Lists-Rus-Mobile.txt"
+    /** Bumped when the feeds change so the next launch replaces old white-list cards. */
+    const val SOURCE = "bs-lte-liberty-1"
+
+    private val feeds = listOf(
+        Feed(
+            url = "https://cdn-sub.file-racing.online/sub/lte/f9afd2d3-3858-403e-bbc9-9a720420c188",
+            label = "LTE",
+            onlyWhitelistNames = false,
+        ),
+        Feed(
+            url = "https://connliberty.com/connection/subs/dcf2b960",
+            label = "вторая",
+            onlyWhitelistNames = true,
+        ),
+    )
 
     private const val MAX_BYTES = 1_500_000
     private const val MAX_PROFILES = 400
     private val LINK = Regex(
         """(?i)vless://[^\s"'#]+(?:#[^\r\n"']*)?""",
     )
+    private val WHITELIST_MARK = Regex("""(?<!\p{L})бс(?!\p{L})""")
 
-    fun download(url: String = URL): List<VpnProfile> {
+    data class Fetch(val profiles: List<VpnProfile>, val note: String)
+
+    fun download(): Fetch {
+        val merged = LinkedHashMap<String, VpnProfile>()
+        val failed = ArrayList<String>()
+        for (feed in feeds) {
+            val body = runCatching { httpGet(feed.url) }.getOrNull()
+            if (body == null) {
+                failed += feed.label
+                continue
+            }
+            profilesFrom(body, feed.onlyWhitelistNames).forEach { profile ->
+                if (merged.size < MAX_PROFILES) merged.putIfAbsent(profile.id, profile)
+            }
+        }
+        if (merged.isEmpty() && failed.size == feeds.size) {
+            error("Подписки не скачались")
+        }
+        val note = buildString {
+            append("Белые списки: ${merged.size}")
+            if (failed.isNotEmpty()) append(". Не скачалось: ${failed.joinToString()}")
+        }
+        return Fetch(merged.values.toList(), note)
+    }
+
+    private fun httpGet(url: String): String {
         val connection = (URL(url).openConnection() as HttpURLConnection).apply {
             connectTimeout = 10_000
             readTimeout = 20_000
@@ -94,7 +133,7 @@ object WhitelistSubscription {
                 out.toString(StandardCharsets.UTF_8)
             }.orEmpty()
             if (code !in 200..299) error("Подписка ответила $code")
-            return profilesFrom(body)
+            return body
         } finally {
             connection.disconnect()
         }
@@ -121,7 +160,7 @@ object WhitelistSubscription {
         ).map { it.value }
     }
 
-    fun profilesFrom(body: String): List<VpnProfile> {
+    fun profilesFrom(body: String, onlyWhitelistNames: Boolean = false): List<VpnProfile> {
         val text = unwrap(body)
         val seen = LinkedHashSet<String>()
         val profiles = ArrayList<VpnProfile>()
@@ -129,6 +168,7 @@ object WhitelistSubscription {
             if (profiles.size >= MAX_PROFILES) return@forEach
             val link = match.value.trim()
             val parsed = parseLink(link) ?: return@forEach
+            if (onlyWhitelistNames && !isWhitelistName(parsed.name)) return@forEach
             val id = idFor(link)
             if (!seen.add(id)) return@forEach
             profiles += VpnProfile(
@@ -189,11 +229,20 @@ object WhitelistSubscription {
         return Parsed(display, "$host:$port")
     }
 
+    internal fun isWhitelistName(name: String): Boolean {
+        val low = name.lowercase()
+        if ("lte" in low || "бел" in low || "вайт" in low || "обход" in low) return true
+        if ("whitelist" in low || "white list" in low || "white-list" in low) return true
+        return WHITELIST_MARK.containsMatchIn(low)
+    }
+
     private fun isNotice(name: String, host: String, port: Int): Boolean {
         val low = name.lowercase()
         if ("устарел" in low || "обновите" in low || "github.com" in low || "t.me/" in low) return true
         return host.equals("zieng2.org", ignoreCase = true) && port <= 10
     }
+
+    private data class Feed(val url: String, val label: String, val onlyWhitelistNames: Boolean)
 
     private data class Parsed(val name: String, val endpoint: String)
 }

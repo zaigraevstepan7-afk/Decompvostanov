@@ -71,6 +71,22 @@ class WhitelistSubscriptionTest {
     }
 
     @Test
+    fun skipsOrdinaryNamesInMixedList() {
+        val body = """
+            vless://00000000-0000-0000-0000-000000000011@nl.example.com:443#${encode("🇳🇱 LTE Нидерланды")}
+            vless://00000000-0000-0000-0000-000000000012@de.example.com:443#${encode("🇩🇪 Германия")}
+            vless://00000000-0000-0000-0000-000000000013@fi.example.com:443#${encode("Белые списки 1")}
+            vless://00000000-0000-0000-0000-000000000014@pl.example.com:443#${encode("🇵🇱 БС Польша")}
+        """.trimIndent()
+        val kept = WhitelistSubscription.profilesFrom(body, onlyWhitelistNames = true)
+        assertThat(kept.map { it.name }).containsExactly(
+            "🇳🇱 LTE Нидерланды",
+            "Белые списки 1",
+            "🇵🇱 БС Польша",
+        ).inOrder()
+    }
+
+    @Test
     fun keepsOnlyVless() {
         val body = """
             hysteria2://secret@lv.example.com:443?sni=ya.ru#Latvia

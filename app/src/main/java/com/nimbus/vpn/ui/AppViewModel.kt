@@ -99,7 +99,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val pingEpoch = AtomicInteger(0)
 
     init {
-        if (app.container.profiles.whitelistSource() != WhitelistSubscription.URL) {
+        if (app.container.profiles.whitelistSource() != WhitelistSubscription.SOURCE) {
             refreshSubscription()
         }
     }
@@ -177,15 +177,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             }
             result.fold(
                 onSuccess = { fetched ->
-                    if (fetched.isEmpty()) {
+                    if (fetched.profiles.isEmpty()) {
                         _subscription.value = SubscriptionUiState(note = "В подписке нет серверов")
                         return@fold
                     }
                     opMutex.withLock {
-                        app.container.profiles.replaceWhitelist(fetched)
-                        app.container.profiles.rememberWhitelistSource(WhitelistSubscription.URL)
+                        app.container.profiles.replaceWhitelist(fetched.profiles)
+                        app.container.profiles.rememberWhitelistSource(WhitelistSubscription.SOURCE)
                     }
-                    _subscription.value = SubscriptionUiState(note = "Белые списки: ${fetched.size}")
+                    _subscription.value = SubscriptionUiState(note = fetched.note)
                 },
                 onFailure = { error ->
                     _subscription.value = SubscriptionUiState(
