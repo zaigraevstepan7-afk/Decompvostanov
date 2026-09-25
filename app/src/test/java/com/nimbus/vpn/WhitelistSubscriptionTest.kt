@@ -2,6 +2,7 @@ package com.nimbus.vpn
 
 import com.google.common.truth.Truth.assertThat
 import com.nimbus.vpn.data.ServerPing
+import com.nimbus.vpn.data.VpnProfile
 import com.nimbus.vpn.data.WhitelistProfile
 import com.nimbus.vpn.data.WhitelistSubscription
 import java.util.Base64
@@ -27,6 +28,22 @@ class WhitelistSubscriptionTest {
         assertThat(WhitelistProfile.link(profiles[0].rawConfig)).contains("de.example.com:443")
         assertThat(profiles[0].id).isEqualTo(profilesFromAgain(body)[0].id)
         assertThat(ServerPing.portOf(WhitelistProfile.endpoint(profiles[1].rawConfig))).isEqualTo(8443)
+    }
+
+    @Test
+    fun sortsFastestPingFirst() {
+        val profiles = listOf(
+            VpnProfile(id = "slow", name = "s", rawConfig = "x"),
+            VpnProfile(id = "fast", name = "f", rawConfig = "x"),
+            VpnProfile(id = "wait", name = "w", rawConfig = "x"),
+            VpnProfile(id = "dead", name = "d", rawConfig = "x"),
+            VpnProfile(id = "mid", name = "m", rawConfig = "x"),
+        )
+        val sorted = WhitelistSubscription.sortedByPing(
+            profiles,
+            mapOf("slow" to 400, "fast" to 20, "dead" to null, "mid" to 80),
+        )
+        assertThat(sorted.map { it.id }).containsExactly("fast", "mid", "slow", "wait", "dead").inOrder()
     }
 
     @Test

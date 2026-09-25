@@ -99,6 +99,27 @@ object WhitelistSubscription {
         }
     }
 
+    /**
+     * Measured servers first, lowest ping at the top. Not measured yet keep
+     * their order. Servers that did not answer go last.
+     */
+    fun sortedByPing(profiles: List<VpnProfile>, millis: Map<String, Int?>): List<VpnProfile> {
+        return profiles.withIndex().sortedWith(
+            compareBy<IndexedValue<VpnProfile>>(
+                { entry ->
+                    val id = entry.value.id
+                    when {
+                        millis[id] != null -> 0
+                        millis.containsKey(id) -> 2
+                        else -> 1
+                    }
+                },
+                { entry -> millis[entry.value.id] ?: Int.MAX_VALUE },
+                { entry -> entry.index },
+            ),
+        ).map { it.value }
+    }
+
     fun profilesFrom(body: String): List<VpnProfile> {
         val text = unwrap(body)
         val seen = LinkedHashSet<String>()

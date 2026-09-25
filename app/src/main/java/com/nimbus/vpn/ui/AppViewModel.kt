@@ -186,7 +186,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun pingServers() {
         if (_ping.value.runningIds.isNotEmpty()) return
-        val snapshot = app.container.profiles.profiles
+        val snapshot = app.container.profiles.profiles.filter { WhitelistProfile.isOne(it.rawConfig) }
         if (snapshot.isEmpty()) return
         _ping.update { it.copy(runningIds = snapshot.map { profile -> profile.id }.toSet()) }
         viewModelScope.launch {

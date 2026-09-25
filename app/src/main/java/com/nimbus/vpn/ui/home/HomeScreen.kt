@@ -53,6 +53,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,6 +76,7 @@ import com.nimbus.vpn.data.SecTunnelProfile
 import com.nimbus.vpn.data.ProfileIndex
 import com.nimbus.vpn.data.VpnProfile
 import com.nimbus.vpn.data.WhitelistProfile
+import com.nimbus.vpn.data.WhitelistSubscription
 import com.nimbus.vpn.tunnel.ConnectionStatus
 import com.nimbus.vpn.tunnel.TunnelUiState
 import com.nimbus.vpn.ui.AccessStatus
@@ -136,6 +138,7 @@ fun HomeScreen(
 ) {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var pendingDelete by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var inWhitelist by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(state.status) {
         if (state.status != ConnectionStatus.CONNECTED) return@LaunchedEffect
         while (true) {
@@ -143,6 +146,11 @@ fun HomeScreen(
             delay(1000)
         }
     }
+    val regular = profiles.profiles.filterNot { WhitelistProfile.isOne(it.rawConfig) }
+    val whitelist = WhitelistSubscription.sortedByPing(
+        profiles.profiles.filter { WhitelistProfile.isOne(it.rawConfig) },
+        ping.millis,
+    )
     val active = profiles.profiles.firstOrNull { it.id == profiles.activeId } ?: state.profile
     val busy = state.status == ConnectionStatus.CONNECTING
     val step = CoachStep.from(settings.coachStep)
@@ -277,8 +285,28 @@ fun HomeScreen(
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                 )
             }
-            val regular = profiles.profiles.filterNot { WhitelistProfile.isOne(it.rawConfig) }
-            val whitelist = profiles.profiles.filter { WhitelistProfile.isOne(it.rawConfig) }
+            Row(
+                Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                SectionChip(
+                    whitelist = false,
+                    title = "Обычные",
+                    count = regular.size,
+                    selected = !inWhitelist,
+                    onClick = { inWhitelist = false },
+                    modifier = Modifier.weight(1f),
+                )
+                SectionChip(
+                    whitelist = true,
+                    title = "Белые списки",
+                    count = whitelist.size,
+                    selected = inWhitelist,
+                    onClick = { inWhitelist = true },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            val shown = if (inWhitelist) whitelist else regular
             LazyColumn(
                 Modifier.fillMaxSize(),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(
@@ -289,54 +317,22 @@ fun HomeScreen(
                 ),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                item(key = "section-regular") {
-                    SectionHeader(whitelist = false, title = "Обычные", count = regular.size)
-                }
-                if (regular.isEmpty()) {
-                    item(key = "empty-regular") {
-                        Text(
-                            "Пока пусто. Нажми «+» и создай WARP.",
-                            color = InkMuted,
-                            fontSize = 13.sp,
-                            modifier = Modifier.padding(start = 42.dp, bottom = 6.dp),
-                        )
-                    }
-                }
-                items(regular, key = { it.id }) { profile ->
-                    ListedServer(
-                        profile = profile,
-                        profiles = profiles,
-                        state = state,
-                        ping = ping,
-                        onSelect = onSelect,
-                        onDelete = { pendingDelete = profile.id to profile.name },
-                        onRotate = onRotate,
-                    )
-                }
-                item(key = "section-whitelist") {
-                    SectionHeader(whitelist = true, title = "Белые списки", count = whitelist.size)
-                }
-                if (!subscriptionNote.isNullOrBlank()) {
+                if (inWhitelist && !subscriptionNote.isNullOrBlank()) {
                     item(key = "subscription-note") {
+                        Text(subscriptionNote, color = InkMuted, fontSize = 13.sp)
+                    }
+                }
+                if (shown.isEmpty()) {
+                    item(key = if (inWhitelist) "empty-whitelist" else "empty-regular") {
                         Text(
-                            subscriptionNote,
+                            if (inWhitelist) "Пока пусто. Слева внизу — обновить подписку."
+                            else "Пока пусто. Нажми «+» и создай WARP.",
                             color = InkMuted,
                             fontSize = 13.sp,
-                            modifier = Modifier.padding(start = 42.dp),
                         )
                     }
                 }
-                if (whitelist.isEmpty()) {
-                    item(key = "empty-whitelist") {
-                        Text(
-                            "Пока пусто. Слева внизу — обновить подписку.",
-                            color = InkMuted,
-                            fontSize = 13.sp,
-                            modifier = Modifier.padding(start = 42.dp, bottom = 6.dp),
-                        )
-                    }
-                }
-                items(whitelist, key = { it.id }) { profile ->
+                items(shown, key = { it.id }) { profile ->
                     ListedServer(
                         profile = profile,
                         profiles = profiles,
@@ -357,19 +353,21 @@ fun HomeScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            SideAction(
-                onClick = onRefreshSubscription,
-                enabled = !subscriptionRefreshing,
-                description = "Обновить подписку",
-            ) {
-                if (subscriptionRefreshing) {
-                    CircularProgressIndicator(
-                        color = Accent,
-                        strokeWidth = 2.dp,
-                        modifier = Modifier.size(22.dp),
-                    )
-                } else {
-                    Icon(Icons.Rounded.Sync, contentDescription = null, tint = Ink, modifier = Modifier.size(26.dp))
+            if (inWhitelist) {
+                SideAction(
+                    onClick = onRefreshSubscription,
+                    enabled = !subscriptionRefreshing,
+                    description = "Обновить подписку",
+                ) {
+                    if (subscriptionRefreshing) {
+                        CircularProgressIndicator(
+                            color = Accent,
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    } else {
+                        Icon(Icons.Rounded.Sync, contentDescription = null, tint = Ink, modifier = Modifier.size(26.dp))
+                    }
                 }
             }
             ConnectButton(
@@ -385,12 +383,14 @@ fun HomeScreen(
                     }
                 },
             )
-            SideAction(
-                onClick = onPing,
-                enabled = ping.runningIds.isEmpty() && profiles.profiles.isNotEmpty(),
-                description = "Пинг",
-            ) {
-                Icon(Icons.Rounded.Timer, contentDescription = null, tint = Ink, modifier = Modifier.size(26.dp))
+            if (inWhitelist) {
+                SideAction(
+                    onClick = onPing,
+                    enabled = ping.runningIds.isEmpty() && whitelist.isNotEmpty(),
+                    description = "Пинг",
+                ) {
+                    Icon(Icons.Rounded.Timer, contentDescription = null, tint = Ink, modifier = Modifier.size(26.dp))
+                }
             }
         }
         DogDock(
@@ -488,13 +488,48 @@ private fun ListedServer(
 }
 
 @Composable
-private fun SectionHeader(whitelist: Boolean, title: String, count: Int) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+private fun SectionChip(
+    whitelist: Boolean,
+    title: String,
+    count: Int,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val press = rememberPress(0.97f)
+    val stroke by animateColorAsState(
+        if (selected) Accent.copy(alpha = 0.7f) else Line,
+        Motion.color(360),
+        label = "section-stroke",
+    )
+    Row(
+        modifier
+            .pressScale(press.scale)
+            .height(44.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(if (selected) Lift else Paper)
+            .border(1.dp, stroke, RoundedCornerShape(16.dp))
+            .clickable(
+                interactionSource = press.interaction,
+                indication = ripple(),
+                onClick = onClick,
+            )
+            .padding(horizontal = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         GroupLogo(whitelist)
-        Spacer(Modifier.width(10.dp))
-        Text(title, color = Ink, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+        Spacer(Modifier.width(8.dp))
+        Text(
+            title,
+            color = Ink,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
         if (count > 0) {
-            Text("$count", color = InkMuted, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            Text("$count", color = InkMuted, fontSize = 12.sp, fontWeight = FontWeight.Medium)
         }
     }
 }
