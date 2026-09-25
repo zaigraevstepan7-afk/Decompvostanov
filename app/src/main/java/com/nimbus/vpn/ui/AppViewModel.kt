@@ -98,6 +98,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private var pingJob: Job? = null
     private val pingEpoch = AtomicInteger(0)
 
+    init {
+        if (app.container.profiles.whitelistSource() != WhitelistSubscription.URL) {
+            refreshSubscription()
+        }
+    }
+
     fun activateAccess() {
         if (_access.value.status == AccessStatus.WORKING) return
         noteAccessPressed()
@@ -175,7 +181,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                         _subscription.value = SubscriptionUiState(note = "В подписке нет серверов")
                         return@fold
                     }
-                    opMutex.withLock { app.container.profiles.replaceWhitelist(fetched) }
+                    opMutex.withLock {
+                        app.container.profiles.replaceWhitelist(fetched)
+                        app.container.profiles.rememberWhitelistSource(WhitelistSubscription.URL)
+                    }
                     _subscription.value = SubscriptionUiState(note = "Белые списки: ${fetched.size}")
                 },
                 onFailure = { error ->

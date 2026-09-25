@@ -8,9 +8,9 @@ import java.security.MessageDigest
 import java.util.Base64
 
 /**
- * White-list servers are not generated here. A tap downloads the public
- * subscription and replaces the previous white-list cards. WARP profiles stay.
- * The saved text is only a marker plus the share link; AmneziaWG never parses it.
+ * White-list servers are not generated here. A tap downloads a short public
+ * list aimed at mobile white-lists and replaces the previous cards. WARP stays.
+ * Only VLESS is kept: that is what this app can start.
  */
 object WhitelistProfile {
     const val ENGINE = "whitelist"
@@ -62,12 +62,13 @@ object WhitelistProfile {
 }
 
 object WhitelistSubscription {
-    const val URL = "https://raw.githubusercontent.com/zieng2/wl/main/vless_universal.txt"
+    const val URL =
+        "https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/main/Vless-Reality-White-Lists-Rus-Mobile.txt"
 
     private const val MAX_BYTES = 1_500_000
     private const val MAX_PROFILES = 400
     private val LINK = Regex(
-        """(?i)(?:vless|vmess|trojan|ss|hysteria2|hy2)://[^\s"'#]+(?:#[^\r\n"']*)?""",
+        """(?i)vless://[^\s"'#]+(?:#[^\r\n"']*)?""",
     )
 
     fun download(url: String = URL): List<VpnProfile> {

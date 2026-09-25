@@ -71,6 +71,16 @@ class WhitelistSubscriptionTest {
     }
 
     @Test
+    fun keepsOnlyVless() {
+        val body = """
+            hysteria2://secret@lv.example.com:443?sni=ya.ru#Latvia
+            vless://00000000-0000-0000-0000-000000000006@uk.example.com:443?type=grpc#${encode("🇬🇧 United Kingdom")}
+        """.trimIndent()
+        val profiles = WhitelistSubscription.profilesFrom(body)
+        assertThat(profiles.map { it.name }).containsExactly("🇬🇧 United Kingdom")
+    }
+
+    @Test
     fun unwrapsBase64Body() {
         val plain = "vless://00000000-0000-0000-0000-000000000009@ch.example.com:2053?type=raw#${encode("🇨🇭 Switzerland")}"
         val encoded = Base64.getMimeEncoder().encodeToString(plain.toByteArray())

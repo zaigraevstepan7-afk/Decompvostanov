@@ -68,6 +68,14 @@ class ProfileStore(context: Context) {
         persist(_index.value.copy(activeId = id))
     }
 
+    fun whitelistSource(): String = synchronized(this) {
+        runCatching { prefs.getString(SOURCE, "").orEmpty() }.getOrDefault("")
+    }
+
+    fun rememberWhitelistSource(url: String) = synchronized(this) {
+        runCatching { prefs.edit().putString(SOURCE, url).apply() }
+    }
+
     fun replaceWhitelist(incoming: List<VpnProfile>) = synchronized(this) {
         val clean = incoming.filter { WhitelistProfile.isOne(it.rawConfig) && !isRemoved(it) }
         if (clean.isEmpty()) return
@@ -136,6 +144,7 @@ class ProfileStore(context: Context) {
 
     companion object {
         private const val KEY = "index"
+        private const val SOURCE = "whitelist_source"
         private const val PREFS = "nimbus_profiles"
         private const val TAG = "Bozya/Profiles"
 
