@@ -21,3 +21,6 @@ keystore.properties
 *.conf
 !app/src/test/resources/*.conf
 !app/src/main/res/raw/sample.conf
+*.exe
+!dist/*.exe
+/desktop/data/

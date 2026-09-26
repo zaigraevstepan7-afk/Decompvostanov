@@ -1,0 +1,3 @@
+wintun.dll is the unmodified file shipped in Xray-windows-64.zip
+from XTLS/Xray-core release v26.3.27. It is WireGuard Wintun.
+License and source: https://www.wintun.net/
