@@ -77,6 +77,33 @@ func normalizeCIDR(addr string) string {
 	return addr + "/32"
 }
 
+func hostsToBypass(servers []string) []string {
+	skip := map[string]bool{
+		"1.1.1.1":   true,
+		"1.0.0.1":   true,
+		"127.0.0.1": true,
+		"0.0.0.0":   true,
+	}
+	var out []string
+	seen := map[string]bool{}
+	for _, raw := range servers {
+		ip := net.ParseIP(strings.TrimSpace(raw))
+		if ip == nil || ip.To4() == nil || ip.IsLoopback() || ip.IsUnspecified() {
+			continue
+		}
+		text := ip.To4().String()
+		if skip[text] || seen[text] {
+			continue
+		}
+		seen[text] = true
+		out = append(out, text)
+		if len(out) == 4 {
+			break
+		}
+	}
+	return out
+}
+
 func splitAddrs(addrs []string) (v4, v6 []string) {
 	for _, addr := range addrs {
 		addr = normalizeCIDR(addr)

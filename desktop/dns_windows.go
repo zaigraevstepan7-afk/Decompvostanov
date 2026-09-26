@@ -9,7 +9,16 @@ import (
 	"strings"
 )
 
-func setSystemDNS() (func(), error) {
+func currentDNSServers() []string {
+	script := `Get-DnsClientServerAddress -AddressFamily IPv4 | ForEach-Object { $_.ServerAddresses }`
+	out, err := commandOutput(exec.Command("powershell", "-NoProfile", "-NonInteractive", "-Command", script))
+	if err != nil {
+		return nil
+	}
+	return ipv4s(out)
+}
+
+func setSystemDNS(servers []string) (func(), error) {
 	gw, err := captureGateway()
 	if err != nil {
 		return nil, err
@@ -24,9 +33,16 @@ func setSystemDNS() (func(), error) {
 	if err := saveDNSBackup(b); err != nil {
 		return nil, err
 	}
-	if err := runQuiet(exec.Command("netsh", "interface", "ipv4", "set", "dnsservers", "name="+gw.Iface, "static", "127.0.0.1", "primary", "validate=no")); err != nil {
+	if len(servers) == 0 {
 		clearDNSBackup()
 		return nil, fmt.Errorf("Не удалось сменить DNS")
+	}
+	if err := runQuiet(exec.Command("netsh", "interface", "ipv4", "set", "dnsservers", "name="+gw.Iface, "static", servers[0], "primary", "validate=no")); err != nil {
+		clearDNSBackup()
+		return nil, fmt.Errorf("Не удалось сменить DNS")
+	}
+	for i, server := range servers[1:] {
+		_ = runQuiet(exec.Command("netsh", "interface", "ipv4", "add", "dnsservers", "name="+gw.Iface, server, "index="+strconv.Itoa(i+2), "validate=no"))
 	}
 	return func() {
 		_ = applyDNSRestore(b)

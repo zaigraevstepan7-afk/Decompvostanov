@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"os"
+	"time"
 )
 
 func writeJSON(w http.ResponseWriter, code int, v any) {
@@ -108,7 +110,10 @@ func newMux(a *app) http.Handler {
 	mux.HandleFunc("POST /api/quit", func(w http.ResponseWriter, r *http.Request) {
 		a.disconnect()
 		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
-		go func() { _ = httpServer.Close() }()
+		go func() {
+			time.Sleep(150 * time.Millisecond)
+			os.Exit(0)
+		}()
 	})
 	return mux
 }

@@ -31,12 +31,14 @@ func (t *awgTunnel) Close() error {
 	if t == nil {
 		return nil
 	}
+	if t.cleanup != nil {
+		t.cleanup()
+		t.cleanup = nil
+	}
 	if t.dev != nil {
 		_ = t.dev.Down()
 		t.dev.Close()
-	}
-	if t.cleanup != nil {
-		t.cleanup()
+		t.dev = nil
 	}
 	return nil
 }
@@ -90,7 +92,16 @@ func startWARP(conf string) (tunnel, error) {
 		dev.Close()
 		return nil, fmt.Errorf("Не удалось включить WARP")
 	}
-	return &awgTunnel{dev: dev, cleanup: cleanup}, nil
+	restore, err := setSystemDNS([]string{"1.1.1.1", "1.0.0.1"})
+	if err != nil {
+		cleanup()
+		dev.Close()
+		return nil, err
+	}
+	return &awgTunnel{dev: dev, cleanup: func() {
+		cleanup()
+		restore()
+	}}, nil
 }
 
 func tunErr(err error) error {

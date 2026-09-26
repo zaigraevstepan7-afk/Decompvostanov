@@ -37,7 +37,13 @@ func main() {
 		resp, getErr := client.Get("http://" + addr + "/api/state")
 		if getErr == nil && resp.StatusCode == http.StatusOK {
 			resp.Body.Close()
-			openBrowser("http://" + addr + "/")
+			if os.Getenv("BOZYA_NO_WINDOW") == "1" {
+				return
+			}
+			page := "http://" + addr + "/"
+			if !showAppWindow(page) {
+				openBrowser(page)
+			}
 			return
 		}
 		fatal("Не удалось открыть окно Bozya VPN")
@@ -47,10 +53,9 @@ func main() {
 		Handler:           newMux(bozya),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
-	go func() {
-		time.Sleep(250 * time.Millisecond)
-		openBrowser("http://" + addr + "/")
-	}()
+	go func() { _ = httpServer.Serve(ln) }()
+	page := "http://" + addr + "/"
+	time.Sleep(250 * time.Millisecond)
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
@@ -58,5 +63,12 @@ func main() {
 		bozya.disconnect()
 		os.Exit(0)
 	}()
-	_ = httpServer.Serve(ln)
+	if os.Getenv("BOZYA_NO_WINDOW") == "1" {
+		<-sig
+	} else if !showAppWindow(page) {
+		openBrowser(page)
+		<-sig
+	}
+	bozya.disconnect()
+	_ = httpServer.Close()
 }

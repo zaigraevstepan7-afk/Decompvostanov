@@ -5,10 +5,18 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"net"
 	"os"
 	"strings"
 	"testing"
 )
+
+func TestHostsToBypass(t *testing.T) {
+	got := hostsToBypass([]string{"192.168.1.1", "1.1.1.1", "127.0.0.1", "192.168.1.1", "10.0.0.1", "not-an-ip"})
+	if len(got) != 2 || got[0] != "192.168.1.1" || got[1] != "10.0.0.1" {
+		t.Fatal(got)
+	}
+}
 
 func TestRouteParsers(t *testing.T) {
 	gw, err := parseLinuxDefault("default via 10.0.0.1 dev eth0 proto dhcp\n")
@@ -153,6 +161,18 @@ func TestWarpUAPI(t *testing.T) {
 		if randomPort(skipped) == 988 {
 			t.Fatal("port")
 		}
+	}
+	bare, err := parseWarpBody(`{"success":true,"privKey":"` + priv + `","peer_pub":"` + pub + `","client_ipv4":"172.16.0.2","client_ipv6":"fd00::1"}`)
+	if err != nil {
+		t.Fatal("bare")
+	}
+	bareConf := buildWarpConf(bare, "de.tribukvy.ltd", 3476)
+	v4, v6 := splitAddrs(confAddrs(bareConf))
+	if len(v4) != 1 || v4[0] != "172.16.0.2/32" || len(v6) != 1 || v6[0] != "fd00::1/128" {
+		t.Fatal("cidr")
+	}
+	if _, _, err = net.ParseCIDR(v4[0]); err != nil {
+		t.Fatal("parse cidr")
 	}
 	pl, ok := countryByID("pl")
 	if !ok || pl.host != "pl.tribukvy.ltd" || pl.lteHost != "tel.pl.tribukvy.ltd" {

@@ -8,7 +8,15 @@ import (
 	"strings"
 )
 
-func setSystemDNS() (func(), error) {
+func currentDNSServers() []string {
+	out, err := commandOutput(exec.Command("scutil", "--dns"))
+	if err != nil {
+		return nil
+	}
+	return ipv4s(out)
+}
+
+func setSystemDNS(servers []string) (func(), error) {
 	gw, err := captureGateway()
 	if err != nil {
 		return nil, err
@@ -18,13 +26,18 @@ func setSystemDNS() (func(), error) {
 		return nil, err
 	}
 	out, _ := commandOutput(exec.Command("networksetup", "-getdnsservers", service))
-	servers := ipv4s(out)
-	dhcp := len(servers) == 0 || strings.Contains(strings.ToLower(out), "aren't any")
-	b := dnsBackup{Service: service, DHCP: dhcp, Servers: servers}
+	current := ipv4s(out)
+	dhcp := len(current) == 0 || strings.Contains(strings.ToLower(out), "aren't any")
+	b := dnsBackup{Service: service, DHCP: dhcp, Servers: current}
 	if err := saveDNSBackup(b); err != nil {
 		return nil, err
 	}
-	if err := runQuiet(exec.Command("networksetup", "-setdnsservers", service, "127.0.0.1")); err != nil {
+	if len(servers) == 0 {
+		clearDNSBackup()
+		return nil, fmt.Errorf("Не удалось сменить DNS")
+	}
+	args := append([]string{"-setdnsservers", service}, servers...)
+	if err := runQuiet(exec.Command("networksetup", args...)); err != nil {
 		clearDNSBackup()
 		return nil, fmt.Errorf("Не удалось сменить DNS")
 	}

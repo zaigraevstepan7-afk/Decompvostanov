@@ -41,11 +41,26 @@ func setupWarpRoutes(ifname string, addrs []string, endpoint net.IP, gw gateway,
 		_ = runQuiet(exec.Command("ifconfig", ifname, "inet6", ip6.String(), "prefixlen", strconv.Itoa(ones)))
 	}
 	ep := endpoint.String()
+	_ = runQuiet(exec.Command("route", "-n", "delete", "-host", ep))
 	if err := runQuiet(exec.Command("route", "-n", "add", "-host", ep, gw.IP.String())); err != nil {
 		return nil, fmt.Errorf("Не удалось обойти адрес сервера")
 	}
+	var kept []string
+	for _, host := range hostsToBypass(currentDNSServers()) {
+		_ = runQuiet(exec.Command("route", "-n", "delete", "-host", host))
+		if runQuiet(exec.Command("route", "-n", "add", "-host", host, gw.IP.String())) == nil {
+			kept = append(kept, host)
+		}
+	}
 	cleanup := func() {
+		_ = runQuiet(exec.Command("route", "-n", "delete", "-net", "0.0.0.0/1", "-interface", ifname))
+		_ = runQuiet(exec.Command("route", "-n", "delete", "-net", "128.0.0.0/1", "-interface", ifname))
+		_ = runQuiet(exec.Command("route", "-n", "delete", "-inet6", "-net", "::/1", "-interface", ifname))
+		_ = runQuiet(exec.Command("route", "-n", "delete", "-inet6", "-net", "8000::/1", "-interface", ifname))
 		_ = runQuiet(exec.Command("route", "-n", "delete", "-host", ep))
+		for _, host := range kept {
+			_ = runQuiet(exec.Command("route", "-n", "delete", "-host", host))
+		}
 	}
 	if err := runQuiet(exec.Command("route", "-n", "add", "-net", "0.0.0.0/1", "-interface", ifname)); err != nil {
 		cleanup()

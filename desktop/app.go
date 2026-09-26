@@ -459,7 +459,7 @@ func startDNS(progress func(string)) (tunnel, error) {
 	if err != nil {
 		return nil, err
 	}
-	restore, err := setSystemDNS()
+	restore, err := setSystemDNS([]string{"127.0.0.1"})
 	if err != nil {
 		_ = proc.Close()
 		return nil, err
