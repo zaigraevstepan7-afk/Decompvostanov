@@ -237,7 +237,7 @@ class TunnelController(
             connectSec(profile, fresh, userInitiated)
             return@withLock
         }
-        if (WhitelistProfile.isOne(profile.rawConfig)) {
+        if (WhitelistProfile.isOne(profile.rawConfig) || com.nimbus.vpn.data.VlessProfile.isOne(profile.rawConfig)) {
             connectWhitelist(profile, fresh)
             return@withLock
         }

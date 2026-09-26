@@ -15,6 +15,7 @@ import com.nimbus.vpn.data.SecTunnelApi
 import com.nimbus.vpn.data.SecTunnelProfile
 import com.nimbus.vpn.data.ServerPing
 import com.nimbus.vpn.data.VpnProfile
+import com.nimbus.vpn.data.VlessProfile
 import com.nimbus.vpn.data.WarpGenerator
 import com.nimbus.vpn.data.WhitelistProfile
 import com.nimbus.vpn.data.WhitelistSubscription
@@ -137,29 +138,44 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                     WarpGenerator.generateOne(id, lte)
                 }
             }
-            result.fold(
-                onSuccess = { profile ->
-                    opMutex.withLock {
-                        val running = tunnel.value.status == ConnectionStatus.CONNECTED ||
-                            tunnel.value.status == ConnectionStatus.CONNECTING
-                        app.container.profiles.upsert(profile, makeActive = true)
-                        if (running) {
-                            runCatching { app.container.tunnel.disconnect() }
-                            runCatching { app.container.tunnel.connectActive() }
-                        }
-                    }
-                    _warp.value = WarpUiState(
-                        message = "Создан ${profile.name}",
-                        created = true,
-                    )
-                },
-                onFailure = { error ->
-                    _warp.value = WarpUiState(
-                        error = error.message ?: "Не удалось создать сервер",
-                    )
-                },
-            )
+            finishCreated(result)
         }
+    }
+
+    fun createVless(link: String) {
+        if (_warp.value.generating) return
+        _warp.value = WarpUiState(generating = true)
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching { VlessProfile.fromLink(link) }
+            }
+            finishCreated(result)
+        }
+    }
+
+    private suspend fun finishCreated(result: Result<VpnProfile>) {
+        result.fold(
+            onSuccess = { profile ->
+                opMutex.withLock {
+                    val running = tunnel.value.status == ConnectionStatus.CONNECTED ||
+                        tunnel.value.status == ConnectionStatus.CONNECTING
+                    app.container.profiles.upsert(profile, makeActive = true)
+                    if (running) {
+                        runCatching { app.container.tunnel.disconnect() }
+                        runCatching { app.container.tunnel.connectActive() }
+                    }
+                }
+                _warp.value = WarpUiState(
+                    message = "Создан ${profile.name}",
+                    created = true,
+                )
+            },
+            onFailure = { error ->
+                _warp.value = WarpUiState(
+                    error = error.message ?: "Не удалось создать сервер",
+                )
+            },
+        )
     }
 
     fun consumeWarpCreated() {

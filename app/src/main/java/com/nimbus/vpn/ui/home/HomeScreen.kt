@@ -610,13 +610,19 @@ private fun ServerRow(
     onRotate: (() -> Unit)? = null,
 ) {
     val whitelist = remember(profile.rawConfig) { WhitelistProfile.isOne(profile.rawConfig) }
+    val pastedVless = remember(profile.rawConfig) { com.nimbus.vpn.data.VlessProfile.isOne(profile.rawConfig) }
     val endpoint = remember(profile.rawConfig) {
-        if (whitelist) WhitelistProfile.endpoint(profile.rawConfig) else ConfigParser.endpointOf(profile.rawConfig)
+        when {
+            whitelist -> WhitelistProfile.endpoint(profile.rawConfig)
+            pastedVless -> com.nimbus.vpn.data.VlessProfile.endpoint(profile.rawConfig)
+            else -> ConfigParser.endpointOf(profile.rawConfig)
+        }
     }
     val sec = remember(profile.rawConfig) { SecTunnelProfile.read(profile.rawConfig) }
     val dnsOnly = remember(profile.rawConfig) { com.nimbus.vpn.data.DnsProfile.isOne(profile.rawConfig) }
     val flag = when {
         whitelist -> WhitelistProfile.flagEmoji(profile.name)
+        pastedVless -> WhitelistProfile.flagEmoji(profile.name) ?: "🔗"
         dnsOnly -> "✦"
         else -> sec?.flag
     }
@@ -628,6 +634,7 @@ private fun ServerRow(
     )
     val proto = when {
         whitelist -> "белые списки"
+        pastedVless -> "VLESS"
         dnsOnly -> "только DNS · xbox-dns.ru"
         ConfigParser.isAmneziaHint(profile.rawConfig) -> "AmneziaWG"
         else -> "WireGuard"
@@ -667,7 +674,7 @@ private fun ServerRow(
             Text(
                 when {
                     dnsOnly -> proto
-                    whitelist -> listOfNotNull(endpoint, proto).joinToString(" · ")
+                    whitelist || pastedVless -> listOfNotNull(endpoint, proto).joinToString(" · ")
                     sec == null -> endpoint ?: proto
                     !livePlace.isNullOrBlank() -> "$livePlace · sec-tunnel"
                     else -> "${sec.place} · sec-tunnel"

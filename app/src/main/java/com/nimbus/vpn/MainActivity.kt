@@ -177,6 +177,7 @@ class MainActivity : ComponentActivity() {
                             warp = warp,
                             onBack = { nav.popBackStack() },
                             onCreate = viewModel::createServer,
+                            onCreateVless = viewModel::createVless,
                             onImport = { go("import") },
                             onCreated = {
                                 viewModel.onCoachWarpCreated()
