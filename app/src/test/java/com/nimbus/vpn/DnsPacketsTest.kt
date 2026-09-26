@@ -2,6 +2,7 @@ package com.nimbus.vpn
 
 import com.google.common.truth.Truth.assertThat
 import com.nimbus.vpn.tunnel.DnsPackets
+import com.nimbus.vpn.tunnel.Packets
 import org.junit.Test
 
 class DnsPacketsTest {
@@ -29,5 +30,7 @@ class DnsPacketsTest {
         assertThat(answer[23]).isEqualTo(0x34)
         assertThat(answer.copyOfRange(answer.size - 4, answer.size)).isEqualTo(payload)
         assertThat(DnsPackets.queryPayload(answer, answer.size)).isNull()
+        assertThat(Packets.ipv4ChecksumOk(answer)).isTrue()
+        assertThat(answer[26].toInt() or answer[27].toInt()).isNotEqualTo(0)
     }
 }

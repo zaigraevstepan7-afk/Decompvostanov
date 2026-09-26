@@ -33,8 +33,10 @@ internal object DnsPackets {
         val destPort = u16(out, header + 2)
         put16(out, header, destPort)
         put16(out, header + 2, srcPort)
-        put16(out, header + 4, 8 + payload.size)
+        val udpLength = 8 + payload.size
+        put16(out, header + 4, udpLength)
         put16(out, header + 6, 0)
+        put16(out, header + 6, udpChecksum(out, header, udpLength))
         put16(out, 2, total)
         put16(out, 10, 0)
         put16(out, 10, checksum(out, header))
@@ -59,5 +61,21 @@ internal object DnsPackets {
         }
         while (sum > 0xffff) sum = (sum and 0xffff) + (sum ushr 16)
         return sum.inv() and 0xffff
+    }
+
+    private fun udpChecksum(packet: ByteArray, header: Int, udpLength: Int): Int {
+        var sum = u16(packet, 12) + u16(packet, 14) + u16(packet, 16) + u16(packet, 18)
+        sum += 17
+        sum += udpLength
+        var index = header
+        val end = header + udpLength
+        while (index + 1 < end) {
+            sum += u16(packet, index)
+            index += 2
+        }
+        if (index < end) sum += (packet[index].toInt() and 0xff) shl 8
+        while (sum > 0xffff) sum = (sum and 0xffff) + (sum ushr 16)
+        val folded = sum.inv() and 0xffff
+        return if (folded == 0) 0xffff else folded
     }
 }
