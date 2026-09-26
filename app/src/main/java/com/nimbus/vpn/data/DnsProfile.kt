@@ -32,7 +32,7 @@ object DnsProfile {
             ?.map { it.trim() }
             ?.filter { it.isNotEmpty() }
             .orEmpty()
-        return listed.ifEmpty { SERVERS }
+        return if (listed.containsAll(SERVERS)) listed else SERVERS
     }
 
     fun create(): VpnProfile {
