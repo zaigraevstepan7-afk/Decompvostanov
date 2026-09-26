@@ -142,12 +142,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun createVless(link: String) {
+    fun createVless() {
         if (_warp.value.generating) return
         _warp.value = WarpUiState(generating = true)
         viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
-                runCatching { VlessProfile.fromLink(link) }
+                runCatching { VlessProfile.bundled() }
             }
             finishCreated(result)
         }

@@ -24,8 +24,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -40,7 +38,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -72,7 +69,7 @@ fun WarpCreateScreen(
     warp: WarpUiState,
     onBack: () -> Unit,
     onCreate: (engine: String, id: String, lte: Boolean) -> Unit,
-    onCreateVless: (String) -> Unit,
+    onCreateVless: () -> Unit,
     onImport: () -> Unit,
     onCreated: () -> Unit,
     onConsumed: () -> Unit,
@@ -83,7 +80,6 @@ fun WarpCreateScreen(
 ) {
     var countryId by remember { mutableStateOf("de") }
     var lte by remember { mutableStateOf(false) }
-    var vlessLink by remember { mutableStateOf("") }
     var supportOpen by remember { mutableStateOf(false) }
     var numberCopied by remember { mutableStateOf(false) }
     val clipboard = LocalClipboardManager.current
@@ -143,56 +139,15 @@ fun WarpCreateScreen(
                 )
                 CountryTile(
                     flag = "🔗",
-                    name = "VLESS",
-                    detail = "своя ссылка",
+                    name = com.nimbus.vpn.data.VlessProfile.NAME,
+                    detail = "VLESS",
                     selected = vless,
                     enabled = !warp.generating,
-                    onClick = {
-                        countryId = com.nimbus.vpn.data.VlessProfile.ID
-                        if (vlessLink.isBlank()) {
-                            val pasted = clipboard.getText()?.text.orEmpty()
-                            if (pasted.contains("vless://", ignoreCase = true)) vlessLink = pasted
-                        }
-                    },
+                    onClick = { countryId = com.nimbus.vpn.data.VlessProfile.ID },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 10.dp),
                 )
-                if (vless) {
-                    OutlinedTextField(
-                        value = vlessLink,
-                        onValueChange = { vlessLink = it },
-                        placeholder = { Text("vless://…", color = InkMuted, fontSize = 14.sp) },
-                        minLines = 2,
-                        maxLines = 4,
-                        shape = Tile,
-                        textStyle = TextStyle(color = Ink, fontSize = 14.sp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 8.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Ink,
-                            unfocusedTextColor = Ink,
-                            focusedContainerColor = Paper,
-                            unfocusedContainerColor = Paper,
-                            focusedBorderColor = Accent,
-                            unfocusedBorderColor = Line,
-                            cursorColor = Accent,
-                        ),
-                    )
-                    Text(
-                        "Вставить из буфера",
-                        color = Accent,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier
-                            .padding(bottom = 10.dp)
-                            .clickable {
-                                val pasted = clipboard.getText()?.text.orEmpty()
-                                if (pasted.isNotBlank()) vlessLink = pasted
-                            },
-                    )
-                }
                 WarpConfigBuilder.countries.chunked(2).forEach { row ->
                     Row(
                         Modifier
@@ -228,7 +183,7 @@ fun WarpCreateScreen(
                         Text(
                             when {
                                 aiUltra -> "Здесь только DNS, без сервера"
-                                vless -> "Сюда вставляется ссылка vless://"
+                                vless -> "Сервер уже вшит"
                                 lteAvailable -> "Мобильный адрес ${country?.lteHost}"
                                 else -> "У ${country?.name} нет LTE"
                             },
@@ -284,7 +239,7 @@ fun WarpCreateScreen(
                     Button(
                         interactionSource = press.interaction,
                         onClick = {
-                            if (vless) onCreateVless(vlessLink) else onCreate("warp", countryId, lte && lteAvailable)
+                            if (vless) onCreateVless() else onCreate("warp", countryId, lte && lteAvailable)
                         },
                         enabled = !warp.generating,
                         colors = ButtonDefaults.buttonColors(

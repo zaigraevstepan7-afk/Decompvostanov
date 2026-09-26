@@ -34,6 +34,21 @@ class VlessProfileTest {
     }
 
     @Test
+    fun bundledServerIsReadyToConnect() {
+        val profile = VlessProfile.bundled()
+        assertThat(profile.name).isEqualTo("Nikitok · custom-vless-25449")
+        assertThat(profile.id).startsWith("vless:")
+        assertThat(VlessProfile.isOne(profile.rawConfig)).isTrue()
+        assertThat(WhitelistProfile.isOne(profile.rawConfig)).isFalse()
+        assertThat(VlessProfile.endpoint(profile.rawConfig)).isEqualTo("ch3.h1cloud.net:25449")
+        val json = WhitelistConfig.toCoreJson(VlessProfile.link(profile.rawConfig)!!)
+        assertThat(json).contains("\"network\":\"xhttp\"")
+        assertThat(json).contains("\"security\":\"reality\"")
+        assertThat(json).contains("www.apple.com")
+        assertThat(json).contains("ch3.h1cloud.net")
+    }
+
+    @Test
     fun rejectsTextWithoutALink() {
         assertThrows(IllegalStateException::class.java) {
             VlessProfile.fromLink("просто текст")
