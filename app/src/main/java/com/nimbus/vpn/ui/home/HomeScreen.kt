@@ -88,6 +88,7 @@ import com.nimbus.vpn.ui.coach.DogMood
 import com.nimbus.vpn.ui.coach.coachGlow
 import com.nimbus.vpn.ui.components.ConfirmDeleteDialog
 import com.nimbus.vpn.ui.components.DeleteServerButton
+import com.nimbus.vpn.ui.components.SupportDialog
 import com.nimbus.vpn.ui.components.MeshBackground
 import com.nimbus.vpn.ui.components.pressScale
 import com.nimbus.vpn.ui.components.rememberPress
@@ -138,6 +139,7 @@ fun HomeScreen(
 ) {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var pendingDelete by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var supportOpen by remember { mutableStateOf(false) }
     var inWhitelist by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(state.status) {
         if (state.status != ConnectionStatus.CONNECTED) return@LaunchedEffect
@@ -234,6 +236,24 @@ fun HomeScreen(
                     Icon(Icons.Rounded.Settings, contentDescription = "Настройки", tint = Ink)
                 }
             }
+            val supportPress = rememberPress(0.97f)
+            Text(
+                "Поддержать",
+                color = Canvas,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .pressScale(supportPress.scale)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Accent)
+                    .clickable(
+                        interactionSource = supportPress.interaction,
+                        indication = ripple(),
+                        onClick = { supportOpen = true },
+                    )
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            )
             val statusVisible = state.status != ConnectionStatus.DISCONNECTED || access.status == AccessStatus.FAIL
             AnimatedVisibility(
                 visible = statusVisible,
@@ -404,6 +424,9 @@ fun HomeScreen(
             onAnchor = onMoveDog,
             modifier = Modifier.fillMaxSize(),
         )
+        if (supportOpen) {
+            SupportDialog(onDismiss = { supportOpen = false })
+        }
         pendingDelete?.let { (id, name) ->
             ConfirmDeleteDialog(
                 serverName = name,

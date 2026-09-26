@@ -36,13 +36,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import com.nimbus.vpn.data.WarpConfigBuilder
 import com.nimbus.vpn.tunnel.ConnectionStatus
 import com.nimbus.vpn.ui.WarpUiState
@@ -50,6 +47,7 @@ import com.nimbus.vpn.ui.coach.DogDock
 import com.nimbus.vpn.ui.coach.DogMood
 import com.nimbus.vpn.ui.coach.coachGlow
 import com.nimbus.vpn.ui.components.MeshBackground
+import com.nimbus.vpn.ui.components.SupportDialog
 import com.nimbus.vpn.ui.components.pressScale
 import com.nimbus.vpn.ui.components.rememberPress
 import com.nimbus.vpn.ui.theme.Accent
@@ -62,7 +60,6 @@ import com.nimbus.vpn.ui.theme.Line
 import com.nimbus.vpn.ui.theme.Paper
 
 private val Tile = RoundedCornerShape(22.dp)
-private const val SUPPORT_PHONE = "+79151259452"
 
 @Composable
 fun WarpCreateScreen(
@@ -81,8 +78,6 @@ fun WarpCreateScreen(
     var countryId by remember { mutableStateOf("de") }
     var lte by remember { mutableStateOf(false) }
     var supportOpen by remember { mutableStateOf(false) }
-    var numberCopied by remember { mutableStateOf(false) }
-    val clipboard = LocalClipboardManager.current
     val aiUltra = countryId == com.nimbus.vpn.data.DnsProfile.ID
     val vless = countryId == com.nimbus.vpn.data.VlessProfile.ID
     val country = WarpConfigBuilder.country(countryId)
@@ -222,10 +217,7 @@ fun WarpCreateScreen(
                     val supportPress = rememberPress(0.97f)
                     Button(
                         interactionSource = supportPress.interaction,
-                        onClick = {
-                            numberCopied = false
-                            supportOpen = true
-                        },
+                        onClick = { supportOpen = true },
                         colors = ButtonDefaults.buttonColors(containerColor = Lift, contentColor = Ink),
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier
@@ -278,40 +270,7 @@ fun WarpCreateScreen(
             }
         }
         if (supportOpen) {
-            Dialog(onDismissRequest = { supportOpen = false }) {
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .clip(Tile)
-                        .background(Paper)
-                        .padding(22.dp),
-                ) {
-                    Text("Поддержать", color = Ink, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.height(8.dp))
-                    Text("Сбербанк", color = InkMuted, fontSize = 14.sp)
-                    Text(
-                        SUPPORT_PHONE,
-                        color = Ink,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(top = 4.dp),
-                    )
-                    Spacer(Modifier.height(16.dp))
-                    Button(
-                        onClick = {
-                            clipboard.setText(AnnotatedString(SUPPORT_PHONE))
-                            numberCopied = true
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = Canvas),
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                    ) {
-                        Text(if (numberCopied) "Номер скопирован" else "Скопировать номер", fontWeight = FontWeight.SemiBold)
-                    }
-                }
-            }
+            SupportDialog(onDismiss = { supportOpen = false })
         }
         if (guide) {
             DogDock(
