@@ -24,8 +24,8 @@ cat > "$APP/Info.plist" << 'EOF'
   <key>CFBundleIdentifier</key><string>dev.bozya.vpn</string>
   <key>CFBundleExecutable</key><string>Bozya VPN</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleVersion</key><string>1.0.68</string>
-  <key>CFBundleShortVersionString</key><string>1.0.68</string>
+  <key>CFBundleVersion</key><string>1.0.69</string>
+  <key>CFBundleShortVersionString</key><string>1.0.69</string>
   <key>LSMinimumSystemVersion</key><string>11.0</string>
   <key>NSHighResolutionCapable</key><true/>
 </dict>
