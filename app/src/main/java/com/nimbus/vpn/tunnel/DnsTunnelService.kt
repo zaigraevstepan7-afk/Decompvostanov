@@ -19,6 +19,8 @@ import java.io.FileOutputStream
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
+import java.net.InetSocketAddress
+import java.net.Socket
 
 /**
  * DNS-only tunnel. The phone keeps its own route for everything except
@@ -96,55 +98,81 @@ class DnsTunnelService : VpnService() {
     }
 
     private fun openTun(label: String): ParcelFileDescriptor {
+        val withIp6 = runCatching { establish(label, ipv6 = true) }.getOrNull()
+        return withIp6 ?: establish(label, ipv6 = false) ?: error("Не удалось создать DNS")
+    }
+
+    private fun establish(label: String, ipv6: Boolean): ParcelFileDescriptor? {
         val builder = Builder()
             .setSession(label)
-            .setMtu(1500)
+            .setMtu(1280)
+            .setBlocking(true)
             .addAddress(VIRTUAL, 32)
             .addDnsServer(VIRTUAL)
-            .addRoute(VIRTUAL, 32)
+            .addRoute("0.0.0.0", 0)
+        if (ipv6) {
+            builder.addAddress(VIRTUAL_V6, 128)
+            builder.addRoute("::", 0)
+        }
         if (Build.VERSION.SDK_INT >= 29) builder.setMetered(false)
         runCatching { builder.addDisallowedApplication(packageName) }
-        return builder.establish() ?: error("Не удалось создать DNS")
+        return builder.establish()
     }
 
     private fun pump(fd: ParcelFileDescriptor, servers: List<String>) {
         val input = FileInputStream(fd.fileDescriptor)
         val output = FileOutputStream(fd.fileDescriptor)
+        val relay = TunRelay(
+            dial = { host, port -> dialOut(host, port) },
+            dns = { query -> lookup(query, servers) },
+            emit = { packet ->
+                synchronized(output) { output.write(packet) }
+            },
+        )
         val buffer = ByteArray(32767)
-        val socket = DatagramSocket()
         try {
-            protect(socket)
-            socket.soTimeout = 2_500
             while (!Thread.currentThread().isInterrupted) {
                 val read = input.read(buffer)
                 if (read <= 0) continue
-                val query = DnsPackets.queryPayload(buffer, read) ?: continue
-                val payload = forward(socket, query, servers) ?: continue
-                val answer = DnsPackets.answer(buffer, read, payload) ?: continue
-                output.write(answer)
+                relay.onPacket(buffer, read)
             }
         } finally {
-            runCatching { socket.close() }
+            relay.close()
         }
     }
 
-    private fun forward(socket: DatagramSocket, query: ByteArray, servers: List<String>): ByteArray? {
-        val packet = DatagramPacket(query, query.size)
-        for (server in servers) {
-            try {
-                packet.address = InetAddress.getByName(server)
-                packet.port = 53
-                packet.length = query.size
-                socket.send(packet)
-                val reply = ByteArray(2048)
-                val incoming = DatagramPacket(reply, reply.size)
-                socket.receive(incoming)
-                if (incoming.length > 0) return reply.copyOf(incoming.length)
-            } catch (error: Throwable) {
-                Log.w(TAG, "dns $server failed", error)
+    private fun dialOut(host: String, port: Int): UpstreamConn {
+        val socket = Socket()
+        if (!protect(socket)) error("Сокет DNS не обошёл туннель")
+        socket.tcpNoDelay = true
+        socket.connect(InetSocketAddress(host, port), 10_000)
+        return object : UpstreamConn {
+            override val input = socket.getInputStream()
+            override val output = socket.getOutputStream()
+            override fun close() {
+                runCatching { socket.close() }
             }
         }
-        return null
+    }
+
+    private fun lookup(query: ByteArray, servers: List<String>): ByteArray {
+        DatagramSocket().use { socket ->
+            if (!protect(socket)) error("DNS не обошёл туннель")
+            socket.soTimeout = 2_500
+            for (server in servers) {
+                try {
+                    val packet = DatagramPacket(query, query.size, InetAddress.getByName(server), 53)
+                    socket.send(packet)
+                    val reply = ByteArray(2048)
+                    val incoming = DatagramPacket(reply, reply.size)
+                    socket.receive(incoming)
+                    if (incoming.length > 0) return reply.copyOf(incoming.length)
+                } catch (error: Throwable) {
+                    Log.w(TAG, "dns $server failed", error)
+                }
+            }
+        }
+        error("xbox-dns.ru не ответил")
     }
 
     private fun shutdown() {
@@ -213,6 +241,7 @@ class DnsTunnelService : VpnService() {
         const val EXTRA_TICKET = "ticket"
         const val EXTRA_SERVERS = "servers"
         private const val VIRTUAL = "172.19.0.2"
+        private const val VIRTUAL_V6 = "fd6d:7362:2a::2"
         private const val CHANNEL_ID = "bozya.keepalive"
         private const val NOTIF_ID = 20
         private const val TAG = "Bozya/Dns"

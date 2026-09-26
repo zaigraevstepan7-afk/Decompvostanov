@@ -21,7 +21,6 @@ data class WarpCountry(
     val host: String,
     val lteHost: String? = null,
     val lteExcludedPorts: Set<Int> = emptySet(),
-    val excludedPorts: Set<Int> = emptySet(),
 ) {
     val hasLte: Boolean get() = !lteHost.isNullOrBlank()
 }
@@ -35,7 +34,6 @@ data class WarpEndpoint(
 
 object WarpConfigBuilder {
     const val DEFAULT_PORT = 4500
-    const val CLOUDFLARE_HOST = "engage.cloudflareclient.com"
     const val DNS = "1.1.1.1, 1.0.0.1, 2606:4700:4700::1111, 2606:4700:4700::1001"
     const val ALLOWED_IPS = "0.0.0.0/0, ::/0"
     const val MTU = 1280
@@ -49,36 +47,13 @@ object WarpConfigBuilder {
     )
 
     val countries: List<WarpCountry> = listOf(
-        WarpCountry("de", "Германия", "🇩🇪", "tel.de.tribukvy.ltd", lteHost = "tel.de.tribukvy.ltd"),
-        WarpCountry(
-            "pl",
-            "Польша",
-            "🇵🇱",
-            "tel.pl.tribukvy.ltd",
-            lteHost = "tel.pl.tribukvy.ltd",
-            lteExcludedPorts = setOf(988),
-            excludedPorts = setOf(988),
-        ),
-        WarpCountry("nl", "Нидерланды", "🇳🇱", CLOUDFLARE_HOST),
-        WarpCountry("fi", "Финляндия", "🇫🇮", CLOUDFLARE_HOST),
-        WarpCountry("ee", "Эстония", "🇪🇪", CLOUDFLARE_HOST),
-        WarpCountry("lv", "Латвия", "🇱🇻", CLOUDFLARE_HOST),
-        WarpCountry("ru", "Россия", "🇷🇺", CLOUDFLARE_HOST),
-    )
-
-    /**
-     * Plain tribukvy relays stopped answering the WARP handshake.
-     * Germany and Poland still answer on the LTE host. The rest use Cloudflare.
-     */
-    private val liveHosts: Map<String, String> = mapOf(
-        "de.tribukvy.ltd" to "tel.de.tribukvy.ltd",
-        "pl.tribukvy.ltd" to "tel.pl.tribukvy.ltd",
-        "nl.tribukvy.ltd" to CLOUDFLARE_HOST,
-        "fi.tribukvy.ltd" to CLOUDFLARE_HOST,
-        "tel.fi.tribukvy.ltd" to CLOUDFLARE_HOST,
-        "ee.tribukvy.ltd" to CLOUDFLARE_HOST,
-        "lv.tribukvy.ltd" to CLOUDFLARE_HOST,
-        "ru0.tribukvy.ltd" to CLOUDFLARE_HOST,
+        WarpCountry("de", "Германия", "🇩🇪", "de.tribukvy.ltd", lteHost = "tel.de.tribukvy.ltd"),
+        WarpCountry("pl", "Польша", "🇵🇱", "pl.tribukvy.ltd", lteHost = "tel.pl.tribukvy.ltd", lteExcludedPorts = setOf(988)),
+        WarpCountry("nl", "Нидерланды", "🇳🇱", "nl.tribukvy.ltd"),
+        WarpCountry("fi", "Финляндия", "🇫🇮", "fi.tribukvy.ltd", lteHost = "tel.fi.tribukvy.ltd", lteExcludedPorts = setOf(1010)),
+        WarpCountry("ee", "Эстония", "🇪🇪", "ee.tribukvy.ltd"),
+        WarpCountry("lv", "Латвия", "🇱🇻", "lv.tribukvy.ltd"),
+        WarpCountry("ru", "Россия", "🇷🇺", "ru0.tribukvy.ltd"),
     )
 
     fun country(id: String): WarpCountry? = countries.firstOrNull { it.id == id }
@@ -90,7 +65,7 @@ object WarpConfigBuilder {
             id = if (useLte) "lte-${country.id}" else country.id,
             name = if (useLte) "${country.name} LTE" else country.name,
             host = if (useLte) country.lteHost!! else country.host,
-            excludedPorts = if (useLte) country.lteExcludedPorts else country.excludedPorts,
+            excludedPorts = if (useLte) country.lteExcludedPorts else emptySet(),
         )
     }
 
@@ -98,23 +73,30 @@ object WarpConfigBuilder {
 
     fun portsFor(excluded: Set<Int>): List<Int> = ports.filterNot { it in excluded }
 
-    fun rewriteDeadRelays(raw: String): String {
+    /** Cards saved while countries were pointed at Cloudflare get their own relay back. */
+    fun restoreCountryHost(profileId: String, raw: String): String {
+        val endpoint = ConfigParser.endpointOf(raw) ?: return raw
+        val host = endpoint.substringBefore(":").lowercase()
+        if (host != "engage.cloudflareclient.com") return raw
+        val endpointId = profileId.removePrefix("warp:")
+        if (endpointId.isEmpty() || endpointId == profileId) return raw
+        val lte = endpointId.startsWith("lte-")
+        val country = country(if (lte) endpointId.removePrefix("lte-") else endpointId) ?: return raw
+        val wanted = if (lte) country.lteHost ?: country.host else country.host
+        val port = endpoint.substringAfter(":", DEFAULT_PORT.toString())
+        return replaceEndpoint(raw, "$wanted:$port")
+    }
+
+    private fun replaceEndpoint(raw: String, endpoint: String): String {
         val newline = raw.endsWith("\n")
         val rewritten = raw.lineSequence().joinToString("\n") { line ->
             val body = line.substringBefore("#")
             val eq = body.indexOf('=')
             if (eq <= 0) return@joinToString line
-            val key = body.substring(0, eq).trim()
-            if (!key.equals("Endpoint", ignoreCase = true)) return@joinToString line
-            val value = body.substring(eq + 1).trim()
-            val host = value.substringBefore(":").lowercase()
-            val port = value.substringAfter(":", "")
-            val live = liveHosts[host] ?: return@joinToString line
-            val livePort = if (live == "tel.pl.tribukvy.ltd" && port == "988") DEFAULT_PORT.toString() else port
+            if (!body.substring(0, eq).trim().equals("Endpoint", ignoreCase = true)) return@joinToString line
             val comment = if (line.contains("#")) " " + line.substring(line.indexOf("#")) else ""
-            line.substring(0, body.length - body.trimStart().length).let { indent ->
-                "$indent$key = $live:$livePort$comment"
-            }
+            val indent = line.substring(0, body.length - body.trimStart().length)
+            "$indent${body.substring(0, eq).trim()} = $endpoint$comment"
         }
         return if (newline && !rewritten.endsWith("\n")) rewritten + "\n" else rewritten
     }

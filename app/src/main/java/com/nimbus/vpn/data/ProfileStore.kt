@@ -23,6 +23,7 @@ class ProfileStore(context: Context) {
 
     init {
         dropRemoved()
+        restoreCountryHosts()
     }
 
     val profiles: List<VpnProfile>
@@ -107,6 +108,21 @@ class ProfileStore(context: Context) {
                 activeId = activeId?.takeIf { id -> clean.any { it.id == id } || kept.any { it.id == id } }
                     ?: current.activeId
                     ?: clean.first().id,
+            ),
+        )
+    }
+
+    private fun restoreCountryHosts() = synchronized(this) {
+        val current = _index.value
+        val fixed = current.profiles.map { profile ->
+            val raw = WarpConfigBuilder.restoreCountryHost(profile.id, profile.rawConfig)
+            if (raw == profile.rawConfig) profile else profile.copy(rawConfig = raw)
+        }
+        if (fixed == current.profiles) return
+        persist(
+            ProfileIndex(
+                profiles = fixed,
+                activeId = current.activeId,
             ),
         )
     }

@@ -144,11 +144,7 @@ fun WarpCreateScreen(
                             CountryTile(
                                 flag = item.flag,
                                 name = item.name,
-                                detail = when {
-                                    item.host == WarpConfigBuilder.CLOUDFLARE_HOST -> "Cloudflare"
-                                    item.hasLte -> "есть LTE"
-                                    else -> "обычный"
-                                },
+                                detail = if (item.hasLte) "есть LTE" else "обычный",
                                 selected = item.id == countryId,
                                 enabled = !warp.generating,
                                 onClick = { countryId = item.id },

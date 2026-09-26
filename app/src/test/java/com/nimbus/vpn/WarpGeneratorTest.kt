@@ -53,35 +53,23 @@ class WarpGeneratorTest {
     fun ignoresLteWhenCountryHasNone() {
         val endpoint = WarpConfigBuilder.resolve("nl", lte = true)
         assertThat(endpoint.id).isEqualTo("nl")
-        assertThat(endpoint.host).isEqualTo(WarpConfigBuilder.CLOUDFLARE_HOST)
+        assertThat(endpoint.host).isEqualTo("nl.tribukvy.ltd")
         assertThat(endpoint.name).isEqualTo("Нидерланды")
     }
 
     @Test
-    fun plainGermanyUsesTheLiveRelay() {
-        val endpoint = WarpConfigBuilder.resolve("de", lte = false)
-        assertThat(endpoint.host).isEqualTo("tel.de.tribukvy.ltd")
-        val poland = WarpConfigBuilder.resolve("pl", lte = false)
-        assertThat(poland.host).isEqualTo("tel.pl.tribukvy.ltd")
-        assertThat(poland.excludedPorts).contains(988)
-    }
-
-    @Test
-    fun rewritesDeadCountryRelays() {
-        val raw = """
-            [Peer]
-            Endpoint = de.tribukvy.ltd:4500
-            Endpoint = pl.tribukvy.ltd:988
-        """.trimIndent() + "\n"
-        val rewritten = WarpConfigBuilder.rewriteDeadRelays(raw)
-        assertThat(rewritten).contains("Endpoint = tel.de.tribukvy.ltd:4500")
-        assertThat(rewritten).contains("Endpoint = tel.pl.tribukvy.ltd:4500")
-        assertThat(rewritten).doesNotContain("Endpoint = de.tribukvy.ltd")
-        assertThat(rewritten).doesNotContain("Endpoint = pl.tribukvy.ltd")
-        val finland = WarpConfigBuilder.rewriteDeadRelays("Endpoint = tel.fi.tribukvy.ltd:2408\n")
-        assertThat(finland).isEqualTo("Endpoint = ${WarpConfigBuilder.CLOUDFLARE_HOST}:2408\n")
-        val alreadyLive = "Endpoint = tel.de.tribukvy.ltd:4500\n"
-        assertThat(WarpConfigBuilder.rewriteDeadRelays(alreadyLive)).isEqualTo(alreadyLive)
+    fun countriesKeepTheirOwnRelays() {
+        assertThat(WarpConfigBuilder.resolve("de", lte = false).host).isEqualTo("de.tribukvy.ltd")
+        assertThat(WarpConfigBuilder.resolve("pl", lte = false).host).isEqualTo("pl.tribukvy.ltd")
+        assertThat(WarpConfigBuilder.resolve("ru", lte = false).host).isEqualTo("ru0.tribukvy.ltd")
+        assertThat(WarpConfigBuilder.resolve("fi", lte = true).host).isEqualTo("tel.fi.tribukvy.ltd")
+        val restored = WarpConfigBuilder.restoreCountryHost(
+            "warp:nl",
+            "Endpoint = engage.cloudflareclient.com:2408\n",
+        )
+        assertThat(restored).isEqualTo("Endpoint = nl.tribukvy.ltd:2408\n")
+        val poland = "Endpoint = tel.pl.tribukvy.ltd:4500\n"
+        assertThat(WarpConfigBuilder.restoreCountryHost("warp:pl", poland)).isEqualTo(poland)
     }
 
     @Test
@@ -119,7 +107,7 @@ class WarpGeneratorTest {
         assertThat(ports).doesNotContain(988)
         assertThat(ports).contains(4500)
         val plain = WarpConfigBuilder.portsFor(WarpConfigBuilder.resolve("pl", lte = false).excludedPorts)
-        assertThat(plain).doesNotContain(988)
+        assertThat(plain).contains(988)
         val picked = WarpConfigBuilder.randomPort(setOf(988), Random(1))
         assertThat(picked).isNotEqualTo(988)
     }
