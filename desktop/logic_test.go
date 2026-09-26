@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net"
 	"os"
 	"strings"
@@ -190,6 +191,66 @@ func countryHost(id string) string {
 		return ""
 	}
 	return c.host
+}
+
+func TestCloudflareFallback(t *testing.T) {
+	priv := base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{3}, 32))
+	body := `{"id":"x","token":"hidden","config":{"peers":[{"public_key":"bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=","endpoint":{"host":"engage.cloudflareclient.com"}}],"interface":{"addresses":{"v4":"172.16.0.2/32","v6":"fd00::1/128"}}}}`
+	keys, err := parseCloudflareReg(body, priv)
+	if err != nil || keys.IPv4 != "172.16.0.2" || keys.IPv6 != "fd00::1" || keys.Peer != "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=" || keys.Private != priv {
+		t.Fatal("parse")
+	}
+	conf := buildWarpConf(keys, "tel.de.tribukvy.ltd", 4500)
+	if strings.Contains(conf, "engage.cloudflareclient.com") || !strings.Contains(conf, "Endpoint = tel.de.tribukvy.ltd:4500") {
+		t.Fatal("host")
+	}
+	if _, err = parseCloudflareReg(`{"config":{}}`, priv); err == nil || !strings.Contains(err.Error(), "Не удалось") {
+		t.Fatal("empty")
+	}
+	called := 0
+	got, err := chooseWarpKeys(
+		func() (warpKeys, error) { return warpKeys{}, fmt.Errorf("Failed to connect") },
+		func() (warpKeys, error) { called++; return keys, nil },
+	)
+	if err != nil || called != 1 || got.IPv4 != "172.16.0.2" {
+		t.Fatal("fallback")
+	}
+	_, err = chooseWarpKeys(
+		func() (warpKeys, error) { return warpKeys{}, fmt.Errorf("Failed to connect to generator") },
+		func() (warpKeys, error) { return warpKeys{}, fmt.Errorf("Failed to connect to api") },
+	)
+	if err == nil || err.Error() != warpFail || strings.Contains(err.Error(), "Failed to connect") {
+		t.Fatal("both")
+	}
+	rawPriv, rawPub, err := newWarpKeyPair()
+	if err != nil {
+		t.Fatal("key")
+	}
+	decoded, err := base64.StdEncoding.DecodeString(rawPriv)
+	pub, err2 := base64.StdEncoding.DecodeString(rawPub)
+	if err != nil || err2 != nil || len(decoded) != 32 || len(pub) != 32 || decoded[0]&7 != 0 || decoded[31]&128 != 0 || decoded[31]&64 == 0 {
+		t.Fatal("clamp")
+	}
+}
+
+func TestLiveCloudflareReg(t *testing.T) {
+	if os.Getenv("BOZYA_LIVE_WARP") != "1" {
+		t.Skip()
+	}
+	keys, err := registerCloudflare()
+	if err != nil {
+		t.Fatal("reg")
+	}
+	if len(keys.Private) < 40 || len(keys.Peer) < 40 || keys.IPv4 == "" || strings.Contains(keys.IPv4, "/") {
+		t.Fatal("shape")
+	}
+	if keys.Peer != "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=" {
+		t.Fatal("peer")
+	}
+	conf := buildWarpConf(keys, "nl.tribukvy.ltd", 4500)
+	if strings.Contains(conf, "engage.cloudflareclient.com") || !strings.Contains(conf, "Endpoint = nl.tribukvy.ltd:4500") {
+		t.Fatal("host")
+	}
 }
 
 func TestXrayFailure(t *testing.T) {

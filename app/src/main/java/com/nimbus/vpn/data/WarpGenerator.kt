@@ -3,8 +3,17 @@ package com.nimbus.vpn.data
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import kotlin.random.Random
 
 data class WarpKeys(
@@ -148,15 +157,22 @@ object WarpConfigBuilder {
 
 object WarpApi {
     const val DEFAULT_URL = "https://generator-config-warp.vercel.app/api/warp-data"
+    const val FETCH_ERROR = "Не удалось получить данные WARP"
+
+    internal const val CF_REG_URL = "https://api.cloudflareclient.com/v0a5641/reg"
+
+    private const val CF_USER_AGENT = "1.1.1.1/6.38.9-5641 (Android 16.0.0)"
+    private const val CF_CLIENT_VERSION = "a-6.38.9-5641"
 
     private val json = Json { ignoreUnknownKeys = true }
+    private val tosFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC)
 
     @Volatile
     private var cached: WarpKeys? = null
 
     fun parse(body: String): WarpKeys {
         val parsed = json.decodeFromString(WarpApiResponse.serializer(), body)
-        require(parsed.success) { parsed.message ?: "Не удалось получить данные WARP" }
+        require(parsed.success) { parsed.message ?: FETCH_ERROR }
         val privateKey = parsed.privKey?.trim().orEmpty()
         val peer = parsed.peerPub?.trim().orEmpty()
         val ipv4 = parsed.clientIpv4?.trim().orEmpty()
@@ -171,11 +187,50 @@ object WarpApi {
         )
     }
 
+    /** Peer key and addresses only. The response endpoint host is ignored. */
+    fun parseCloudflare(body: String, privateKey: String): WarpKeys {
+        val root = json.parseToJsonElement(body) as? JsonObject ?: error(FETCH_ERROR)
+        val config = root["config"] as? JsonObject ?: error(FETCH_ERROR)
+        val peers = config["peers"] as? JsonArray
+        val peer = peers?.firstOrNull().jsonText("public_key")
+        val addresses = (config["interface"] as? JsonObject)?.get("addresses") as? JsonObject
+        val ipv4 = addresses.jsonText("v4").substringBefore("/").trim()
+        val ipv6 = addresses.jsonText("v6").substringBefore("/").trim().takeIf { it.isNotEmpty() }
+        val own = privateKey.trim()
+        require(own.isNotBlank() && peer.isNotBlank() && ipv4.isNotBlank()) { FETCH_ERROR }
+        return WarpKeys(
+            privateKey = own,
+            peerPublicKey = peer,
+            clientIpv4 = ipv4,
+            clientIpv6 = ipv6,
+        )
+    }
+
+    internal fun loadWarpKeys(
+        generator: () -> WarpKeys,
+        direct: () -> WarpKeys,
+    ): WarpKeys = runCatching(generator).getOrElse {
+        runCatching(direct).getOrElse { error(FETCH_ERROR) }
+    }
+
+    fun shownCreateError(message: String?): String {
+        val text = message?.trim().orEmpty()
+        if (text.any { it in '\u0400'..'\u04FF' }) return text
+        return FETCH_ERROR
+    }
+
     fun fetch(url: String = DEFAULT_URL, forceRefresh: Boolean = false): WarpKeys {
         if (!forceRefresh) cached?.let { return it }
+        return loadWarpKeys(
+            generator = { fetchGenerator(url) },
+            direct = { registerDirect() },
+        ).also { cached = it }
+    }
+
+    private fun fetchGenerator(url: String): WarpKeys {
         val connection = (URL(url).openConnection() as HttpURLConnection).apply {
-            connectTimeout = 15_000
-            readTimeout = 20_000
+            connectTimeout = 8_000
+            readTimeout = 8_000
             requestMethod = "GET"
             instanceFollowRedirects = true
             setRequestProperty("Accept", "application/json")
@@ -185,12 +240,61 @@ object WarpApi {
             val code = connection.responseCode
             val stream = if (code in 200..299) connection.inputStream else connection.errorStream
             val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
-            require(code in 200..299) { "WARP HTTP $code" }
-            return parse(body).also { cached = it }
+            if (code !in 200..299) error(FETCH_ERROR)
+            return parse(body)
         } finally {
             connection.disconnect()
         }
     }
+
+    private fun registerDirect(): WarpKeys {
+        val pair = org.amnezia.awg.crypto.KeyPair()
+        val privateKey = pair.privateKey.toBase64()
+        val publicKey = pair.publicKey.toBase64()
+        val payload = json.encodeToString(
+            CfRegRequest.serializer(),
+            CfRegRequest(
+                key = publicKey,
+                installId = "",
+                fcmToken = "",
+                tos = tosFormat.format(Instant.now()),
+                model = "PC",
+                serialNumber = "",
+                locale = "en_US",
+                osVersion = "16.0.0",
+                keyType = "curve25519",
+                tunnelType = "wireguard",
+            ),
+        )
+        val connection = (URL(CF_REG_URL).openConnection() as HttpURLConnection).apply {
+            connectTimeout = 12_000
+            readTimeout = 15_000
+            requestMethod = "POST"
+            doOutput = true
+            instanceFollowRedirects = true
+            setRequestProperty("Accept", "application/json")
+            setRequestProperty("Content-Type", "application/json; charset=UTF-8")
+            setRequestProperty("User-Agent", CF_USER_AGENT)
+            setRequestProperty("CF-Client-Version", CF_CLIENT_VERSION)
+        }
+        try {
+            connection.outputStream.use { it.write(payload.toByteArray(Charsets.UTF_8)) }
+            val code = connection.responseCode
+            val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+            val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+            if (code !in 200..299) error(FETCH_ERROR)
+            return parseCloudflare(body, privateKey)
+        } finally {
+            connection.disconnect()
+        }
+    }
+}
+
+private fun JsonElement?.jsonText(key: String): String {
+    val obj = this as? JsonObject ?: return ""
+    val prim = obj[key] as? JsonPrimitive ?: return ""
+    if (prim is JsonNull) return ""
+    return prim.content.trim()
 }
 
 object WarpGenerator {
@@ -215,6 +319,20 @@ object WarpGenerator {
         )
     }
 }
+
+@Serializable
+internal data class CfRegRequest(
+    val key: String,
+    @SerialName("install_id") val installId: String,
+    @SerialName("fcm_token") val fcmToken: String,
+    val tos: String,
+    val model: String,
+    @SerialName("serial_number") val serialNumber: String,
+    val locale: String,
+    @SerialName("os_version") val osVersion: String,
+    @SerialName("key_type") val keyType: String,
+    @SerialName("tunnel_type") val tunnelType: String,
+)
 
 @Serializable
 internal data class WarpApiResponse(

@@ -1,6 +1,6 @@
 # Bozya VPN
 
-Телефон, Windows и macOS. Версия `1.0.68`. Телефон не закрывается сам. Windows — программа `Bozya-VPN-windows.exe` со своим окном. macOS — `Bozya VPN.app`. VLESS — вшитый сервер Nikitok. AI Ultra меняет только DNS. «Поддержать» показывает Сбербанк и номер.
+Телефон, Windows и macOS. Версия `1.0.69`. Телефон не закрывается сам. Windows — программа `Bozya-VPN-windows.exe` со своим окном. macOS — `Bozya VPN.app`. VLESS — вшитый сервер Nikitok. AI Ultra меняет только DNS. «Поддержать» показывает Сбербанк и номер. Если сайт генератора WARP не открывается, ключ регистрируется напрямую, а страна остаётся прежней.
 
 Телефон (`com.nimbus.vpn.debug`):
 

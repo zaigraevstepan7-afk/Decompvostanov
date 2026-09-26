@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/base64"
@@ -13,10 +14,16 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"golang.org/x/crypto/curve25519"
 )
 
 const (
 	warpAPIURL      = "https://generator-config-warp.vercel.app/api/warp-data"
+	cfRegURL        = "https://api.cloudflareclient.com/v0a5641/reg"
+	cfUserAgent     = "1.1.1.1/6.38.9-5641 (Android 16.0.0)"
+	cfClientVersion = "a-6.38.9-5641"
+	warpFail        = "Не удалось получить данные WARP"
 	warpDefaultPort = 4500
 	warpMTU         = 1280
 	warpKeepalive   = 25
@@ -77,13 +84,13 @@ var cachedWarpOK bool
 func parseWarpBody(body string) (warpKeys, error) {
 	var parsed warpAPIResponse
 	if err := json.Unmarshal([]byte(body), &parsed); err != nil {
-		return warpKeys{}, fmt.Errorf("Не удалось получить данные WARP")
+		return warpKeys{}, fmt.Errorf("%s", warpFail)
 	}
 	if !parsed.Success {
 		if strings.TrimSpace(parsed.Message) != "" {
 			return warpKeys{}, fmt.Errorf("%s", redact(parsed.Message))
 		}
-		return warpKeys{}, fmt.Errorf("Не удалось получить данные WARP")
+		return warpKeys{}, fmt.Errorf("%s", warpFail)
 	}
 	keys := warpKeys{
 		Private: strings.TrimSpace(parsed.PrivKey),
@@ -92,39 +99,154 @@ func parseWarpBody(body string) (warpKeys, error) {
 		IPv6:    strings.TrimSpace(parsed.IPv6),
 	}
 	if keys.Private == "" || keys.Peer == "" || keys.IPv4 == "" {
-		return warpKeys{}, fmt.Errorf("Не удалось получить данные WARP")
+		return warpKeys{}, fmt.Errorf("%s", warpFail)
 	}
 	return keys, nil
+}
+
+type cfRegBody struct {
+	Key          string `json:"key"`
+	InstallID    string `json:"install_id"`
+	FCMToken     string `json:"fcm_token"`
+	TOS          string `json:"tos"`
+	Model        string `json:"model"`
+	SerialNumber string `json:"serial_number"`
+	Locale       string `json:"locale"`
+	OSVersion    string `json:"os_version"`
+	KeyType      string `json:"key_type"`
+	TunnelType   string `json:"tunnel_type"`
+}
+
+func parseCloudflareReg(body, privateKey string) (warpKeys, error) {
+	var parsed struct {
+		Config struct {
+			Peers []struct {
+				PublicKey string `json:"public_key"`
+			} `json:"peers"`
+			Interface struct {
+				Addresses struct {
+					V4 string `json:"v4"`
+					V6 string `json:"v6"`
+				} `json:"addresses"`
+			} `json:"interface"`
+		} `json:"config"`
+	}
+	if err := json.Unmarshal([]byte(body), &parsed); err != nil {
+		return warpKeys{}, fmt.Errorf("%s", warpFail)
+	}
+	peer := ""
+	if len(parsed.Config.Peers) > 0 {
+		peer = strings.TrimSpace(parsed.Config.Peers[0].PublicKey)
+	}
+	v4 := strings.TrimSpace(strings.SplitN(parsed.Config.Interface.Addresses.V4, "/", 2)[0])
+	v6 := strings.TrimSpace(strings.SplitN(parsed.Config.Interface.Addresses.V6, "/", 2)[0])
+	privateKey = strings.TrimSpace(privateKey)
+	if privateKey == "" || peer == "" || v4 == "" {
+		return warpKeys{}, fmt.Errorf("%s", warpFail)
+	}
+	return warpKeys{Private: privateKey, Peer: peer, IPv4: v4, IPv6: v6}, nil
+}
+
+func chooseWarpKeys(generator, direct func() (warpKeys, error)) (warpKeys, error) {
+	keys, err := generator()
+	if err != nil {
+		keys, err = direct()
+	}
+	if err != nil {
+		return warpKeys{}, fmt.Errorf("%s", warpFail)
+	}
+	return keys, nil
+}
+
+func newWarpKeyPair() (string, string, error) {
+	var priv [32]byte
+	if _, err := rand.Read(priv[:]); err != nil {
+		return "", "", err
+	}
+	priv[0] &= 248
+	priv[31] &= 127
+	priv[31] |= 64
+	pub, err := curve25519.X25519(priv[:], curve25519.Basepoint)
+	if err != nil {
+		return "", "", err
+	}
+	return base64.StdEncoding.EncodeToString(priv[:]), base64.StdEncoding.EncodeToString(pub), nil
 }
 
 func fetchWarpKeys() (warpKeys, error) {
 	if cachedWarpOK {
 		return cachedWarp, nil
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
-	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, warpAPIURL, nil)
-	if err != nil {
-		return warpKeys{}, fmt.Errorf("Не удалось получить данные WARP")
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "BozyaVPN/"+appVersion)
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return warpKeys{}, fmt.Errorf("Не удалось получить данные WARP")
-	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-	if err != nil || resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return warpKeys{}, fmt.Errorf("Не удалось получить данные WARP")
-	}
-	keys, err := parseWarpBody(string(body))
+	keys, err := chooseWarpKeys(fetchVercelWarp, registerCloudflare)
 	if err != nil {
 		return warpKeys{}, err
 	}
 	cachedWarp = keys
 	cachedWarpOK = true
 	return keys, nil
+}
+
+func fetchVercelWarp() (warpKeys, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, warpAPIURL, nil)
+	if err != nil {
+		return warpKeys{}, fmt.Errorf("%s", warpFail)
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", "BozyaVPN/"+appVersion)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return warpKeys{}, fmt.Errorf("%s", warpFail)
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil || resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return warpKeys{}, fmt.Errorf("%s", warpFail)
+	}
+	return parseWarpBody(string(body))
+}
+
+func registerCloudflare() (warpKeys, error) {
+	priv, pub, err := newWarpKeyPair()
+	if err != nil {
+		return warpKeys{}, fmt.Errorf("%s", warpFail)
+	}
+	payload, err := json.Marshal(cfRegBody{
+		Key:          pub,
+		InstallID:    "",
+		FCMToken:     "",
+		TOS:          time.Now().UTC().Format("2006-01-02T15:04:05.000Z"),
+		Model:        "PC",
+		SerialNumber: "",
+		Locale:       "en_US",
+		OSVersion:    "16.0.0",
+		KeyType:      "curve25519",
+		TunnelType:   "wireguard",
+	})
+	if err != nil {
+		return warpKeys{}, fmt.Errorf("%s", warpFail)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, cfRegURL, bytes.NewReader(payload))
+	if err != nil {
+		return warpKeys{}, fmt.Errorf("%s", warpFail)
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
+	req.Header.Set("User-Agent", cfUserAgent)
+	req.Header.Set("CF-Client-Version", cfClientVersion)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return warpKeys{}, fmt.Errorf("%s", warpFail)
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil || resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return warpKeys{}, fmt.Errorf("%s", warpFail)
+	}
+	return parseCloudflareReg(string(body), priv)
 }
 
 func randomPort(excluded map[int]bool) int {

@@ -138,4 +138,70 @@ class WarpGeneratorTest {
     fun rejectsFailedWarpApi() {
         WarpApi.parse("""{"success":false,"message":"rate limited"}""")
     }
+
+    @Test
+    fun parsesCloudflareRegistration() {
+        val keys = WarpApi.parseCloudflare(
+            """
+            {
+              "config": {
+                "peers": [{
+                  "public_key": "bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=",
+                  "endpoint": {"host": "engage.cloudflareclient.com"}
+                }],
+                "interface": {"addresses": {"v4": "172.16.0.2/32", "v6": "2606:4700:110::1/128"}}
+              }
+            }
+            """.trimIndent(),
+            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+        )
+        assertThat(keys.privateKey).startsWith("AAA")
+        assertThat(keys.peerPublicKey).isEqualTo("bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=")
+        assertThat(keys.clientIpv4).isEqualTo("172.16.0.2")
+        assertThat(keys.clientIpv6).isEqualTo("2606:4700:110::1")
+        val conf = WarpConfigBuilder.build(keys, "tel.de.tribukvy.ltd", 4500)
+        assertThat(conf).contains("Endpoint = tel.de.tribukvy.ltd:4500")
+        assertThat(conf).doesNotContain("engage.cloudflareclient.com")
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun rejectsCloudflareWithoutAddress() {
+        WarpApi.parseCloudflare("""{"config":{"peers":[{"public_key":"abc"}]}}""", "abc")
+    }
+
+    @Test
+    fun usesDirectRegistrationWhenGeneratorFails() {
+        var direct = 0
+        val keys = WarpApi.loadWarpKeys(
+            generator = { error("Failed to connect to generator-config-warp.vercel.app/64.29.17.67:443") },
+            direct = {
+                direct += 1
+                fakeKeys
+            },
+        )
+        assertThat(direct).isEqualTo(1)
+        assertThat(keys).isEqualTo(fakeKeys)
+    }
+
+    @Test
+    fun bothSourcesFailInRussian() {
+        try {
+            WarpApi.loadWarpKeys(
+                generator = { error("Failed to connect to generator-config-warp.vercel.app/64.29.17.67:443") },
+                direct = { error("Failed to connect to api.cloudflareclient.com/1.1.1.1:443") },
+            )
+            throw AssertionError("expected failure")
+        } catch (error: IllegalStateException) {
+            assertThat(error.message).isEqualTo("Не удалось получить данные WARP")
+            assertThat(error.message).doesNotContain("Failed to connect")
+        }
+    }
+
+    @Test
+    fun hidesEnglishConnectError() {
+        assertThat(
+            WarpApi.shownCreateError("Failed to connect to generator-config-warp.vercel.app/64.29.17.67:443"),
+        ).isEqualTo("Не удалось получить данные WARP")
+        assertThat(WarpApi.shownCreateError("Неизвестная страна: zz")).isEqualTo("Неизвестная страна: zz")
+    }
 }

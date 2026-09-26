@@ -16,6 +16,7 @@ import com.nimbus.vpn.data.SecTunnelProfile
 import com.nimbus.vpn.data.ServerPing
 import com.nimbus.vpn.data.VpnProfile
 import com.nimbus.vpn.data.VlessProfile
+import com.nimbus.vpn.data.WarpApi
 import com.nimbus.vpn.data.WarpGenerator
 import com.nimbus.vpn.data.WhitelistProfile
 import com.nimbus.vpn.data.WhitelistSubscription
@@ -173,7 +174,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             },
             onFailure = { error ->
                 _warp.value = WarpUiState(
-                    error = error.message ?: "Не удалось создать сервер",
+                    error = WarpApi.shownCreateError(error.message),
                 )
             },
         )
