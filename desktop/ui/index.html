@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bozya VPN</title>
+<style>
+:root {
+  --canvas:#F3EEE6; --paper:#FBF8F2; --ink:#1E1C18; --muted:#8A847A;
+  --line:#E6DFD4; --lift:#EFE8DC; --accent:#5C4E24; --danger:#C4523A; --ok:#2E8B45;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; background: var(--canvas); color: var(--ink); font: 16px/1.4 system-ui, sans-serif; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+#app { max-width: 480px; margin: 0 auto; min-height: 100vh; padding: 18px 16px 28px; }
+.top { display: flex; gap: 8px; align-items: center; }
+.chip, .icon, .wide, .tile, .row, .mini {
+  border: 0; background: var(--paper); border-radius: 16px;
+}
+.chip { background: var(--accent); color: var(--canvas); padding: 8px 16px; font-weight: 650; }
+.icon { width: 42px; height: 42px; margin-left: auto; background: var(--lift); font-size: 22px; }
+.switch { display: flex; gap: 8px; margin: 16px 0 10px; }
+.switch button { flex: 1; padding: 10px; border-radius: 16px; border: 0; background: var(--lift); }
+.switch button.on { background: var(--accent); color: var(--canvas); }
+.note { color: var(--muted); min-height: 1.2em; margin: 4px 2px 8px; font-size: 14px; }
+.list { display: flex; flex-direction: column; gap: 8px; }
+.row { display: flex; align-items: center; gap: 10px; text-align: left; padding: 12px 12px; border: 1px solid transparent; }
+.row.on { border-color: var(--accent); }
+.row .name { font-weight: 650; }
+.row .sub { color: var(--muted); font-size: 13px; }
+.grow { flex: 1; min-width: 0; }
+.x { width: 36px; height: 36px; border-radius: 12px; border: 0; background: var(--lift); color: var(--danger); }
+.dock { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: 22px; }
+.power {
+  width: 112px; height: 112px; border-radius: 50%; border: 0; background: var(--accent); color: var(--canvas);
+}
+.power.on { background: var(--ok); }
+.power.bad { background: var(--danger); }
+.power svg { width: 42px; height: 42px; }
+.mini { width: 74px; height: 44px; background: var(--lift); }
+.status { text-align: center; margin-top: 10px; font-weight: 650; }
+.status.bad { color: var(--danger); }
+.foot { margin-top: 18px; color: var(--muted); font-size: 13px; display: flex; justify-content: space-between; gap: 12px; }
+.linkish { background: none; border: 0; color: var(--muted); padding: 0; }
+.back { background: none; border: 0; padding: 0 0 12px; color: var(--muted); }
+.tiles { display: flex; flex-direction: column; gap: 8px; }
+.tile { text-align: left; padding: 14px 16px; border: 1px solid transparent; }
+.tile.on { border-color: var(--accent); }
+.tile b { display: block; }
+.tile span { color: var(--muted); font-size: 13px; }
+.lte { display: flex; align-items: center; gap: 8px; margin: 12px 2px; }
+.actions { display: flex; gap: 8px; margin-top: 16px; }
+.wide { flex: 1; padding: 14px; background: var(--lift); }
+.wide.go { flex: 1.35; background: var(--accent); color: var(--canvas); font-weight: 700; }
+.mask { position: fixed; inset: 0; background: rgba(30,28,24,.35); display: flex; align-items: center; justify-content: center; padding: 18px; }
+.card { background: var(--paper); border-radius: 20px; padding: 20px; width: min(360px, 100%); }
+.card h2 { margin: 0 0 8px; font-size: 20px; }
+.phone { font-size: 22px; font-weight: 700; letter-spacing: .02em; margin: 8px 0 14px; }
+.card .wide { width: 100%; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+let meta = null, state = {profiles:[], status:"disconnected", activeId:""}, view = "home";
+let section = "normal", picked = null, lte = false, support = false, banner = "", last = "";
+
+function h(tag, props, kids) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(props || {})) {
+    if (k === "class") n.className = v;
+    else if (k === "onclick") n.addEventListener("click", v);
+    else if (v != null && v !== false) n.setAttribute(k, v);
+  }
+  for (const kid of kids || []) n.append(kid && kid.nodeType ? kid : document.createTextNode(kid == null ? "" : String(kid)));
+  return n;
+}
+function svgPower() {
+  const ns = "http://www.w3.org/2000/svg";
+  const s = document.createElementNS(ns, "svg");
+  s.setAttribute("viewBox", "0 0 24 24");
+  s.setAttribute("fill", "none");
+  s.setAttribute("stroke", "currentColor");
+  s.setAttribute("stroke-width", "2.2");
+  s.setAttribute("stroke-linecap", "round");
+  const p = document.createElementNS(ns, "path");
+  p.setAttribute("d", "M12 3v8M7.2 6.2a7 7 0 1 0 9.6 0");
+  s.append(p);
+  return s;
+}
+async function api(path, body) {
+  const opt = body ? {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)} : {};
+  const r = await fetch(path, opt);
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || "Не получилось");
+  return j;
+}
+function rank(p) {
+  if (typeof p.ping === "number" && p.ping >= 0) return 0;
+  if (p.ping === -1) return 2;
+  return 1;
+}
+function visible() {
+  let list = (state.profiles || []).filter(p => section === "whitelist" ? p.kind === "whitelist" : p.kind !== "whitelist");
+  if (section === "whitelist") list = list.slice().sort((a,b) => rank(a) - rank(b) || ((a.ping ?? 1e15) - (b.ping ?? 1e15)));
+  return list;
+}
+function kindLabel(k) {
+  if (k === "warp") return "WARP";
+  if (k === "vless") return "VLESS";
+  if (k === "dns") return "DNS";
+  return "Белый список";
+}
+function render() {
+  const y = document.scrollingElement.scrollTop;
+  const root = document.getElementById("app");
+  root.replaceChildren();
+  if (view === "create") renderCreate(root); else renderHome(root);
+  if (support) renderSupport(root);
+  document.scrollingElement.scrollTop = y;
+}
+function renderHome(root) {
+  const top = h("div", {class:"top"}, [
+    h("button", {class:"chip", onclick: () => { support = true; render(); }}, ["Поддержать"]),
+    h("button", {class:"icon", onclick: () => { view = "create"; picked = null; lte = false; banner = ""; render(); }}, ["+"])
+  ]);
+  const sw = h("div", {class:"switch"}, [
+    h("button", {class: section === "normal" ? "on" : "", onclick: () => { section = "normal"; render(); }}, ["Обычные"]),
+    h("button", {class: section === "whitelist" ? "on" : "", onclick: () => { section = "whitelist"; render(); }}, ["Белые списки"])
+  ]);
+  const list = h("div", {class:"list"});
+  const rows = visible();
+  if (!rows.length) list.append(h("div", {class:"note"}, [section === "whitelist" ? "Нажми «Обновить», чтобы скачать серверы." : "Нажми «+», чтобы создать сервер."]));
+  for (const p of rows) {
+    const ping = typeof p.ping === "number" ? (p.ping < 0 ? "нет ответа" : p.ping + " мс") : "";
+    const sub = [p.endpoint, kindLabel(p.kind), ping].filter(Boolean).join(" · ");
+    list.append(h("div", {class: "row" + (state.activeId === p.id ? " on" : "")}, [
+      h("button", {class:"grow", style:"background:none;border:0;text-align:left;padding:0", onclick: () => act("/api/select", {id: p.id})}, [
+        h("div", {class:"name"}, [p.name]),
+        h("div", {class:"sub"}, [sub])
+      ]),
+      h("button", {class:"x", title:"Удалить", onclick: () => { if (confirm("Удалить сервер?")) act("/api/delete", {id: p.id}); }}, ["×"])
+    ]));
+  }
+  const status = state.status === "connecting" ? "Подключение…" : state.status === "connected" ? "Подключено" : state.status === "error" ? (state.error || "Ошибка") : "Отключено";
+  const dock = h("div", {class:"dock"});
+  if (section === "whitelist") dock.append(h("button", {class:"mini", onclick: () => act("/api/refresh", {})}, ["Обновить"]));
+  const power = h("button", {class:"power" + (state.status === "connected" ? " on" : state.status === "error" ? " bad" : ""), onclick: () => act("/api/connect", {id: state.activeId || ""})}, [svgPower()]);
+  dock.append(power);
+  if (section === "whitelist") dock.append(h("button", {class:"mini", onclick: () => act("/api/ping", {})}, ["Пинг"]));
+  root.append(top, sw, h("div", {class:"note"}, [banner || state.note || ""]), list, dock, h("div", {class:"status" + (state.status === "error" ? " bad" : "")}, [status]));
+  root.append(h("div", {class:"foot"}, [
+    h("span", {}, [meta ? meta.version : ""]),
+    h("button", {class:"linkish", onclick: quit}, ["Выход"])
+  ]));
+}
+function renderCreate(root) {
+  root.append(h("button", {class:"back", onclick: () => { view = "home"; banner = ""; render(); }}, ["← Назад"]));
+  const tiles = h("div", {class:"tiles"});
+  const fixed = [
+    {id:"dns", kind:"dns", name:"AI Ultra", detail:"Только DNS"},
+    {id:"vless", kind:"vless", name:"Nikitok", detail:"VLESS · сервер уже вшит"}
+  ];
+  for (const item of fixed) {
+    tiles.append(h("button", {class:"tile" + (picked && picked.id === item.id ? " on" : ""), onclick: () => { picked = item; lte = false; render(); }}, [
+      h("b", {}, [item.name]), h("span", {}, [item.detail])
+    ]));
+  }
+  for (const c of (meta && meta.countries) || []) {
+    tiles.append(h("button", {class:"tile" + (picked && picked.id === c.id ? " on" : ""), onclick: () => { picked = {id:c.id, kind:"warp", lte:c.lte, name:c.name}; if (!c.lte) lte = false; render(); }}, [
+      h("b", {}, [c.flag + "  " + c.name]), h("span", {}, ["WARP"])
+    ]));
+  }
+  root.append(tiles);
+  if (picked && picked.kind === "warp" && picked.lte) {
+    const box = h("input", {type:"checkbox"});
+    box.checked = lte;
+    box.addEventListener("change", () => { lte = box.checked; });
+    root.append(h("label", {class:"lte"}, [box, "LTE"]));
+  }
+  if (banner) root.append(h("div", {class:"note"}, [banner]));
+  root.append(h("div", {class:"actions"}, [
+    h("button", {class:"wide", onclick: () => { support = true; render(); }}, ["Поддержать"]),
+    h("button", {class:"wide go", onclick: create}, ["Создать"])
+  ]));
+}
+function renderSupport(root) {
+  const phone = (meta && meta.phone) || "";
+  const bank = (meta && meta.bank) || "";
+  root.append(h("div", {class:"mask", onclick: (e) => { if (e.target.classList.contains("mask")) { support = false; render(); } }}, [
+    h("div", {class:"card"}, [
+      h("h2", {}, ["Поддержать"]),
+      h("div", {}, [bank]),
+      h("div", {class:"phone"}, [phone]),
+      h("button", {class:"wide go", onclick: async () => { try { await navigator.clipboard.writeText(phone); banner = "Номер скопирован"; } catch (e) { banner = phone; } support = false; render(); }}, ["Скопировать номер"]),
+      h("button", {class:"wide", onclick: () => { support = false; render(); }}, ["Закрыть"])
+    ])
+  ]));
+}
+async function act(path, body) {
+  try {
+    banner = "";
+    state = await api(path, body);
+    last = JSON.stringify(state);
+  } catch (e) {
+    banner = e.message || "Ошибка";
+  }
+  render();
+}
+async function create() {
+  if (!picked) { banner = "Сначала выбери сервер"; render(); return; }
+  try {
+    banner = "";
+    state = await api("/api/create", {kind: picked.kind, country: picked.kind === "warp" ? picked.id : "", lte: !!lte});
+    last = JSON.stringify(state);
+    view = "home";
+    section = "normal";
+  } catch (e) {
+    banner = e.message || "Ошибка";
+  }
+  render();
+}
+async function quit() {
+  try { await api("/api/quit", {}); } catch (e) {}
+  document.body.replaceChildren(h("div", {id:"app"}, [h("p", {}, ["Bozya VPN закрыт. Это окно можно закрыть."])]));
+}
+async function poll() {
+  if (view !== "home" || support) return;
+  try {
+    const j = await api("/api/state");
+    const s = JSON.stringify(j);
+    if (s !== last) { state = j; last = s; render(); }
+  } catch (e) {}
+}
+async function boot() {
+  meta = await api("/api/meta");
+  state = await api("/api/state");
+  last = JSON.stringify(state);
+  render();
+  setInterval(poll, 700);
+}
+boot();
+</script>
+</body>
+</html>

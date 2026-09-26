@@ -1,0 +1,5 @@
+-keep class org.amnezia.awg.** { *; }
+-keep class com.nimbus.vpn.** { *; }
+-keep class com.getkeepsafe.relinker.** { *; }
+-dontwarn org.amnezia.awg.**
+-dontwarn okhttp3.internal.platform.PlatformRegistry
