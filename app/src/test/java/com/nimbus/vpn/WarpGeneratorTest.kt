@@ -96,7 +96,7 @@ class WarpGeneratorTest {
         assertThat(profile.name).isEqualTo("AI Ultra")
         assertThat(profile.id).isEqualTo("warp:ai")
         assertThat(DnsProfile.isOne(profile.rawConfig)).isTrue()
-        assertThat(DnsProfile.servers(profile.rawConfig)).containsExactly("111.88.96.56", "111.88.96.57").inOrder()
+        assertThat(DnsProfile.servers(profile.rawConfig)).containsExactly("111.88.96.54", "111.88.96.55").inOrder()
         assertThat(profile.rawConfig).contains("xbox-dns.ru")
         assertThat(profile.rawConfig).doesNotContain("PrivateKey")
     }

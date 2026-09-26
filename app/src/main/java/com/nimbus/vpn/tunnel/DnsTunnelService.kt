@@ -14,13 +14,18 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.nimbus.vpn.MainActivity
 import com.nimbus.vpn.R
+import com.nimbus.vpn.data.DnsProfile
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.net.DatagramPacket
 import java.net.DatagramSocket
+import java.net.HttpURLConnection
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Socket
+import java.net.URL
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * DNS-only tunnel. The phone keeps its own route for everything except
@@ -31,6 +36,7 @@ class DnsTunnelService : VpnService() {
     private var tun: ParcelFileDescriptor? = null
     private var worker: Thread? = null
     private var generation = 0
+    @Volatile private var skipUdpUntil = 0L
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
@@ -42,7 +48,7 @@ class DnsTunnelService : VpnService() {
         val label = intent?.getStringExtra(EXTRA_LABEL)?.takeIf { it.isNotBlank() } ?: "AI Ultra"
         val ticket = intent?.getIntExtra(EXTRA_TICKET, 0) ?: 0
         val servers = intent?.getStringArrayListExtra(EXTRA_SERVERS).orEmpty().ifEmpty {
-            arrayListOf("111.88.96.56", "111.88.96.57")
+            ArrayList(DnsProfile.SERVERS)
         }
         if (!promote(label)) {
             DnsRuntime.fail(ticket, "Не удалось показать уведомление")
@@ -122,21 +128,24 @@ class DnsTunnelService : VpnService() {
     private fun pump(fd: ParcelFileDescriptor, servers: List<String>) {
         val input = FileInputStream(fd.fileDescriptor)
         val output = FileOutputStream(fd.fileDescriptor)
+        val emit = { packet: ByteArray ->
+            synchronized(output) { output.write(packet) }
+        }
         val relay = TunRelay(
             dial = { host, port -> dialOut(host, port) },
             dns = { query -> lookup(query, servers) },
-            emit = { packet ->
-                synchronized(output) { output.write(packet) }
-            },
+            emit = emit,
         )
+        val plainUdp = PlainUdp(protect = { socket -> protect(socket) }, emit = emit)
         val buffer = ByteArray(32767)
         try {
             while (!Thread.currentThread().isInterrupted) {
                 val read = input.read(buffer)
                 if (read <= 0) continue
-                relay.onPacket(buffer, read)
+                if (!plainUdp.offer(buffer, read)) relay.onPacket(buffer, read)
             }
         } finally {
+            plainUdp.close()
             relay.close()
         }
     }
@@ -156,23 +165,53 @@ class DnsTunnelService : VpnService() {
     }
 
     private fun lookup(query: ByteArray, servers: List<String>): ByteArray {
-        DatagramSocket().use { socket ->
-            if (!protect(socket)) error("DNS не обошёл туннель")
-            socket.soTimeout = 2_500
-            for (server in servers) {
+        val now = System.currentTimeMillis()
+        if (now >= skipUdpUntil) {
+            val udp = udpLookup(query, servers)
+            if (udp != null) return udp
+            skipUdpUntil = now + 60_000
+        }
+        return dohLookup(query)
+    }
+
+    private fun udpLookup(query: ByteArray, servers: List<String>): ByteArray? {
+        for (server in servers) {
+            DatagramSocket().use { socket ->
+                if (!protect(socket)) return null
+                socket.soTimeout = 800
                 try {
-                    val packet = DatagramPacket(query, query.size, InetAddress.getByName(server), 53)
-                    socket.send(packet)
+                    socket.send(DatagramPacket(query, query.size, InetAddress.getByName(server), 53))
                     val reply = ByteArray(2048)
                     val incoming = DatagramPacket(reply, reply.size)
                     socket.receive(incoming)
-                    if (incoming.length > 0) return reply.copyOf(incoming.length)
+                    if (incoming.length >= 12) return reply.copyOf(incoming.length)
                 } catch (error: Throwable) {
-                    Log.w(TAG, "dns $server failed", error)
+                    Log.w(TAG, "udp dns $server failed", error)
                 }
             }
         }
-        error("xbox-dns.ru не ответил")
+        return null
+    }
+
+    private fun dohLookup(query: ByteArray): ByteArray {
+        val connection = (URL(DnsProfile.DOH).openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            connectTimeout = 5_000
+            readTimeout = 5_000
+            doOutput = true
+            setRequestProperty("Content-Type", "application/dns-message")
+            setRequestProperty("Accept", "application/dns-message")
+        }
+        try {
+            connection.outputStream.use { it.write(query) }
+            val code = connection.responseCode
+            if (code !in 200..299) error("xbox-dns.ru HTTP $code")
+            val body = connection.inputStream.use { it.readBytes() }
+            if (body.size < 12) error("xbox-dns.ru пустой ответ")
+            return body
+        } finally {
+            connection.disconnect()
+        }
     }
 
     private fun shutdown() {
@@ -253,5 +292,93 @@ class DnsTunnelService : VpnService() {
                 )
             }
         }
+    }
+}
+
+/** Forwards ordinary UDP around the DNS tunnel so the phone's own network still carries it. */
+private class PlainUdp(
+    private val protect: (DatagramSocket) -> Boolean,
+    private val emit: (ByteArray) -> Unit,
+) {
+    private val flows = ConcurrentHashMap<String, Flow>()
+    private val ids = AtomicInteger(1)
+
+    fun offer(packet: ByteArray, length: Int): Boolean {
+        val ip = Packets.parseIpv4(packet, length) ?: return false
+        if (ip.protocol != Packets.PROTO_UDP) return false
+        val udp = Packets.parseUdp(ip.payload) ?: return true
+        if (udp.dstPort == 53) return false
+        if (udp.payload.size > 1400) return true
+        val key = Packets.formatIpv4(ip.src) + ":" + udp.srcPort + ">" +
+            Packets.formatIpv4(ip.dst) + ":" + udp.dstPort
+        val flow = flows[key] ?: open(key, ip, udp) ?: return true
+        flow.seen = System.nanoTime()
+        try {
+            flow.socket.send(
+                DatagramPacket(udp.payload, udp.payload.size, InetAddress.getByAddress(ip.dst), udp.dstPort),
+            )
+        } catch (_: Throwable) {
+            flows.remove(key, flow)
+            runCatching { flow.socket.close() }
+        }
+        return true
+    }
+
+    fun close() {
+        flows.values.forEach { runCatching { it.socket.close() } }
+        flows.clear()
+    }
+
+    private fun open(key: String, ip: Ipv4Packet, udp: UdpDatagram): Flow? {
+        if (flows.size >= 48) {
+            val oldest = flows.entries.minByOrNull { it.value.seen }?.key
+            if (oldest != null) flows.remove(oldest)?.let { runCatching { it.socket.close() } }
+        }
+        val socket = DatagramSocket()
+        if (!protect(socket)) {
+            socket.close()
+            return null
+        }
+        socket.soTimeout = 20_000
+        val flow = Flow(socket, ip.src.copyOf(), udp.srcPort, ip.dst.copyOf(), udp.dstPort)
+        if (flows.putIfAbsent(key, flow) != null) {
+            socket.close()
+            return flows[key]
+        }
+        Thread({
+            val buffer = ByteArray(2048)
+            try {
+                while (!Thread.currentThread().isInterrupted) {
+                    val incoming = DatagramPacket(buffer, buffer.size)
+                    socket.receive(incoming)
+                    flow.seen = System.nanoTime()
+                    emit(
+                        Packets.buildIpv4Udp(
+                            src = flow.remoteIp,
+                            dst = flow.localIp,
+                            srcPort = flow.remotePort,
+                            dstPort = flow.localPort,
+                            payload = buffer.copyOf(incoming.length),
+                            ipId = ids.incrementAndGet() and 0xffff,
+                        ),
+                    )
+                }
+            } catch (_: Throwable) {
+            } finally {
+                flows.remove(key, flow)
+                runCatching { socket.close() }
+            }
+        }, "dns-udp").apply { isDaemon = true }.start()
+        return flow
+    }
+
+    private class Flow(
+        val socket: DatagramSocket,
+        val localIp: ByteArray,
+        val localPort: Int,
+        val remoteIp: ByteArray,
+        val remotePort: Int,
+    ) {
+        @Volatile var seen: Long = System.nanoTime()
     }
 }

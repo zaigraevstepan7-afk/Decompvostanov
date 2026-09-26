@@ -9,7 +9,8 @@ object DnsProfile {
     const val ENGINE = "dns"
     const val NAME = "AI Ultra"
     const val HOST = "xbox-dns.ru"
-    val SERVERS = listOf("111.88.96.56", "111.88.96.57")
+    const val DOH = "https://xbox-dns.ru/dns-query"
+    val SERVERS = listOf("111.88.96.54", "111.88.96.55")
 
     fun isOne(raw: String): Boolean {
         raw.replace("\r\n", "\n").lineSequence().forEach { original ->
