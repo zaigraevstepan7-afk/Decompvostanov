@@ -39,10 +39,11 @@ class WhitelistTunnelService : VpnService() {
             stopSelf(startId)
             return START_NOT_STICKY
         }
-        val json = intent?.getStringExtra(EXTRA_CONFIG).orEmpty()
-        val label = intent?.getStringExtra(EXTRA_LABEL)?.takeIf { it.isNotBlank() } ?: "Белые списки"
-        val bypass = intent?.getStringArrayListExtra(EXTRA_BYPASS).orEmpty()
-        val ticket = intent?.getIntExtra(EXTRA_TICKET, 0) ?: 0
+        if (intent == null) return restartedSticky()
+        val json = intent.getStringExtra(EXTRA_CONFIG).orEmpty()
+        val label = intent.getStringExtra(EXTRA_LABEL)?.takeIf { it.isNotBlank() } ?: "Белые списки"
+        val bypass = intent.getStringArrayListExtra(EXTRA_BYPASS).orEmpty()
+        val ticket = intent.getIntExtra(EXTRA_TICKET, 0)
         if (!promote(label)) {
             WhitelistRuntime.fail(ticket, "Не удалось показать уведомление VPN")
             stopSelf(startId)
@@ -96,6 +97,19 @@ class WhitelistTunnelService : VpnService() {
             }
         }, "wl-tun")
         worker?.start()
+        return START_STICKY
+    }
+
+    private fun restartedSticky(): Int {
+        val snap = TunnelSession(this).read()
+        val title = KeepAlivePolicy.usable(snap.title) ?: getString(R.string.app_name)
+        if (snap.wanted) {
+            promote(title)
+            return START_STICKY
+        }
+        promote(title)
+        runCatching { stopForeground(STOP_FOREGROUND_REMOVE) }
+        stopSelf()
         return START_NOT_STICKY
     }
 

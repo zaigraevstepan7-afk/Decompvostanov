@@ -29,7 +29,10 @@ class BootReceiver : BroadcastReceiver() {
                 if (user != null && !user.isUserUnlocked) return@launch
                 val app = context.applicationContext as? BozyaApp ?: return@launch
                 val auto = app.container.settings.settings.first().autoConnect
-                if (auto) {
+                val wanted = TunnelSession(app).read().wanted
+                if (wanted) {
+                    app.container.tunnel.restorePersistedSession()
+                } else if (auto) {
                     app.container.tunnel.connectActive()
                 }
             } catch (t: Throwable) {

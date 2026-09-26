@@ -49,9 +49,10 @@ class DnsTunnelService : VpnService() {
             stopSelf(startId)
             return START_NOT_STICKY
         }
-        val label = intent?.getStringExtra(EXTRA_LABEL)?.takeIf { it.isNotBlank() } ?: "AI Ultra"
-        val ticket = intent?.getIntExtra(EXTRA_TICKET, 0) ?: 0
-        val servers = intent?.getStringArrayListExtra(EXTRA_SERVERS).orEmpty().ifEmpty {
+        if (intent == null) return restartedSticky()
+        val label = intent.getStringExtra(EXTRA_LABEL)?.takeIf { it.isNotBlank() } ?: "AI Ultra"
+        val ticket = intent.getIntExtra(EXTRA_TICKET, 0)
+        val servers = intent.getStringArrayListExtra(EXTRA_SERVERS).orEmpty().ifEmpty {
             ArrayList(DnsProfile.SERVERS)
         }
         if (!promote(label)) {
@@ -92,6 +93,19 @@ class DnsTunnelService : VpnService() {
             }
         }, "dns-tun")
         worker?.start()
+        return START_STICKY
+    }
+
+    private fun restartedSticky(): Int {
+        val snap = TunnelSession(this).read()
+        val title = KeepAlivePolicy.usable(snap.title) ?: getString(R.string.app_name)
+        if (snap.wanted) {
+            promote(title)
+            return START_STICKY
+        }
+        promote(title)
+        runCatching { stopForeground(STOP_FOREGROUND_REMOVE) }
+        stopSelf()
         return START_NOT_STICKY
     }
 

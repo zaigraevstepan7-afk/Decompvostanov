@@ -86,6 +86,7 @@ class MainActivity : ComponentActivity() {
                 val battery = rememberLauncherForActivityResult(
                     ActivityResultContracts.StartActivityForResult(),
                 ) {}
+                val askBattery by viewModel.batteryPrompt.collectAsStateWithLifecycle()
 
                 LaunchedEffect(Unit) {
                     if (Build.VERSION.SDK_INT >= 33 &&
@@ -94,6 +95,12 @@ class MainActivity : ComponentActivity() {
                         notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
                     }
                     handleIncoming(intent)
+                }
+
+                LaunchedEffect(askBattery) {
+                    if (!askBattery) return@LaunchedEffect
+                    viewModel.batteryIntent()?.let { battery.launch(it) }
+                    viewModel.consumeBatteryPrompt()
                 }
 
                 LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.setUiVisible(true) }

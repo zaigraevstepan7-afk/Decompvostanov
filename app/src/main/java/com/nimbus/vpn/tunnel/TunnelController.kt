@@ -33,6 +33,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.amnezia.awg.backend.Backend
@@ -82,6 +83,11 @@ class TunnelController(
 
     private val _ui = MutableStateFlow(TunnelUiState())
     val ui: StateFlow<TunnelUiState> = _ui.asStateFlow()
+
+    private val session = TunnelSession(context)
+    private val _batteryPrompt = MutableStateFlow(false)
+    val batteryPrompt: StateFlow<Boolean> = _batteryPrompt.asStateFlow()
+    private val restoreLaunched = AtomicBoolean(false)
 
     private val _rootStatus = MutableStateFlow(RootPowerManager.Status(false, false, false, false, "Проверка root…"))
     val rootStatus: StateFlow<RootPowerManager.Status> = _rootStatus.asStateFlow()
@@ -136,7 +142,6 @@ class TunnelController(
                         txRate = 0,
                     )
                 }
-                BozyaKeepAliveService.stop(context)
                 scheduleReconnect(fromDrop = true)
             }
         }
@@ -158,6 +163,30 @@ class TunnelController(
             _rootStatus.value = status
             _ui.update { it.copy(backendLabel = status.message) }
         }
+        restorePersistedSession()
+    }
+
+    fun restorePersistedSession() {
+        val snap = session.read()
+        if (!snap.wanted || userStopped) return
+        if (!restoreLaunched.compareAndSet(false, true)) return
+        scope.launch {
+            val profile = profiles.profiles.firstOrNull { it.id == snap.profileId } ?: profiles.active
+            if (userStopped) return@launch
+            if (profile == null) {
+                session.clear()
+                BozyaKeepAliveService.stop(context)
+                return@launch
+            }
+            if (profile.id != profiles.active?.id) profiles.setActive(profile.id)
+            runCatching { connect(profile, userInitiated = false) }
+                .onFailure { Log.w(TAG, "Session restore failed", it) }
+        }
+    }
+
+    fun consumeBatteryPrompt() {
+        session.markBatteryAsked()
+        _batteryPrompt.value = false
     }
 
     fun setUiVisible(visible: Boolean) {
@@ -205,6 +234,12 @@ class TunnelController(
         } else if (userStopped) {
             return@withLock
         }
+        session.mark(profile.id, profile.name)
+        if (!userInitiated && userStopped) {
+            session.clear()
+            return@withLock
+        }
+        maybeAskBattery()
         quietRotated = false
         pinnedExit = false
         SecTunnelRuntime.publishedIp = null
@@ -222,6 +257,7 @@ class TunnelController(
         BozyaKeepAliveService.start(context, "Подключение…")
 
         val fresh = settings.settings.first()
+        appSettings = fresh
         if (fresh.rootBatteryGuard) {
             runCatching {
                 rootPower.applyLowDrainKeepAlive(
@@ -238,11 +274,11 @@ class TunnelController(
             return@withLock
         }
         if (WhitelistProfile.isOne(profile.rawConfig) || com.nimbus.vpn.data.VlessProfile.isOne(profile.rawConfig)) {
-            connectWhitelist(profile, fresh)
+            connectWhitelist(profile, fresh, userInitiated)
             return@withLock
         }
         if (DnsProfile.isOne(profile.rawConfig)) {
-            connectDns(profile)
+            connectDns(profile, userInitiated)
             return@withLock
         }
         activeEngine = Engine.AWG
@@ -308,14 +344,14 @@ class TunnelController(
                     fallbackName = null,
                 )
             }
-            BozyaKeepAliveService.stop(context)
-            if (userInitiated) scheduleReconnect()
+            finishFailedConnect(userInitiated)
         }
     }
 
     suspend fun disconnect() {
         userStopped = true
         reconnectJob?.cancel()
+        session.clear()
         connectToken = 0
         SecTunnelRuntime.requestStop(context)
         WhitelistTunnelService.stop(context)
@@ -341,6 +377,7 @@ class TunnelController(
                 fallbackName = null,
             )
         }
+        session.clear()
         BozyaKeepAliveService.stop(context)
         }
     }
@@ -351,7 +388,6 @@ class TunnelController(
         if (userStopped || activeEngine != Engine.AWG) return
         if (state == Tunnel.State.DOWN && _ui.value.status == ConnectionStatus.CONNECTED) {
             _ui.update { it.copy(status = ConnectionStatus.DISCONNECTED, connectedSince = null) }
-            BozyaKeepAliveService.stop(context)
             scheduleReconnect(fromDrop = true)
         }
     }
@@ -414,7 +450,6 @@ class TunnelController(
                         txRate = 0,
                     )
                 }
-                BozyaKeepAliveService.stop(context)
                 scheduleReconnect(fromDrop = true)
             }
             return
@@ -432,7 +467,6 @@ class TunnelController(
                         txRate = 0,
                     )
                 }
-                BozyaKeepAliveService.stop(context)
                 scheduleReconnect(fromDrop = true)
             }
             return
@@ -693,8 +727,30 @@ class TunnelController(
                 fallbackName = warp?.name,
             )
         }
-        BozyaKeepAliveService.stop(context)
-        if (userInitiated) scheduleReconnect()
+        finishFailedConnect(userInitiated)
+    }
+
+    private fun finishFailedConnect(userInitiated: Boolean) {
+        if (userStopped ||
+            !SessionPolicy.keepForeground(userStopped, userInitiated, appSettings.autoConnect)
+        ) {
+            session.clear()
+            BozyaKeepAliveService.stop(context)
+            return
+        }
+        scheduleReconnect(fromDrop = !userInitiated)
+    }
+
+    private fun maybeAskBattery() {
+        runCatching {
+            if (session.read().batteryAsked) return
+            val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+            if (pm.isIgnoringBatteryOptimizations(context.packageName)) {
+                session.markBatteryAsked()
+                return
+            }
+            _batteryPrompt.value = true
+        }
     }
 
     private fun isInstalledPackage(packageName: String): Boolean {
@@ -722,7 +778,11 @@ class TunnelController(
         }
     }
 
-    private suspend fun connectWhitelist(profile: VpnProfile, fresh: com.nimbus.vpn.data.AppSettings) {
+    private suspend fun connectWhitelist(
+        profile: VpnProfile,
+        fresh: com.nimbus.vpn.data.AppSettings,
+        userInitiated: Boolean,
+    ) {
         var ticket = 0
         try {
             activeEngine = Engine.WL
@@ -784,7 +844,7 @@ class TunnelController(
                     fallbackName = null,
                 )
             }
-            BozyaKeepAliveService.stop(context)
+            finishFailedConnect(userInitiated)
         }
     }
 
@@ -795,7 +855,7 @@ class TunnelController(
         withTimeoutOrNull(3_000) { done.await() }
     }
 
-    private suspend fun connectDns(profile: VpnProfile) {
+    private suspend fun connectDns(profile: VpnProfile, userInitiated: Boolean) {
         var ticket = 0
         try {
             activeEngine = Engine.DNS
@@ -852,7 +912,7 @@ class TunnelController(
                     fallbackName = null,
                 )
             }
-            BozyaKeepAliveService.stop(context)
+            finishFailedConnect(userInitiated)
         }
     }
 

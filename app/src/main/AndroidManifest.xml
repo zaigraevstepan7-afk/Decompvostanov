@@ -30,6 +30,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Bozya"
         android:hardwareAccelerated="true"
+        android:largeHeap="true"
         android:networkSecurityConfig="@xml/network_security_config">
 
         <activity
@@ -61,6 +62,7 @@
             android:exported="false"
             android:directBootAware="true"
             android:foregroundServiceType="specialUse"
+            android:stopWithTask="false"
             tools:replace="android:exported,android:directBootAware,android:foregroundServiceType">
             <intent-filter>
                 <action android:name="android.net.VpnService" />
@@ -78,6 +80,7 @@
             android:permission="android.permission.BIND_VPN_SERVICE"
             android:exported="false"
             android:directBootAware="true"
+            android:stopWithTask="false"
             android:foregroundServiceType="specialUse">
             <intent-filter>
                 <action android:name="android.net.VpnService" />
@@ -92,6 +95,7 @@
             android:permission="android.permission.BIND_VPN_SERVICE"
             android:exported="false"
             android:directBootAware="true"
+            android:stopWithTask="false"
             android:foregroundServiceType="specialUse">
             <intent-filter>
                 <action android:name="android.net.VpnService" />
@@ -106,6 +110,7 @@
             android:permission="android.permission.BIND_VPN_SERVICE"
             android:exported="false"
             android:directBootAware="true"
+            android:stopWithTask="false"
             android:foregroundServiceType="specialUse">
             <intent-filter>
                 <action android:name="android.net.VpnService" />
@@ -118,6 +123,7 @@
         <service
             android:name=".tunnel.BozyaKeepAliveService"
             android:exported="false"
+            android:stopWithTask="false"
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"

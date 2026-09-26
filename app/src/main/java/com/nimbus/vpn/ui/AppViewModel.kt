@@ -72,6 +72,7 @@ data class SubscriptionUiState(
 class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val app = application as BozyaApp
     val tunnel = app.container.tunnel.ui
+    val batteryPrompt = app.container.tunnel.batteryPrompt
     val root = app.container.tunnel.rootStatus
     val profiles = app.container.profiles.index
     val settings: StateFlow<AppSettings> = app.container.settings.settings.stateIn(
@@ -274,6 +275,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun prepareVpn(): Intent? = app.container.tunnel.prepareVpnIntent()
 
     fun batteryIntent(): Intent? = app.container.tunnel.requestBatteryExemption()
+
+    fun consumeBatteryPrompt() = app.container.tunnel.consumeBatteryPrompt()
 
     fun toggle() {
         cancelPing()

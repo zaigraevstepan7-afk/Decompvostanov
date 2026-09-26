@@ -10,8 +10,10 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.annotation.SuppressLint
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.nimbus.vpn.BozyaApp
@@ -25,35 +27,97 @@ import kotlinx.coroutines.launch
 class BozyaKeepAliveService : Service() {
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(serviceJob + Dispatchers.Default)
+    private var wakeLock: PowerManager.WakeLock? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == ACTION_STOP) {
-            val app = applicationContext as? BozyaApp
-            serviceScope.launch {
-                runCatching { app?.container?.tunnel?.disconnect() }
+        val session = TunnelSession(this).read()
+        val restarted = intent == null ||
+            (flags and START_FLAG_RETRY) != 0 ||
+            (flags and START_FLAG_REDELIVERY) != 0
+        val plan = KeepAlivePolicy.plan(
+            KeepAlivePolicy.Command(
+                stopRequested = intent?.action == ACTION_STOP,
+                title = intent?.getStringExtra(EXTRA_TITLE),
+                savedTitle = session.title,
+                sessionWanted = session.wanted,
+                restarted = restarted,
+            ),
+        )
+        if (plan.stop) {
+            if (intent?.action == ACTION_STOP) {
+                val app = applicationContext as? BozyaApp
+                serviceScope.launch {
+                    runCatching { app?.container?.tunnel?.disconnect() }
+                }
+            }
+            if (plan.showForeground) {
+                ensureChannel()
+                goForeground(buildNotification(plan.title, withLargeIcon = false))
             }
             runCatching { stopForeground(STOP_FOREGROUND_REMOVE) }
-            stopSelf()
-            return START_NOT_STICKY
-        }
-        val title = intent?.getStringExtra(EXTRA_TITLE)?.takeIf { it.isNotBlank() }
-        if (title == null) {
+            releaseWake()
             stopSelf()
             return START_NOT_STICKY
         }
         ensureChannel()
         // Promote before any bitmap work. A late startForeground kills the process.
-        if (!goForeground(buildNotification(title, withLargeIcon = false))) {
+        if (!goForeground(buildNotification(plan.title, withLargeIcon = false))) {
             stopSelf()
-            return START_NOT_STICKY
+            return if (session.wanted) START_STICKY else START_NOT_STICKY
         }
+        holdWake()
         serviceScope.launch(Dispatchers.IO) {
-            val decorated = runCatching { buildNotification(title, withLargeIcon = true) }.getOrNull() ?: return@launch
+            val decorated = runCatching { buildNotification(plan.title, withLargeIcon = true) }.getOrNull() ?: return@launch
             runCatching { getSystemService(NotificationManager::class.java)?.notify(NOTIF_ID, decorated) }
         }
-        return START_NOT_STICKY
+        if (plan.restoreTunnel) {
+            val app = applicationContext as? BozyaApp
+            serviceScope.launch {
+                runCatching { app?.container?.tunnel?.restorePersistedSession() }
+            }
+        }
+        return if (plan.sticky) START_STICKY else START_NOT_STICKY
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        val snap = TunnelSession(this).read()
+        val title = KeepAlivePolicy.usable(snap.title)
+        if (snap.wanted && title != null) {
+            val restart = Intent(applicationContext, BozyaKeepAliveService::class.java)
+                .putExtra(EXTRA_TITLE, title)
+            runCatching {
+                if (Build.VERSION.SDK_INT >= 26) {
+                    applicationContext.startForegroundService(restart)
+                } else {
+                    applicationContext.startService(restart)
+                }
+            }
+        }
+        super.onTaskRemoved(rootIntent)
+    }
+
+    override fun onDestroy() {
+        releaseWake()
+        super.onDestroy()
+    }
+
+    @SuppressLint("WakelockTimeout")
+    private fun holdWake() {
+        if (wakeLock?.isHeld == true) return
+        val pm = getSystemService(POWER_SERVICE) as PowerManager
+        val lock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "bozya:tunnel")
+        lock.setReferenceCounted(false)
+        lock.acquire()
+        wakeLock = lock
+    }
+
+    private fun releaseWake() {
+        runCatching {
+            if (wakeLock?.isHeld == true) wakeLock?.release()
+        }
+        wakeLock = null
     }
 
     private fun goForeground(notification: Notification): Boolean {
